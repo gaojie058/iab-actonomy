@@ -32,7 +32,7 @@ Developed through Grounded Theory, the taxonomy comprises **10 actions, 46 subac
 <table align="center">
   <tr><th align="left">Workflow Demo</th></tr>
   <tr><td align="center">
-    <img src="assets/semantic_workflow.gif" alt="Original trajectory, two examples of sentence-level Action–Subaction–Leaf labels, turn summaries, and a shared purpose" width="1000"><br>
+    <img src="assets/semantic_workflow.gif" alt="Original trajectory, two examples of sentence-level Action–Subaction–Leaf labels, turn summaries, and a shared purpose" width="100%"><br>
     <em>Raw trajectory → Turn excerpts → Behavior labels → Turn summaries → Shared purpose.</em>
   </td></tr>
 </table>

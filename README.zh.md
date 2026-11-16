@@ -28,7 +28,7 @@
 <table align="center">
   <tr><th align="left">流程演示 · Workflow Demo</th></tr>
   <tr><td align="center">
-    <img src="assets/semantic_workflow.gif" alt="原始轨迹、两页语句与 Action—Subaction—Leaf 三层标签的标注示例、逐轮总结和共同目标" width="1000"><br>
+    <img src="assets/semantic_workflow.gif" alt="原始轨迹、两页语句与 Action—Subaction—Leaf 三层标签的标注示例、逐轮总结和共同目标" width="100%"><br>
     <em>原始轨迹 → 逐轮摘录 → 行为标签 → 逐轮总结 → 共同目标。</em>
   </td></tr>
 </table>
