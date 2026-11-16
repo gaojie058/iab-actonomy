@@ -1,44 +1,50 @@
-# Contributing to Act-onomy
+# Contributing to Act\*ONOMY
 
-Act-onomy is intended to be a living artifact: as new agent designs appear, the codebook should grow rather than fork. This document specifies how to propose an extension.
+Act\*ONOMY is a living research artifact. Contributions should keep behavior labels grounded in evidence and analyses reproducible.
 
-> **Note.** Contributions are paused during pre-release. The protocol below describes how the open release will accept contributions.
+> Contributions are paused during pre-release. The protocol below describes how the open release will accept contributions.
 
-## When to add a sub-action vs. a new top-level category
+## Development setup
 
-Following the deductive coding procedure described in the paper:
+Use Python 3.10+ from a source checkout. The Python tools and tests need no third-party packages. For the optional discovery document builders, run `npm ci --prefix tools/discovery-qualitative-analyst/scripts`.
 
-- **Add a new sub-action** when the observed behavior is functionally an instance of an existing top-level category but its surface form is not yet covered (e.g., `Annotate UI components` was added under **Grounding** after encountering P28).
-- **Add a new top-level category** only when the behavior fails the boundary tests in §3.1 of the paper against *all* existing categories. This is a much higher bar that, in our 35-paper corpus (20 incorporated), was met during construction but not during validation. Top-level categories define the analytic vocabulary, so churning them weakens cross-paper comparability.
+```bash
+make check
+make demo
+```
 
-## Proposal template
+`make check` runs repository-local codebook consistency, documentation-link checks, and regression tests. GitHub Actions runs these checks on Python 3.10, 3.12, and 3.13. A separate Node.js job checks the discovery scripts and their installed dependency. See [the architecture guide](docs/architecture.md) for where changes belong.
 
-Open an issue (or a pull request against `codebook.md`) including:
+Keep outputs under `outputs/` and retain raw research inputs and saved reference results. Update both root READMEs when user-facing commands or capabilities change. Include the commands you ran and their results in a pull request. Tests should cover affected behavior rather than just repeat implementation details.
 
-1. **Behavior sentence.** A verbatim quote from the source paper or trajectory that exhibits the behavior.
-2. **Source.** Paper citation, agent name, or trajectory file (with line/turn reference).
-3. **Target placement.** One of:
-   - existing sub-action (specify which);
-   - new sub-action under an existing category (specify which);
-   - new top-level category (rare; see above).
-4. **Boundary argument.** Why does the behavior not fit the closest existing code? Reference the boundary tests in §3.1 of the paper.
-5. **(Optional) Example labeling.** A short trajectory turn or sentence labeled with the proposed code, plus a 1-sentence justification.
+## Proposing a taxonomy extension
 
-## Versioning
+Use the [extension template](.github/ISSUE_TEMPLATE/codebook_extension.md) and include:
 
-Approved extensions are merged into a versioned codebook `vX.Y`:
+1. **Behavior sentence:** a verbatim quote from a paper or trajectory.
+2. **Source:** citation, agent name, and page/turn reference.
+3. **Target placement:** an existing code, new instance/subaction, or new top-level action.
+4. **Boundary argument:** why the closest existing code does not cover the behavior; reference the boundary tests in §3.1 of the paper.
+5. **Example labeling:** a short labeled passage and explanation, if available.
 
-- **`X` (major)** is incremented for any change at the **top-level category** layer (add / rename / merge / split).
-- **`Y` (minor)** is incremented for any change at the **sub-action** or **specialization** layer.
+Add a subaction when a behavior fits an existing top-level action but is not covered by its current subactions. Add a top-level action only when it fails the boundary tests against all existing actions. A new subaction needs evidence from at least two independent sources; domain-specific instances may specialize existing subactions.
 
-The latest version always lives at `codebook.md`. Frozen snapshots are kept at `codebook.vX.Y.md` so analyses remain reproducible against a fixed version. The changelog ([`CHANGELOG.md`](CHANGELOG.md)) records every release with its diff against the previous version.
+## Review criteria
 
-## Review
+- **Faithfulness:** the quoted sentence occurs verbatim in the source.
+- **Boundary clarity:** the proposed code preserves meaningful distinctions.
+- **Generality:** the code captures a recurring pattern rather than a single domain detail.
+- **Consistency:** structured codebook representations, operational references, affected examples, and documented counts agree.
 
-Each proposal is reviewed against:
+Use the [dependency manifest](tools/extension-tool/references/CODEBOOK_DEPENDENCIES.md) and [maintenance guide](docs/codebook.md) to propagate an accepted change. Semantic relabeling requires evidence-based review; a passing checker cannot establish it.
 
-- **Faithfulness.** The quoted sentence appears verbatim in the cited source.
-- **Boundary clarity.** The proposed code does not collapse a distinction maintained elsewhere in the codebook.
-- **Generality.** The code captures a recurring pattern, not a one-off domain detail (domain-specific specializations are welcome under existing sub-actions, but a new sub-action requires evidence from at least two independent sources).
+## Versioning and provenance
 
-Reviews are conducted publicly in the issue / PR thread. Approved changes are merged by a maintainer and reflected in `CHANGELOG.md` and the next versioned snapshot.
+The current analytical codebook is V4.2. The taxonomy JSON also retains its historical export-format version (`v1.0`); these are different labels.
+
+- Increment the major codebook version for changes to the top-level action layer.
+- Increment the minor version for changes at the subaction or instance layer.
+- Preserve earlier development snapshots and record the source/version of an analysis. Current sources live in `data/taxonomy/`; development history is in `data/taxonomy/taxonomy_development/`.
+- Document release changes and migration needs with the accepted proposal. A directory reorganization does not change codebook semantics or justify replacing historical corpus labels.
+
+Personal skills are maintained in the shared skill-library source, with assistant discovery directories linking to it. The repository's distributable bundles are separate project artifacts. Review synchronization explicitly; repository commands do not automatically overwrite personal installations.
