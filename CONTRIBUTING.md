@@ -13,7 +13,7 @@ make check
 make demo
 ```
 
-`make check` runs repository-local codebook consistency, documentation-link checks, and regression tests. GitHub Actions runs these checks on Python 3.10, 3.12, and 3.13. A separate Node.js job checks the discovery scripts and their installed dependency. See [the architecture guide](docs/architecture.md) for where changes belong.
+`make check` runs repository-local codebook consistency, documentation-link checks, and regression tests. GitHub Actions runs these checks on Python 3.10, 3.12, and 3.13. A separate Node.js job checks the discovery scripts and their installed dependency. See [the repository layout](README.md#repository-layout) for where changes belong.
 
 Keep outputs under `outputs/` and retain raw research inputs and saved reference results. Update both root READMEs when user-facing commands or capabilities change. Include the commands you ran and their results in a pull request. Tests should cover affected behavior rather than just repeat implementation details.
 
@@ -36,7 +36,7 @@ Add a subaction when a behavior fits an existing top-level action but is not cov
 - **Generality:** the code captures a recurring pattern rather than a single domain detail.
 - **Consistency:** structured codebook representations, operational references, affected examples, and documented counts agree.
 
-Use the [dependency manifest](tools/extension-tool/references/CODEBOOK_DEPENDENCIES.md) and [maintenance guide](docs/codebook.md) to propagate an accepted change. Semantic relabeling requires evidence-based review; a passing checker cannot establish it.
+Use the [dependency manifest](tools/extension-tool/references/CODEBOOK_DEPENDENCIES.md) and [maintenance workflow](tools/extension-tool/SKILL.md) to propagate an accepted change. Semantic relabeling requires evidence-based review; a passing checker cannot establish it.
 
 ## Versioning and provenance
 

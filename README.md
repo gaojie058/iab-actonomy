@@ -1,7 +1,7 @@
 <p align="center">
   <img src="assets/actonomy_logo.png" alt="Act*ONOMY" width="440" align="middle">
   &nbsp;&nbsp;&nbsp;
-  <a href="https://neurips.cc/Conferences/2026"><img src="docs/assets/neurips-logo.svg" alt="NeurIPS 2026" width="160" align="middle"></a>
+  <a href="https://neurips.cc/Conferences/2026"><img src="assets/neurips-logo.svg" alt="NeurIPS 2026" width="160" align="middle"></a>
 </p>
 
 <p align="center">
@@ -18,7 +18,7 @@
 <p align="center">
   English · <a href="README.zh.md">中文</a><br>
   <strong>How to Interpret Agent Behavior</strong><br>
-  <a href="https://gaojie058.github.io/Act-onomy/">Project website</a> ·
+  <a href="https://gaojie058.github.io/iab-actonomy/">Project website</a> ·
   <a href="https://arxiv.org/abs/2605.13625">Paper</a> ·
   <a href="data/taxonomy/taxonomy.md">Taxonomy</a>
 </p>
@@ -41,7 +41,7 @@ The animation follows T1–T4 of the [original requests-2317 log](trajectory%20a
 
 ## Website
 
-The [project website](https://gaojie058.github.io/Act-onomy/) includes the taxonomy explorer, two SWE-agent case studies, and a SWE-chat example with human feedback. GitHub Pages serves the static files in [`docs/`](docs/) from `main`; see [website maintenance notes](docs/README.md).
+The [project website](https://gaojie058.github.io/iab-actonomy/) includes the taxonomy explorer, two SWE-agent case studies, and a SWE-chat example with human feedback. GitHub Pages publishes the root of the dedicated [`gh-pages` branch](https://github.com/gaojie058/iab-actonomy/tree/gh-pages); `main` contains the code and datasets. See the [website maintenance notes](https://github.com/gaojie058/iab-actonomy/blob/gh-pages/README.md).
 
 ## When to use Act\*ONOMY
 
@@ -65,8 +65,8 @@ Analysis runs in a compatible AI assistant with the skills loaded. The assistant
 Download this repository; the skill bundles are in [`tools/`](tools/).
 
 ```bash
-git clone https://github.com/gaojie058/Act-onomy.git
-cd Act-onomy
+git clone https://github.com/gaojie058/iab-actonomy.git
+cd iab-actonomy
 ```
 
 ### 2. Install skills
@@ -91,7 +91,7 @@ Annotate behavior with verbatim evidence from the trajectory and generate
 outputs/trajectory.annotated.json and outputs/trajectory.html.
 ```
 
-For a Claude Code session with human interactions, use `human-trace-qualitative-analyst` and provide the session `.jsonl` file. See the [full quickstart](docs/quickstart.md) for input formats and a bundled example.
+For a Claude Code session with human interactions, use `human-trace-qualitative-analyst` and provide the session `.jsonl` file. See the [trace skill guide](tools/trace-qualitative-analyst/README.md) for usage and bundle details.
 
 ### 4. Generate a report
 

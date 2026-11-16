@@ -1,7 +1,7 @@
 <p align="center">
   <img src="assets/actonomy_logo.png" alt="Act*ONOMY" width="440" align="middle">
   &nbsp;&nbsp;&nbsp;
-  <a href="https://neurips.cc/Conferences/2026"><img src="docs/assets/neurips-logo.svg" alt="NeurIPS 2026" width="160" align="middle"></a>
+  <a href="https://neurips.cc/Conferences/2026"><img src="assets/neurips-logo.svg" alt="NeurIPS 2026" width="160" align="middle"></a>
 </p>
 
 <p align="center">
@@ -17,9 +17,9 @@
   <a href="README.md">English</a> · 中文<br>
   <strong>How to Interpret Agent Behavior</strong><br>
   <a href="https://arxiv.org/abs/2605.13625">论文</a> ·
-  <a href="docs/quickstart.md">快速上手</a> ·
+  <a href="#快速上手">快速上手</a> ·
   <a href="data/taxonomy/taxonomy.md">行为分类</a> ·
-  <a href="docs/README.md">文档</a> ·
+  <a href="https://github.com/gaojie058/iab-actonomy/blob/gh-pages/README.md">官网文档</a> ·
   <a href="CONTRIBUTING.md">贡献指南</a>
 </p>
 
@@ -35,6 +35,8 @@
 
 动图展示 [requests-2317 原始日志](trajectory%20annotation%20examples/case2_swe_agent_two_traces/trace1_psf__requests-2317.json) 的连续四轮 T1–T4。Behavior labels 用 T1、T2 两页示例说明：高亮具体语句，通过编号对应 **Action → Subaction → Leaf** 三层标签。标签原样取自[案例真实标注](trajectory%20annotation%20examples/case2_swe_agent_two_traces/trace1_psf__requests-2317.annotated.json)，随后汇总四轮行为与共同目标。[三层标注示例](assets/semantic_workflow_labels.png) · [静态总结](assets/semantic_workflow.png)。
 
+官网由独立的 [`gh-pages` 分支](https://github.com/gaojie058/iab-actonomy/tree/gh-pages)根目录发布；`main` 保留代码与数据。网站维护方式见[官网文档](https://github.com/gaojie058/iab-actonomy/blob/gh-pages/README.md)。
+
 ## 适用场景
 
 | 你的目标 | 从这里开始 |
@@ -43,7 +45,7 @@
 | 研究用户如何引导智能体 | [人机交互分析](tools/human-trace-qualitative-analyst/SKILL.md) |
 | 比较不同智能体或任务的行为特征 | [案例](trajectory%20annotation%20examples/README.md) |
 | 发现现有词汇未覆盖的行为 | [发现与扩展流程](tools/discovery-qualitative-analyst/SKILL.md) |
-| 扩展分类并核对依赖文件 | [Codebook 维护](docs/codebook.md) |
+| 扩展分类并核对依赖文件 | [Codebook 维护](tools/extension-tool/SKILL.md) |
 
 `trace-qualitative-analyst` 分析智能体自主执行的轨迹；`human-trace-qualitative-analyst` 用于有人类参与交互的轨迹，额外标注人的指令、反馈及其如何引导智能体。
 
@@ -58,8 +60,8 @@
 下载本仓库；Skill 包位于 [`tools/`](tools/) 目录。
 
 ```bash
-git clone https://github.com/gaojie058/Act-onomy.git
-cd Act-onomy
+git clone https://github.com/gaojie058/iab-actonomy.git
+cd iab-actonomy
 ```
 
 ### 2. 安装 Skills
@@ -84,7 +86,7 @@ scripts 和 assets，并将两个 Skill 放在同一父目录下。
 和 outputs/trajectory.html。
 ```
 
-如果是包含用户交互的 Claude Code 会话，改用 `human-trace-qualitative-analyst`，并提供会话 `.jsonl` 文件。支持的输入格式和仓库示例见[完整教程](docs/quickstart.md)。
+如果是包含用户交互的 Claude Code 会话，改用 `human-trace-qualitative-analyst`，并提供会话 `.jsonl` 文件。Skill 的用法和目录结构见[轨迹分析说明](tools/trace-qualitative-analyst/README.md)。
 
 ### 4. 输出报告
 
