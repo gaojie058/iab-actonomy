@@ -19,7 +19,7 @@
   <a href="https://arxiv.org/abs/2605.13625">论文</a> ·
   <a href="#快速上手">快速上手</a> ·
   <a href="data/taxonomy/taxonomy.md">行为分类</a> ·
-  <a href="https://github.com/gaojie058/iab-actonomy/blob/gh-pages/README.md">官网文档</a> ·
+  <a href="https://actonomy-agents.github.io/">项目网站</a> ·
   <a href="CONTRIBUTING.md">贡献指南</a>
 </p>
 
@@ -35,7 +35,7 @@
 
 动图展示 [requests-2317 原始日志](trajectory%20annotation%20examples/case2_swe_agent_two_traces/trace1_psf__requests-2317.json) 的连续四轮 T1–T4。Behavior labels 用 T1、T2 两页示例说明：高亮具体语句，通过编号对应 **Action → Subaction → Leaf** 三层标签。标签原样取自[案例真实标注](trajectory%20annotation%20examples/case2_swe_agent_two_traces/trace1_psf__requests-2317.annotated.json)，随后汇总四轮行为与共同目标。[三层标注示例](assets/semantic_workflow_labels.png) · [静态总结](assets/semantic_workflow.png)。
 
-官网由独立的 [`gh-pages` 分支](https://github.com/gaojie058/iab-actonomy/tree/gh-pages)根目录发布；`main` 保留代码与数据。网站维护方式见[官网文档](https://github.com/gaojie058/iab-actonomy/blob/gh-pages/README.md)。
+[项目官网](https://actonomy-agents.github.io/)在独立的 [`actonomy-agents.github.io` 仓库](https://github.com/actonomy-agents/actonomy-agents.github.io)维护；本仓库保留代码、数据与分析工具。
 
 ## 适用场景
 

@@ -18,7 +18,7 @@
 <p align="center">
   English · <a href="README.zh.md">中文</a><br>
   <strong>How to Interpret Agent Behavior</strong><br>
-  <a href="https://gaojie058.github.io/iab-actonomy/">Project website</a> ·
+  <a href="https://actonomy-agents.github.io/">Project website</a> ·
   <a href="https://arxiv.org/abs/2605.13625">Paper</a> ·
   <a href="data/taxonomy/taxonomy.md">Taxonomy</a>
 </p>
@@ -41,7 +41,7 @@ The animation follows T1–T4 of the [original requests-2317 log](trajectory%20a
 
 ## Website
 
-The [project website](https://gaojie058.github.io/iab-actonomy/) includes the taxonomy explorer, two SWE-agent case studies, and a SWE-chat example with human feedback. GitHub Pages publishes the root of the dedicated [`gh-pages` branch](https://github.com/gaojie058/iab-actonomy/tree/gh-pages); `main` contains the code and datasets. See the [website maintenance notes](https://github.com/gaojie058/iab-actonomy/blob/gh-pages/README.md).
+The [project website](https://actonomy-agents.github.io/) includes the taxonomy explorer, two SWE-agent case studies, and a SWE-chat example with human feedback. The website is maintained separately in the [`actonomy-agents.github.io` repository](https://github.com/actonomy-agents/actonomy-agents.github.io); this repository contains the code, datasets, and analysis tools.
 
 ## When to use Act\*ONOMY
 
