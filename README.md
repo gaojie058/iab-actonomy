@@ -1,17 +1,26 @@
 <p align="center">
-  <img src="assets/actonomy_logo.png" alt="Act*ONOMY" width="440">
+  <img src="assets/actonomy_logo.png" alt="Actonomy logo, styled as ACT*ONOMY" width="440">
 </p>
+
+<h1 align="center">Actonomy: A Taxonomy for Describing and Analyzing Agent Behavior</h1>
 
 <h3 align="center">A shared vocabulary for understanding, describing and analysing agent runtime behavior</h3>
 
 <p align="center">
   English · <a href="README.zh.md">中文</a><br>
-  <a href="Project Website">Project Website</a> ·
-  <a href="https://arxiv.org/abs/2605.13625">Paper</a> ·
+  <strong>How to Interpret Agent Behavior</strong><br>
+  <a href="https://gaojie058.github.io/">Jie Gao</a> et al.<br>
+  Accepted at <strong>NeurIPS 2026</strong><br>
+  <a href="https://gaojie058.github.io/Act-onomy/">Project website</a> ·
+  <a href="https://arxiv.org/abs/2605.13625">Paper (arXiv:2605.13625)</a> ·
   <a href="data/taxonomy/taxonomy.md">Taxonomy</a>
 </p>
 
-**Act\*ONOMY** describes what AI agents do at runtime through **10 actions, 46 subactions, and 120 leaf instances**. It combines a grounded-theory codebook, tools for quote-level trajectory analysis, and a protocol for extending the vocabulary as new behaviors emerge.
+**Actonomy** is an extensible taxonomy for **describing and analyzing agent behavior** at runtime. This official repository for [*How to Interpret Agent Behavior*](https://arxiv.org/abs/2605.13625) provides the codebook, datasets of behavior descriptions, and tools for automated agent trajectory analysis.
+
+The name combines **action** and **taxonomy**. **Actonomy** is styled **ACT\*ONOMY** in the paper and logo, and also appears as **Act-onomy** (the GitHub repository name) and **Act·onomy**. These names refer to the same research project.
+
+Developed through Grounded Theory, the taxonomy comprises **10 actions, 46 subactions, and 120 leaf categories**. Use it to annotate agent traces, compare behavioral profiles across agents, and examine patterns associated with successes and failures.
 
 <p align="center">
   <img src="assets/semantic_workflow.gif" alt="Original trajectory, two examples of sentence-level Action–Subaction–Leaf labels, turn summaries, and a shared purpose" width="1000"><br>
@@ -19,6 +28,10 @@
 </p>
 
 The animation follows T1–T4 of the [original requests-2317 log](trajectory%20annotation%20examples/case2_swe_agent_two_traces/trace1_psf__requests-2317.json). Two example pages show highlighted sentences from T1–T2 with **Action → Subaction → Leaf** labels taken verbatim from the [case-study annotations](trajectory%20annotation%20examples/case2_swe_agent_two_traces/trace1_psf__requests-2317.annotated.json). The four turn summaries then reveal a shared purpose. [Three-level annotation example](assets/semantic_workflow_labels.png) · [Static summary](assets/semantic_workflow.png).
+
+## Website
+
+The [project website](https://gaojie058.github.io/Act-onomy/) includes the taxonomy explorer, two SWE-agent case studies, and a SWE-chat example with human feedback. GitHub Pages serves the static files in [`docs/`](docs/) from `main`; see [website maintenance notes](docs/README.md).
 
 ## When to use Act\*ONOMY
 
@@ -90,6 +103,7 @@ The assistant saves the annotated JSON and an interactive HTML report. Open **`o
 │   ├── case2_swe_agent_two_traces/
 │   └── crosswalk/
 ├── assets/
+├── docs/
 ├── CITATION.cff
 ├── LICENSE
 └── LICENSE-codebook
@@ -100,6 +114,7 @@ The assistant saves the annotated JSON and an interactive HTML report. Open **`o
 | [data/](data/README.md) | Research corpora, canonical taxonomy, and development snapshots |
 | [tools/](tools/) | Four skill bundles with instructions, scripts, and supporting assets |
 | [trajectory annotation examples/](trajectory%20annotation%20examples/README.md) | Agent trajectories, annotated reports, and MAST/CoALA crosswalks |
+| [docs/](docs/README.md) | Static project website and downloadable research artifacts |
 | [assets/](assets/) | Act\*ONOMY branding, workflow animations, and static previews |
 
 <!-- ## Data and examples
@@ -127,21 +142,20 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and evidence requir
 
 ## Citation
 
-If you use Act\*ONOMY in research, cite [How to Interpret Agent Behavior](https://arxiv.org/abs/2605.13625):
+If you use the Actonomy taxonomy, datasets, or analysis tools, please cite the accompanying paper:
 
 ```bibtex
-@misc{gao2026interpret,
-  title = {How to Interpret Agent Behavior},
-  author = {Jie Gao and Kaiser Sun and Jen-tse Huang and Katherine Van Koevering and Sijie Ji and Heyuan Huang and Weiyan Shi and Zhuoran Lu and Ziang Xiao and Daniel Khashabi and Mark Dredze},
-  year = {2026},
-  eprint = {2605.13625},
-  archivePrefix = {arXiv},
-  primaryClass = {cs.AI},
-  url = {https://arxiv.org/abs/2605.13625}
+@article{gao2026interpret,
+  title   = {How to Interpret Agent Behavior},
+  author  = {Gao, Jie and Sun, Kaiser and Huang, Jen-tse and Van Koevering, Katherine and Ji, Sijie and Huang, Heyuan and Shi, Weiyan and Lu, Zhuoran and Xiao, Ziang and Khashabi, Daniel and Dredze, Mark},
+  journal = {arXiv preprint arXiv:2605.13625},
+  year    = {2026},
+  doi     = {10.48550/arXiv.2605.13625},
+  url     = {https://arxiv.org/abs/2605.13625}
 }
 ```
 
-Machine-readable citation metadata is in [CITATION.cff](CITATION.cff).
+Machine-readable citation metadata is available in [CITATION.cff](CITATION.cff).
 
 ## License
 
