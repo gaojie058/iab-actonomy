@@ -6,6 +6,10 @@
 
 <p align="center">
   <a href="README.md">English</a> · 中文<br>
+  <strong>How to Interpret Agent Behavior</strong><br>
+  <a href="https://gaojie058.github.io/">Jie Gao</a>, Kaiser Sun, Jen-tse Huang, Katherine Van Koevering, Sijie Ji, Heyuan Huang,<br>
+  Weiyan Shi, Zhuoran Lu, Ziang Xiao, Daniel Khashabi, Mark Dredze<br>
+  <a href="https://neurips.cc/Conferences/2026"><img src="docs/assets/neurips-logo.svg" alt="NeurIPS 2026" width="160"></a><br>
   <a href="https://arxiv.org/abs/2605.13625">论文</a> ·
   <a href="docs/quickstart.md">快速上手</a> ·
   <a href="data/taxonomy/taxonomy.md">行为分类</a> ·

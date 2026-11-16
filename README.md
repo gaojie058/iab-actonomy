@@ -9,8 +9,9 @@
 <p align="center">
   English · <a href="README.zh.md">中文</a><br>
   <strong>How to Interpret Agent Behavior</strong><br>
-  <a href="https://gaojie058.github.io/">Jie Gao</a> et al.<br>
-  Accepted at <strong>NeurIPS 2026</strong><br>
+  <a href="https://gaojie058.github.io/">Jie Gao</a>, Kaiser Sun, Jen-tse Huang, Katherine Van Koevering, Sijie Ji, Heyuan Huang,<br>
+  Weiyan Shi, Zhuoran Lu, Ziang Xiao, Daniel Khashabi, Mark Dredze<br>
+  <a href="https://neurips.cc/Conferences/2026"><img src="docs/assets/neurips-logo.svg" alt="NeurIPS 2026" width="160"></a><br>
   <a href="https://gaojie058.github.io/Act-onomy/">Project website</a> ·
   <a href="https://arxiv.org/abs/2605.13625">Paper (arXiv:2605.13625)</a> ·
   <a href="data/taxonomy/taxonomy.md">Taxonomy</a>
