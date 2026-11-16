@@ -28,13 +28,14 @@ Keep `.nojekyll` so the static files are served without Jekyll processing.
 ## Sources
 
 The released taxonomy contains 10 actions, 46 subactions, and 120 leaf categories.
-The two SWE-agent reports come from `3_case_studies/case2_swe_agent_two_traces/`.
+The two SWE-agent reports come from `trajectory annotation examples/case2_swe_agent_two_traces/`.
 The SWE-chat example `c621c551` is a supplied Claude Code report with 43 agent
 turns, 6 human inputs, and 113 quote annotations. It retains the supplied
 annotations, outcome, and original report. The explorer separates human inputs
 from agent labels and highlights the source field specified by each quote.
 The report is an additional example, not a new controlled experiment.
-Source hashes are recorded in `downloads/source-manifest.json`.
+Source hashes are recorded in `downloads/source-manifest.json`; its paths retain
+the original export locations for provenance.
 
 The original NeurIPS logo is from https://neurips.cc/public/MediaKit
 (asset: https://neurips.cc/media/Press/NeurIPS_logo.svg).

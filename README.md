@@ -4,16 +4,16 @@
 
 <h1 align="center">Actonomy: A Taxonomy for Describing and Analyzing Agent Behavior</h1>
 
-<p align="center">
-  A taxonomy, codebook, and tools for understanding what AI agents do.
-</p>
+<h3 align="center">A shared vocabulary for understanding, describing and analysing agent runtime behavior</h3>
 
 <p align="center">
+  English · <a href="README.zh.md">中文</a><br>
   <strong>How to Interpret Agent Behavior</strong><br>
   <a href="https://gaojie058.github.io/">Jie Gao</a> et al.<br>
   Accepted at <strong>NeurIPS 2026</strong><br>
+  <a href="https://gaojie058.github.io/Act-onomy/">Project website</a> ·
   <a href="https://arxiv.org/abs/2605.13625">Paper (arXiv:2605.13625)</a> ·
-  <a href="https://gaojie058.github.io/Act-onomy/">Project website</a>
+  <a href="data/taxonomy/taxonomy.md">Taxonomy</a>
 </p>
 
 **Actonomy** is an extensible taxonomy for **describing and analyzing agent behavior** at runtime. This official repository for [*How to Interpret Agent Behavior*](https://arxiv.org/abs/2605.13625) provides the codebook, datasets of behavior descriptions, and tools for automated agent trajectory analysis.
@@ -22,50 +22,123 @@ The name combines **action** and **taxonomy**. **Actonomy** is styled **ACT\*ONO
 
 Developed through Grounded Theory, the taxonomy comprises **10 actions, 46 subactions, and 120 leaf categories**. Use it to annotate agent traces, compare behavioral profiles across agents, and examine patterns associated with successes and failures.
 
-**Explore:** [Interactive website](https://gaojie058.github.io/Act-onomy/) · [Taxonomy and codebook](1_data/2_taxonomy/taxonomy.md) · [Automated trace analysis](2_tools/trace-qualitative-analyst/) · [Case studies](3_case_studies/) · [Contributing](CONTRIBUTING.md)
+<p align="center">
+  <img src="assets/semantic_workflow.gif" alt="Original trajectory, two examples of sentence-level Action–Subaction–Leaf labels, turn summaries, and a shared purpose" width="1000"><br>
+  <em>Raw trajectory → Turn excerpts → Behavior labels → Turn summaries → Shared purpose.</em>
+</p>
 
----
+The animation follows T1–T4 of the [original requests-2317 log](trajectory%20annotation%20examples/case2_swe_agent_two_traces/trace1_psf__requests-2317.json). Two example pages show highlighted sentences from T1–T2 with **Action → Subaction → Leaf** labels taken verbatim from the [case-study annotations](trajectory%20annotation%20examples/case2_swe_agent_two_traces/trace1_psf__requests-2317.annotated.json). The four turn summaries then reveal a shared purpose. [Three-level annotation example](assets/semantic_workflow_labels.png) · [Static summary](assets/semantic_workflow.png).
 
 ## Website
 
 The [project website](https://gaojie058.github.io/Act-onomy/) includes the taxonomy explorer, two SWE-agent case studies, and a SWE-chat example with human feedback. GitHub Pages serves the static files in [`docs/`](docs/) from `main`; see [website maintenance notes](docs/README.md).
 
----
+## When to use Act\*ONOMY
 
-## Data
+| Your goal                                          | Start here                                                             |
+|----------------------------------------------------|------------------------------------------------------------------------|
+| Understand an agent's reasoning and actions        | [Trajectory analysis](tools/trace-qualitative-analyst/README.md)       |
+| Study how a human steers an agent                  | [Human–agent analysis](tools/human-trace-qualitative-analyst/SKILL.md) |
+| Compare behavioral profiles across agents or tasks | [Case studies](trajectory%20annotation%20examples/README.md)                                     |
+| Identify behaviors missing from the vocabulary     | [Discovery workflow](tools/discovery-qualitative-analyst/SKILL.md)     |
 
-The datasets behind the empirical results in the paper.
+## Quickstart
 
-| Subdirectory                                                           | Contents                                                                                                                                                         |
-|------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `1_data/1_corpus_grounded_theory/` | The 35-paper grounded-theory corpus and the 780 behavior-description sentences extracted from it.<br><br>**Construction set** — 28 papers / 664 sentences: 20 papers (565 sentences) incorporated into V4.2, with 120 sentences quoted as evidence in the released codebook; the remaining 8 papers (99 sentences) were reviewed but judged off-topic for an agent-behavior taxonomy.<br>**Held-out set** — 7 papers / 116 sentences reserved for the Phase-2 reliability check; 50 sentences sampled for the human–human and human–LLM κ tests.<br><br>• `papers (35 items).csv` — per-paper index (title, domain tags, incorporation flag, anonymized reviewer, reliability-check flag); joins to the sentence CSVs on `paper_id`.<br>• `(construction set)behavioral_descriptions.csv` — 664 rows, one per (sentence, suggested code, human verdict).<br>• `(validation set) behavioral_descriptions_validation.csv` — 116 held-out sentences from the 7 validation papers. |
-| `1_data/2_taxonomy/`               | The Actonomy codebook itself: the canonical CSV/JSON taxonomy, the human-readable `taxonomy.md`, the dependency map, and the taxonomy-development trace.        |
-| `1_data/5_large_corpus/`           | A larger follow-up corpus: 210 agent papers and 3,455 behavior-description sentences extracted from them, used to stress-test Actonomy beyond the 35-paper set. |
+**Download skills → Install skills → Input a trajectory → Generate a report**
 
----
+Analysis runs in a compatible AI assistant with the skills loaded. The assistant reads the codebook, annotates evidence, and generates the report; `actonomy.py` provides parsing and rendering helpers, not automatic trajectory analysis.
 
-## Tools
+### 1. Download skills
 
-The three tools shipped with Actonomy, each implemented as a Claude Code skill under `2_tools/`.
+Download this repository; the skill bundles are in [`tools/`](tools/).
 
-| Tool                                                                          | What it does                                                                                  |
-|-------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------|
-| `Automated-Trace-Analysis-Tool`<br>`2_tools/trace-qualitative-analyst/`       | Takes a raw agent trajectory, tags each turn with the codebook, and renders an HTML report.   |
-| `LLM-powered-Discovery-Qualitative-Analyst`<br>`2_tools/discovery-qualitative-analyst/` | Reads a new agent paper, compares its behaviors against the codebook, and proposes revisions. |
-| `Automated-Codebook-Extension-Tool`<br>`2_tools/extension-tool/`              | Keeps the codebook and all files that depend on it in sync after edits.                       |
+```bash
+git clone https://github.com/gaojie058/Act-onomy.git
+cd Act-onomy
+```
 
----
+### 2. Install skills
 
-## Case studies
+Open the repository in your assistant and ask:
 
-Files for reproducing the case studies in the paper.
+```text
+Install tools/trace-qualitative-analyst and tools/human-trace-qualitative-analyst
+using this environment's skill installation workflow. Keep both complete
+folders side by side, including their references, scripts, and assets.
+```
 
-| Folder                                                                                     | Question                                                                                                                             | Scope                                                                                                                                                                                       |
-|--------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `3_case_studies/case1_three_agents/`         | Does Actonomy surface distinct behavioral profiles across agents that vary in architecture and task?                                | 300 trajectories across three agent collections (AG2/AutoGen, HyperAgent, SWE-Agent). Ships the aggregated `analysis_report.md` and `run_summaries.md` only; raw trajectories not included. |
-| `3_case_studies/case2_swe_agent_two_traces/` | Within a single agent, does the behavior profile change with the task (e.g., the same SWE-agent on two different SWE-bench tickets)? | Two `swe_agent` trajectories on SWE-bench (`psf/requests-2317`, `django/django-14411`), each with raw JSON, annotated JSON, and a rendered HTML report.                                     |
+The human-interaction skill depends on the trace skill. The assistant needs local file access and Python **3.10+** to run the bundled scripts.
 
----
+### 3. Input a trajectory
+
+Provide your trajectory file and ask:
+
+```text
+Use trace-qualitative-analyst to analyze my trajectory at <path/to/trajectory.json>.
+Annotate behavior with verbatim evidence from the trajectory and generate
+outputs/trajectory.annotated.json and outputs/trajectory.html.
+```
+
+For a Claude Code session with human interactions, use `human-trace-qualitative-analyst` and provide the session `.jsonl` file. See the [full quickstart](docs/quickstart.md) for input formats and a bundled example.
+
+### 4. Generate a report
+
+The assistant saves the annotated JSON and an interactive HTML report. Open **`outputs/trajectory.html`** in your browser to explore turn-by-turn behavior, evidence quotes, and action distributions.
+
+## Repository layout
+
+```text
+.
+├── data/
+│   ├── corpus/
+│   ├── large_corpus/
+│   └── taxonomy/
+├── tools/
+│   ├── discovery-qualitative-analyst/
+│   ├── extension-tool/
+│   ├── human-trace-qualitative-analyst/
+│   └── trace-qualitative-analyst/
+├── trajectory annotation examples/
+│   ├── case1_three_agents/
+│   ├── case2_swe_agent_two_traces/
+│   └── crosswalk/
+├── assets/
+├── docs/
+├── CITATION.cff
+├── LICENSE
+└── LICENSE-codebook
+```
+
+| Directory | Contents |
+| --- | --- |
+| [data/](data/README.md) | Research corpora, canonical taxonomy, and development snapshots |
+| [tools/](tools/) | Four skill bundles with instructions, scripts, and supporting assets |
+| [trajectory annotation examples/](trajectory%20annotation%20examples/README.md) | Agent trajectories, annotated reports, and MAST/CoALA crosswalks |
+| [docs/](docs/README.md) | Static project website and downloadable research artifacts |
+| [assets/](assets/) | Act\*ONOMY branding, workflow animations, and static previews |
+
+<!-- ## Data and examples
+
+| Resource                                                     | Included in this repository                                                 |
+|--------------------------------------------------------------|-----------------------------------------------------------------------------|
+| [Grounded-theory corpus](data/corpus/)                       | 35 papers; 664 construction and 116 held-out behavior sentences             |
+| [Codebook](data/taxonomy/)                                   | CSV/JSON sources, a readable taxonomy, and development snapshots            |
+| [Larger corpus](data/large_corpus/)                          | 3,455 behavior sentences; the current paper index has 211 records           |
+| [Three-agent comparison](trajectory%20annotation%20examples/case1_three_agents/)       | 300 source trajectory JSON files (100 per agent) and aggregate reports      |
+| [Two SWE-agent traces](trajectory%20annotation%20examples/case2_swe_agent_two_traces/) | Raw JSON, annotated JSON, and saved HTML for requests-2317 and django-14411 |
+| [MAST / CoALA crosswalks](trajectory%20annotation%20examples/crosswalk/)               | Mapping script and saved tables; mappings are analytic judgments            |
+
+The [data guide](data/README.md) explains corpus splits, the paper-index count discrepancy, and local-only materials. -->
+
+<!-- ## Development and contributing
+
+```bash
+make check      # Codebook consistency, documentation links, and regression tests
+make demo       # Render the bundled example
+make crosswalk  # Write regenerated mappings to outputs/crosswalk/
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and evidence requirements for taxonomy proposals. The existing pre-release pause on external contributions remains in effect. -->
 
 ## Citation
 
@@ -84,10 +157,8 @@ If you use the Actonomy taxonomy, datasets, or analysis tools, please cite the a
 
 Machine-readable citation metadata is available in [CITATION.cff](CITATION.cff).
 
----
-
 ## License
 
-- **Source code** (under `2_tools/` and helper scripts): MIT, see `LICENSE`.
-- **Codebook content** (`1_data/2_taxonomy/`) and **labeled datasets** (under `1_data/`): CC BY 4.0, see `LICENSE-codebook`.
-- Third-party assets used in the case studies (`swe_agent`, AutoGen / AG2, CodeAct, HyperAgent trajectories; MAST failure taxonomy) are credited under their original licenses in the paper's appendix.
+- **Source code and skill templates:** [MIT](LICENSE).
+- **Codebook content and labeled datasets:** [CC BY 4.0](LICENSE-codebook).
+- **Third-party case-study materials:** retain their original licenses and attribution; see the paper's appendix.
