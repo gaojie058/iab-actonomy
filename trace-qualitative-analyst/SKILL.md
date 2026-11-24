@@ -250,7 +250,7 @@ The `findings` array (0–4 entries) populates the Findings tab. Each finding is
 - A single short phrase that carries a phase transition
 - The contrast between annotation-dense reasoning turns and bare procedural turns
 
-If you have nothing meaningful to say, omit `findings` entirely. The renderer displays the tab when findings or behavior patterns are present.
+If you have nothing meaningful to say, omit `findings` entirely. Note: the Findings tab is currently hidden in rendered HTML reports (`scripts/report_layout.py` sets `{{FINDINGS_VISIBILITY}}` to `hidden`), while preserving any `findings` entries in the annotated JSON.
 
 **Summary vs. Findings:** the **summary** is a holistic narrative of the whole run (what happened, in what order, with what quality). The **findings** are punchy 1–2 sentence observations about *patterns the quote-level granularity reveals*. Don't duplicate; they read as complementary layers.
 
@@ -287,11 +287,13 @@ The Overview tab includes a resizable behavior-profile column. The Turn log open
 
 ## Working with the user
 
-Before stage 3, **show the user the parsed turns** (stage 1 + 2 output) and ask if anything looks off. Trajectory parsing can be ambiguous, especially around phase labels for borderline turns.
+By default, **run Stages 1 → 2 → 3 → 3b → 4 end-to-end in one pass** and generate both the annotated JSON and the rendered HTML report without pausing for intermediate confirmations.
 
-After stage 3 but before stage 4, **show the user a sample of your annotations** (3–5 turns' worth) and ask if the granularity / tag choices feel right. Annotation style is partly a matter of taste; calibrating early saves rework.
+Only pause to ask the user before proceeding if:
+- the input file/paste is ambiguous or does not contain a parseable trajectory, or
+- the user explicitly asks to review parsed turns or an annotation sample before rendering.
 
-After rendering, **always run `present_files`** so the user can open and review the artifact directly.
+After rendering, share direct links to the generated HTML report and annotated JSON (and run `present_files` if available) along with a brief summary of any borderline phase or codebook calls so the user can request targeted edits if needed.
 
 If the user asks for multiple trajectories (e.g., a successful one and a failed one for comparison), produce one HTML per trajectory. The codebook is shared across runs but each render is self-contained.
 

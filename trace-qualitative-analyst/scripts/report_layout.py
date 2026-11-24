@@ -89,7 +89,7 @@ def layout_values(data, agent_turns, segments, group_counts, source_json):
     return {
         '{{TURN_COUNT_LABEL}}': turn_label, '{{RUN_FACTS}}': facts, '{{STAGE_BAR}}': timeline,
         '{{STAGE_ROWS}}': ''.join(rows), '{{SAFE_SUMMARY}}': inline_text(data['summary']),
-        '{{PROFILE_BARS}}': profile, '{{FINDINGS_VISIBILITY}}': '' if findings or data.get('patterns') else 'hidden',
+        '{{PROFILE_BARS}}': profile, '{{FINDINGS_VISIBILITY}}': 'hidden',  # Temporarily hide Findings tab in rendered reports
         '{{FINDING_ROWS}}': findings, '{{STATUS_TEXT}}': escape(data['outcome'].capitalize()),
         '{{STATUS_COLOR}}': 'teal' if data['outcome'] == 'resolved' else 'orange',
         '{{SAFE_SEGMENTS_JSON}}': script_json(stages), '{{SOURCE_JSON}}': source_json,
