@@ -1,0 +1,1738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Trajectory & Behavior Profile · pylint-dev/pylint-5859</title>
+<!-- Yuque-style restyle: system fonts only, no external font CDN -->
+<style>
+:root {
+  --bg: #f6f7f9;
+  --bg-panel: #ffffff;
+  --ink: #262626;
+  --ink-soft: #585d63;
+  --ink-mute: #8a8f8d;
+  --rule: #ebecef;
+  --rule-soft: #f2f3f5;
+  --accent: #00b96b;
+  --accent-soft: #b7e7d1;
+  --thought: #5a68c9;
+  --action: #0f9b8a;
+  --obs: #c77d1a;
+  --obs-soft: #f7edd6;
+  --highlight: #eafaf2;
+  --radius: 10px;
+
+  --grp-Retrieval: #0891b2;
+  --grp-Retrieval-bg: rgba(8, 145, 178, 0.10);
+  --grp-Memory: #d97706;
+  --grp-Memory-bg: rgba(217, 119, 6, 0.10);
+  --grp-Planning: #0284c7;
+  --grp-Planning-bg: rgba(2, 132, 199, 0.10);
+  --grp-Reasoning: #4f46e5;
+  --grp-Reasoning-bg: rgba(79, 70, 229, 0.10);
+  --grp-Evaluating: #0d9488;
+  --grp-Evaluating-bg: rgba(13, 148, 136, 0.10);
+  --grp-Deciding: #7c3aed;
+  --grp-Deciding-bg: rgba(124, 58, 237, 0.10);
+  --grp-Grounding: #c026d3;
+  --grp-Grounding-bg: rgba(192, 38, 211, 0.10);
+  --grp-Executing: #059669;
+  --grp-Executing-bg: rgba(5, 150, 105, 0.10);
+  --grp-Learning: #db2777;
+  --grp-Learning-bg: rgba(219, 39, 119, 0.10);
+  --grp-Reflection: #e11d48;
+  --grp-Reflection-bg: rgba(225, 29, 72, 0.10);
+
+  --panel-w: 360px;
+}
+
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#1b1c1e; --bg-panel:#232427;
+    --ink:#e6e6e6; --ink-soft:#b3b7bb; --ink-mute:#8d9195;
+    --rule:#303236; --rule-soft:#2a2c30;
+    --accent:#33c98d; --accent-soft:#2b5f48;
+    --thought:#8f9cf0; --action:#34c9b3; --obs:#e0a955; --obs-soft:#382f18;
+    --highlight:#18271f;
+  }
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+body {
+  min-height: 100vh;
+}
+
+header.masthead {
+  border-bottom: 1px solid var(--rule);
+  padding: 28px calc(var(--panel-w) + 24px) 24px 40px;
+  background: var(--bg-panel);
+  position: relative;
+  z-index: 5;
+}
+
+.eyebrow {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin-bottom: 8px;
+}
+
+h1.title {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-weight: 600;
+  font-variation-settings: 'opsz' 144;
+  font-size: 38px;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+}
+
+h1.title em {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--accent);
+}
+
+.subtitle {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 15px;
+  color: var(--ink-soft);
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1.55;
+  max-width: 820px;
+}
+
+.meta-row {
+  display: flex;
+  gap: 24px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: var(--ink-mute);
+}
+
+.meta-row span strong {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.outcome-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 2px;
+  font-weight: 600;
+}
+.outcome-resolved { background: rgba(5, 150, 105, 0.13); color: var(--grp-Executing); }
+.outcome-unresolved { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
+
+.app {
+  position: relative;
+  min-height: calc(100vh - 140px);
+}
+
+@media (max-width: 1100px) {
+  header.masthead { padding-right: 40px; }
+  main.trajectory { margin-right: 0 !important; max-width: 100% !important; }
+  aside.codebook-panel {
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    border-left: none !important;
+    border-top: 1px solid var(--rule);
+  }
+}
+
+main.trajectory {
+  padding: 32px 40px 80px;
+  max-width: 900px;
+  margin-right: var(--panel-w);
+}
+
+.section-label {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--rule); }
+
+.issue-block {
+  background: var(--bg-panel);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--accent);
+  padding: 18px 22px;
+  margin-bottom: 28px;
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  color: var(--ink-soft);
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+.issue-block strong { font-weight: 600; color: var(--ink); }
+.issue-block code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; background: var(--rule-soft); padding: 1px 5px; border-radius: 2px; }
+
+.summary-block {
+  background: var(--bg-panel);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--thought);
+  padding: 20px 24px 22px;
+  margin-bottom: 32px;
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: var(--ink);
+  position: relative;
+}
+.summary-block .summary-eyebrow {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--thought);
+  font-weight: 600;
+  margin-bottom: 10px;
+  display: block;
+}
+.summary-block .summary-text {
+  font-style: normal;
+  color: var(--ink);
+  letter-spacing: 0;
+}
+.summary-block .summary-text strong { font-style: normal; font-weight: 600; color: var(--ink); }
+.summary-block .summary-text em { font-style: normal; color: var(--accent); }
+.summary-block .summary-text code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-style: normal; font-size: 13px; background: var(--rule-soft); padding: 1px 5px; border-radius: 2px; color: var(--ink); }
+.summary-block .summary-text ul { margin: 10px 0; padding-left: 22px; }
+.summary-block .summary-text li { margin-bottom: 8px; line-height: 1.6; }
+.summary-block .summary-text p { margin: 0 0 10px 0; }
+.method-note ul { margin: 8px 0 4px 0; padding-left: 20px; }
+.method-note li { margin-bottom: 5px; line-height: 1.55; }
+
+.method-note {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-style: normal;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  margin-bottom: 24px;
+  padding: 12px 16px;
+  background: var(--highlight);
+  border-left: 2px solid var(--accent);
+  border-radius: 0 2px 2px 0;
+  line-height: 1.6;
+}
+.method-note strong { font-style: normal; font-weight: 600; color: var(--ink); }
+.method-note code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; background: rgba(0,0,0,0.06); padding: 1px 5px; border-radius: 2px; font-style: normal; }
+
+.turn {
+  position: relative;
+  margin-bottom: 28px;
+  padding: 22px 24px 20px 28px;
+  background: var(--bg-panel);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  transition: all 0.25s ease;
+}
+.turn::before { content: ''; position: absolute; left: -1px; top: -1px; bottom: -1px; width: 4px; background: var(--rule); transition: background 0.25s ease; }
+.turn.active { border-color: var(--ink); box-shadow: 0 1px 8px rgba(0,0,0,0.05); }
+.turn.active::before { background: var(--accent); width: 4px; }
+
+.turn-header {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--rule);
+}
+
+.turn-num {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-weight: 600;
+  font-size: 28px;
+  font-variation-settings: 'opsz' 144;
+  color: var(--accent);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.turn-num small { font-size: 11px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink-mute); font-weight: 400; display: block; letter-spacing: 0.1em; margin-bottom: 2px; }
+
+.turn-tag-line { font-family: -apple-system, "PingFang SC", "Helvetica Neue", "Segoe UI", sans-serif; font-style: normal; font-size: 15px; color: var(--ink); font-weight: 500; flex: 1; line-height: 1.45; }
+
+/* ===== Collapsible turns =====
+   Turns render collapsed by default: only the header row (icon, number,
+   headline, phase pill) is visible. Clicking the header toggles the body.
+   Programmatic activation (codebook / signature clicks) auto-expands. */
+.turn-header, .interaction-header { cursor: pointer; user-select: none; }
+.turn-body { display: none; }
+.turn.expanded > .turn-body { display: block; }
+.turn:not(.expanded) .turn-header,
+.turn:not(.expanded) .interaction-header {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+.turn:not(.expanded) { padding-top: 16px; padding-bottom: 16px; }
+.turn-chevron {
+  flex-shrink: 0;
+  align-self: center;
+  color: var(--ink-mute);
+  font-size: 11px;
+  transition: transform 0.2s ease;
+}
+.turn.expanded .turn-chevron { transform: rotate(90deg); }
+
+.turns-controls {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-bottom: 14px;
+}
+.turns-controls button {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: var(--bg-panel);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.turns-controls button:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ===== Actor icons (Google Material Design icons: person / smart_toy) ===== */
+.actor-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  align-self: center;
+}
+.actor-icon svg { width: 20px; height: 20px; }
+.actor-agent { color: var(--accent); background: var(--highlight); border: 1px solid var(--accent-soft); }
+.actor-human { color: #b45309; background: var(--obs-soft); border: 1px solid rgba(217, 119, 6, 0.35); }
+
+/* ===== Human interaction cards =====
+   First-class human turns interleaved with agent (obs, thought, action)
+   turns. Verbatim prompt, amber palette, person icon — visually distinct
+   from agent turn cards. */
+.turn.interaction {
+  background: #fffbeb;
+  border: 1px solid rgba(217, 119, 6, 0.35);
+  border-left: 3px solid var(--obs);
+}
+.interaction-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed rgba(217, 119, 6, 0.35);
+}
+.int-num {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-weight: 600;
+  font-size: 28px;
+  color: #b45309;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.int-num small { font-size: 11px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink-mute); font-weight: 400; display: block; letter-spacing: 0.1em; margin-bottom: 2px; }
+.int-title { font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; font-size: 15px; color: var(--ink); font-weight: 500; flex: 1; }
+.int-title .small { font-size: 10px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink-mute); font-weight: 400; margin-left: 6px; }
+.int-label {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border: 1px solid rgba(217, 119, 6, 0.4);
+  border-radius: 2px;
+  color: #b45309;
+  background: rgba(217, 119, 6, 0.08);
+}
+.interaction-text {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ink);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Interaction rows in the right-panel trajectory signature */
+.sig-row.sig-interaction {
+  background: #fffbeb;
+  border: 1px solid rgba(217, 119, 6, 0.3);
+  border-radius: 3px;
+}
+.sig-row.sig-interaction:hover { background: var(--obs-soft); }
+.sig-num-h { color: #b45309 !important; }
+.sig-int-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  color: #92400e;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sig-int-text svg { width: 12px; height: 12px; flex-shrink: 0; color: #b45309; }
+
+.turn-phase {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  color: var(--ink-soft);
+  background: var(--bg);
+}
+.phase-reproduce { color: var(--obs); border-color: var(--obs-soft); background: var(--obs-soft); }
+.phase-localize { color: var(--thought); border-color: rgba(91,74,138,0.2); background: rgba(91,74,138,0.08); }
+.phase-edit { color: var(--action); border-color: rgba(5, 150, 105, 0.2); background: rgba(5, 150, 105, 0.08); }
+.phase-recover { color: var(--accent); border-color: var(--accent-soft); background: var(--accent-soft); }
+.phase-verify { color: var(--grp-Evaluating); border-color: rgba(26,88,120,0.2); background: rgba(26,88,120,0.08); }
+.phase-submit { color: var(--ink); border-color: var(--rule); background: var(--rule-soft); }
+.phase-other { color: var(--ink-soft); border-color: var(--rule); background: var(--bg); }
+
+.oat-block { margin: 12px 0; padding-left: 14px; border-left: 2px solid; font-size: 14px; line-height: 1.55; }
+.oat-block .lbl { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 600; margin-bottom: 6px; display: block; }
+
+.oat-obs { border-color: var(--obs); }
+.oat-obs .lbl { color: var(--obs); }
+
+.oat-thought { border-color: var(--thought); background: rgba(91, 74, 138, 0.025); padding: 8px 14px 10px; border-radius: 0 2px 2px 0; }
+.oat-thought .lbl { color: var(--thought); }
+.oat-thought .lbl .small { opacity: 0.5; font-weight: 400; text-transform: none; letter-spacing: 0.05em; font-style: italic; }
+.thought-text { font-family: -apple-system, "PingFang SC", "Helvetica Neue", "Segoe UI", sans-serif; font-style: normal; font-size: 14px; color: var(--ink); line-height: 1.65; letter-spacing: 0; }
+
+.oat-action { border-color: var(--action); }
+.oat-action .lbl { color: var(--action); }
+.oat-action .content {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+  background: #1f1f1f;
+  color: #eaeaea;
+  padding: 8px 12px;
+  border-radius: 2px;
+  display: block;
+  margin-top: 4px;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+.oat-action .content .cmt { color: #888888; }
+.oat-action .content .kw { color: #d4a574; }
+
+.content { color: var(--ink); }
+.content code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; background: var(--rule-soft); padding: 1px 5px; border-radius: 2px; }
+
+.qmark {
+  font-style: italic;
+  background: var(--qbg, var(--rule-soft));
+  border-bottom: 1.5px solid var(--qcolor, var(--ink-mute));
+  padding: 0 2px;
+  margin: 0 1px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  border-radius: 1px;
+  position: relative;
+}
+.qmark:hover { background: var(--qcolor, var(--ink-mute)); color: var(--bg); }
+.qmark sup { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-style: normal; font-size: 9px; font-weight: 600; color: var(--qcolor, var(--ink-mute)); margin-left: 2px; letter-spacing: 0; vertical-align: super; line-height: 0; }
+.qmark:hover sup { color: var(--bg); }
+
+.annotations {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.annotations-header { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-mute); font-weight: 600; margin-bottom: 4px; }
+
+.annot-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1.1fr);
+  gap: 10px;
+  align-items: baseline;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 5px 6px;
+  border-radius: 2px;
+  transition: background 0.18s ease;
+}
+.annot-row:hover { background: var(--rule-soft); }
+.annot-row.flash { background: var(--qbg, var(--rule-soft)); }
+
+.annot-quote {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-style: italic;
+  color: var(--qcolor, var(--ink));
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.annot-quote::before { content: '"'; opacity: 0.5; }
+.annot-quote::after { content: '"'; opacity: 0.5; }
+.annot-quote .qnum { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-style: normal; font-size: 9px; font-weight: 600; margin-right: 4px; opacity: 0.7; vertical-align: super; }
+
+.annot-arrow { color: var(--ink-mute); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
+
+.annot-tag { font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; font-size: 11.5px; color: var(--ink-soft); letter-spacing: 0.005em; }
+.annot-tag .annot-grp { font-weight: 600; color: var(--qcolor, var(--ink)); }
+.annot-tag .annot-sep { margin: 0 4px; opacity: 0.4; }
+.annot-tag .annot-leaf { color: var(--ink); }
+
+.insight {
+  margin-top: 12px;
+  padding: 10px 12px 10px 14px;
+  background: var(--highlight);
+  border-radius: 2px;
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 13px;
+  font-style: normal;
+  color: var(--ink-soft);
+  position: relative;
+  line-height: 1.6;
+}
+.insight::before { content: '※'; position: absolute; left: -22px; top: 8px; font-size: 14px; color: var(--accent); font-style: normal; }
+.insight strong { font-style: normal; font-weight: 600; color: var(--ink); }
+
+/* Segment summary card inside the right-panel trajectory signature.
+   Sits above the first row of each `segments[]` entry — a compact "what
+   the agent is doing in this stretch" preface for the row block below. */
+.sig-segment {
+  margin: 14px 0 6px;
+  padding: 8px 10px;
+  background: var(--highlight);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 2px 2px 0;
+}
+.sig-segment:first-child { margin-top: 4px; }
+.sig-segment-tag {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 8.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+.sig-segment-title {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-weight: 600;
+  font-size: 12.5px;
+  font-style: italic;
+  color: var(--ink);
+  line-height: 1.3;
+  margin-bottom: 3px;
+}
+.sig-segment-body {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 12px;
+  color: var(--ink-soft);
+  line-height: 1.55;
+}
+.sig-segment-body code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+  background: rgba(79, 70, 229, 0.08);
+  padding: 0 3px;
+  border-radius: 2px;
+}
+
+aside.codebook-panel {
+  background: var(--bg-panel);
+  border-left: 1px solid var(--rule);
+  padding: 32px 24px 60px;
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: var(--panel-w);
+  height: 100vh;
+  overflow-y: auto;
+  z-index: 10;
+}
+aside.codebook-panel::-webkit-scrollbar { width: 6px; }
+aside.codebook-panel::-webkit-scrollbar-track { background: transparent; }
+aside.codebook-panel::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 3px; }
+
+/* Drag handle on the panel's left edge — sits over the border, 6px hit area,
+   shows a thin colored stripe on hover/drag. Double-click resets width. */
+#panel-resize-handle {
+  position: absolute;
+  top: 0;
+  left: -3px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 20;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+#panel-resize-handle:hover,
+#panel-resize-handle:active {
+  background: linear-gradient(to right, transparent 0%, transparent 40%, var(--accent) 40%, var(--accent) 60%, transparent 60%);
+}
+
+.panel-title { font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; font-weight: 600; font-size: 22px; font-variation-settings: 'opsz' 144; margin-bottom: 4px; letter-spacing: -0.01em; }
+.panel-sub { font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; font-style: normal; font-size: 12.5px; color: var(--ink-soft); line-height: 1.5; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--rule); }
+
+/* Pie chart section */
+.pie-section {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--rule);
+}
+.pie-svg-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+.pie-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 11px;
+}
+.pie-legend-row {
+  display: grid;
+  grid-template-columns: 12px 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  color: var(--ink-soft);
+}
+.pie-legend-swatch { width: 10px; height: 10px; border-radius: 1px; }
+.pie-legend-name { font-weight: 500; color: var(--ink); }
+.pie-legend-pct { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; color: var(--ink-mute); }
+.pie-legend-count { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; color: var(--ink-mute); }
+
+.pie-slice { transition: opacity 0.2s ease; cursor: pointer; }
+.pie-slice:hover { opacity: 0.8; }
+
+.cb-group { margin-bottom: 18px; }
+.cb-group-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+.cb-group-name { font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; font-weight: 600; font-size: 14px; font-style: italic; color: var(--qcolor, var(--ink)); }
+.cb-count { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; color: var(--ink-mute); background: var(--bg); padding: 1px 6px; border-radius: 8px; border: 1px solid var(--rule); }
+.cb-bar { height: 4px; background: var(--rule-soft); border-radius: 2px; margin-bottom: 8px; overflow: hidden; }
+.cb-bar-fill { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
+.cb-items { display: flex; flex-direction: column; gap: 2px; margin-left: 4px; }
+.cb-item {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  padding: 4px 8px 4px 12px;
+  border-left: 2px solid var(--rule);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 0 2px 2px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+}
+.cb-item:hover { background: var(--bg); border-left-color: var(--ink-soft); color: var(--ink); }
+.cb-item.fired { border-left-color: var(--qcolor, var(--accent)); color: var(--ink); background: var(--qbg, var(--accent-soft)); font-weight: 500; }
+.cb-item-text { flex: 1; }
+.cb-item .turn-refs { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; color: var(--ink-mute); flex-shrink: 0; }
+.cb-item.fired .turn-refs { color: var(--qcolor, var(--accent)); font-weight: 600; }
+
+.summary-footer {
+  margin-top: 60px;
+  padding: 28px;
+  background: var(--bg-panel);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+.summary-footer h2 { font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; font-weight: 600; font-size: 22px; margin-bottom: 4px; letter-spacing: -0.01em; }
+.summary-footer .sub { font-style: italic; color: var(--ink-soft); font-size: 14px; margin-bottom: 20px; }
+.findings { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+.finding { padding: 14px 16px; border-left: 2px solid var(--accent); background: var(--bg); font-size: 13px; line-height: 1.55; }
+.finding strong { font-weight: 600; display: block; margin-bottom: 4px; color: var(--ink); }
+.finding span { color: var(--ink-soft); }
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 40%, transparent); }
+  100% { box-shadow: 0 0 0 8px transparent; }
+}
+.cb-item.fired.flash, .annot-row.flash, .qmark.flash-pulse { animation: pulse-ring 0.6s ease-out; }
+
+.legend {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 24px;
+  padding: 10px 14px;
+  background: var(--bg-panel);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  color: var(--ink-soft);
+  flex-wrap: wrap;
+  align-items: center;
+}
+.legend-item { display: flex; align-items: center; gap: 6px; }
+.legend-dot { width: 8px; height: 8px; border-radius: 1px; }
+.legend-dot.obs { background: var(--obs); }
+.legend-dot.thought { background: var(--thought); }
+.legend-dot.action { background: var(--action); }
+.legend small { margin-left: auto; color: var(--ink-mute); font-style: italic; }
+
+/* ===== Trajectory signature (right panel, above the bar chart) =====
+   Auto-built in JS from the same turns/quotes data. No extra schema fields. */
+.signature-section {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--rule);
+}
+.sig-section-title {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+.sig-section-sub {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-style: italic;
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+.sig-flat {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  white-space: pre-wrap;
+  word-break: normal;
+  overflow-wrap: anywhere;
+  user-select: all;
+  cursor: text;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.sig-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+.sig-row {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 6px;
+  align-items: start;
+  padding: 5px 6px 5px 4px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 2px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  transition: background 0.15s ease;
+}
+.sig-row:hover { background: var(--bg); }
+.sig-row:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.sig-num {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  color: var(--ink-mute);
+  font-weight: 600;
+  text-align: right;
+  padding-right: 4px;
+  padding-top: 2px;
+}
+.sig-num .sig-flag {
+  display: inline;
+  margin-left: 2px;
+  color: var(--accent);
+  font-weight: 700;
+}
+.sig-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  align-items: center;
+}
+.sig-chip {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 1px 6px 2px;
+  border-radius: 2px;
+  border: 1px solid;
+  line-height: 1.35;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.sig-chip-grp {
+  text-transform: uppercase;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+}
+.sig-chip-sub {
+  font-size: 10px;
+  font-weight: 600;
+}
+.sig-chip-sep {
+  font-size: 10px;
+  opacity: 0.45;
+  margin: 0 1px;
+}
+.sig-chip-leaf {
+  font-size: 9.5px;
+  font-weight: 500;
+  font-style: italic;
+  opacity: 0.78;
+}
+.sig-chip-empty {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: var(--ink-mute);
+  padding: 0 4px;
+}
+.sig-chip.grp-Retrieval  { color: var(--grp-Retrieval);  background: var(--grp-Retrieval-bg);  border-color: var(--grp-Retrieval); }
+.sig-chip.grp-Memory     { color: var(--grp-Memory);     background: var(--grp-Memory-bg);     border-color: var(--grp-Memory); }
+.sig-chip.grp-Planning   { color: var(--grp-Planning);   background: var(--grp-Planning-bg);   border-color: var(--grp-Planning); }
+.sig-chip.grp-Reasoning  { color: var(--grp-Reasoning);  background: var(--grp-Reasoning-bg);  border-color: var(--grp-Reasoning); }
+.sig-chip.grp-Evaluating   { color: var(--grp-Evaluating);   background: var(--grp-Evaluating-bg);   border-color: var(--grp-Evaluating); }
+.sig-chip.grp-Deciding   { color: var(--grp-Deciding);   background: var(--grp-Deciding-bg);   border-color: var(--grp-Deciding); }
+.sig-chip.grp-Grounding  { color: var(--grp-Grounding);  background: var(--grp-Grounding-bg);  border-color: var(--grp-Grounding); }
+.sig-chip.grp-Executing  { color: var(--grp-Executing);  background: var(--grp-Executing-bg);  border-color: var(--grp-Executing); }
+.sig-chip.grp-Learning   { color: var(--grp-Learning);   background: var(--grp-Learning-bg);   border-color: var(--grp-Learning); }
+.sig-chip.grp-Reflection { color: var(--grp-Reflection); background: var(--grp-Reflection-bg); border-color: var(--grp-Reflection); }
+
+.sig-restart-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  margin: 4px 0;
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  border-left: 2px solid var(--accent);
+  border-radius: 0 2px 2px 0;
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-style: italic;
+  font-size: 11px;
+  color: var(--accent);
+  cursor: help;
+}
+.sig-restart-glyph { font-size: 16px; line-height: 1; }
+.sig-restart-text { color: var(--ink-soft); }
+
+/* ============ behavior-pattern (success / failure) layer ============ */
+/* driven by the optional `patterns` field in the annotated JSON; absent -> nothing renders */
+/* signature chip highlight */
+.sig-chip-anom { outline: 1.5px solid; outline-offset: 1px; border-radius: 3px; }
+.sig-chip-anom-lo { outline-color: #e11d48; }
+.sig-chip-anom-hi { outline-color: #d97706; }
+.sig-chip-anom-mid { outline-color: #2563eb; }
+.sig-chip-anom-ok { outline-color: #16a34a; }
+.sig-chip-flag { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8px; font-weight: 700; margin-left: 3px; padding: 0 3px; border-radius: var(--radius); vertical-align: middle; }
+.sig-chip-flag-lo { color: #be123c; background: rgba(225,29,72,0.18); }
+.sig-chip-flag-hi { color: #b45309; background: rgba(217,119,6,0.18); }
+.sig-chip-flag-mid { color: #1d4ed8; background: rgba(37,99,235,0.18); }
+.sig-chip-flag-ok { color: #15803d; background: rgba(34,197,94,0.18); }
+/* codebook-panel leaf highlight */
+.cb-anom-legend { font-size: 10px; color: var(--ink-soft); margin-bottom: 10px; padding: 6px 8px; background: var(--rule-soft); border-radius: 3px; line-height: 1.6; }
+.cb-item.cb-anom:not(.fired) { border-left-width: 3px; }
+.cb-item.cb-anom-lo:not(.fired) { border-left-color: #e11d48; background: rgba(225,29,72,0.07); }
+.cb-item.cb-anom-hi:not(.fired) { border-left-color: #d97706; background: rgba(217,119,6,0.07); }
+.cb-item.cb-anom-mid:not(.fired) { border-left-color: #2563eb; background: rgba(37,99,235,0.07); }
+.cb-item.cb-anom-ok:not(.fired) { border-left-color: #16a34a; background: rgba(34,197,94,0.07); }
+.cb-anom-badge { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; font-weight: 700; padding: 0 4px; border-radius: 6px; margin-left: 4px; }
+.cb-anom-b-lo { color: #be123c; background: rgba(225,29,72,0.16); }
+.cb-anom-b-hi { color: #b45309; background: rgba(217,119,6,0.16); }
+.cb-anom-b-mid { color: #1d4ed8; background: rgba(37,99,235,0.16); }
+.cb-anom-b-ok { color: #15803d; background: rgba(34,197,94,0.16); }
+/* custom hover card (模式类型 / 诊断原因 / 建议) */
+#anom-tip { position: fixed; z-index: 99999; max-width: 340px; background: #0f172a; color: #f8fafc; border-radius: 9px; padding: 12px 14px; font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; font-size: 12.5px; line-height: 1.55; box-shadow: 0 10px 34px rgba(0,0,0,0.32); pointer-events: none; opacity: 0; display: none; }
+#anom-tip.show { opacity: 1; display: block; }
+#anom-tip .at-type { font-weight: 700; font-size: 11px; letter-spacing: 0.03em; padding: 2px 9px; border-radius: 11px; }
+#anom-tip .at-ok { color: #86efac; background: rgba(34,197,94,0.20); }
+#anom-tip .at-bad { color: #fca5a5; background: rgba(239,68,68,0.20); }
+#anom-tip .at-row { margin-top: 9px; }
+#anom-tip .at-label { color: #94a3b8; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-bottom: 2px; }
+#anom-tip .at-val { color: #f1f5f9; }
+/* auto pattern-summary table (main column) */
+#patterns-summary { margin-top: 30px; }
+.ps-table-wrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--bg-panel); }
+table.ps-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 640px; }
+table.ps-table th { text-align: left; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-mute); font-weight: 600; padding: 10px 12px; border-bottom: 1px solid var(--rule); background: var(--rule-soft); }
+table.ps-table td { padding: 9px 12px; border-bottom: 1px solid var(--rule-soft); color: var(--ink-soft); vertical-align: top; line-height: 1.45; }
+table.ps-table tr:last-child td { border-bottom: none; }
+.ps-leaf { font-weight: 600; color: var(--ink); }
+.ps-key { font-size: 10px; color: var(--ink-mute); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.ps-pill { display: inline-block; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; letter-spacing: 0.03em; font-weight: 700; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+.ps-ok { color: #15803d; background: rgba(34,197,94,0.14); }
+.ps-bad { color: #be123c; background: rgba(225,29,72,0.13); }
+
+
+:root { --grp-Evaluate: var(--grp-Evaluating); --grp-Evaluate-bg: var(--grp-Evaluating-bg); }
+.sig-chip.grp-Evaluate {color:var(--grp-Evaluate);background:var(--grp-Evaluate-bg);border-color:var(--grp-Evaluate);}
+.sig-chip {display:inline-block;max-width:100%;white-space:normal;overflow-wrap:anywhere;}
+.sig-chip > span + span {margin-left:4px;}
+.archive-nav {font: 12px/1.7 Inter, sans-serif; margin-bottom:12px; overflow-wrap:anywhere; color:var(--ink-soft);}
+.archive-nav a {color:var(--accent);}
+.archive-notes {font: 13px/1.6 Inter, sans-serif; color:var(--ink-soft); margin: 14px 0;}
+.archive-notes summary {cursor:pointer; font-weight:600;}
+.archive-notes ul {padding-left:1.5rem;}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+<nav class="archive-nav"><a href="../index.html">Report index</a> &nbsp;›&nbsp; SWE-bench-Lite &nbsp;·&nbsp; <a href="example_pylint_5859.annotated--ec8df04eff64.json">Annotation JSON</a></nav>
+  <div class="eyebrow">Quote-grounded annotation</div>
+  <h1 class="title">Agent Trajectory <em>&</em> Behavior Profile</h1>
+  <div class="subtitle">This report walks through one agent session step by step. Every label is tied to the exact quoted words that justify it — so you can see what was asked, what the agent did, and why.</div>
+  <div class="meta-row">
+    <span><strong>Instance</strong> pylint-dev/pylint-5859</span>
+    <span><strong>Model</strong> SWE-agent w/ GPT-4 Turbo</span>
+    <span><strong>Turns</strong> 13</span>
+    
+    <span><strong>Outcome</strong> <span class="outcome-pill outcome-resolved">RESOLVED ✓</span></span>
+    <span><strong>Annotations</strong> 39</span>
+  </div>
+</header>
+
+<div class="app">
+
+<main class="trajectory">
+
+<div class="section-label">the task</div>
+<div class="issue-block">&quot;--notes&quot; option ignores note tags that are entirely punctuation. Running `pylint test.py --notes=&quot;YES,???&quot;` on a file with two fixme-style comments (`# YES: yes` and `# ???: no`) only reports W0511 for the first; the all-punctuation tag `???` is silently dropped. Expected: both should fire.</div>
+
+<div class="section-label">trajectory summary</div>
+<div class="summary-block">
+  <span class="summary-eyebrow">What happened in this run</span>
+  <div class="summary-text">The agent fixes a <strong>pylint</strong> false-negative where <code>--notes</code> silently drops note tags made entirely of punctuation (e.g. <code>???</code>) — only alphanumeric tags fire W0511. The 13-turn run falls into three clean phases. <em>Reproduce</em> (T1–T3) builds the minimal two-line repro directly from the issue text and confirms only one W0511 fires. <em>Localize</em> (T4–T9) loses two turns to a recovery loop when <code>grep</code> interprets <code>--notes</code> as a flag (T5–T6), then walks into <code>pylint/checkers/misc.py</code> via match-count ranking and scrolling, reaching the bug at lines 124–126: a <code>\b</code> word-boundary assertion cannot anchor between two non-word characters, so <code>???</code> never matches. <em>Edit and verify</em> (T10–T13) replaces <code>\b</code> with a positive lookahead, re-runs the original repro, and confirms both tags fire before submitting. Verification is genuine — the exact command that failed at T3 succeeds at T11 — so the resolution is not circular. T9 is the cognitive peak of the run, with five distinct codebook moves in a single thought paragraph.</div>
+</div>
+
+
+<div class="method-note">
+  <strong>How to read this.</strong> Each turn shows the verbatim <em>thought</em> from the trajectory. Inside, underlined phrases are <em>linguistic evidence</em> for a codebook label — the colour matches the codebook group on the right. Below each thought, the annotation table reads <code>"quote" → Group › Subgroup › Action</code>, one row per phrase. Click any phrase, any row, or any codebook entry — they highlight bidirectionally without scrolling.
+</div>
+
+<div class="legend">
+  <div class="legend-item"><span class="legend-dot obs"></span> Observation</div>
+  <div class="legend-item"><span class="legend-dot thought"></span> Thought</div>
+  <div class="legend-item"><span class="legend-dot action"></span> Action</div>
+  <small>click anything underlined to light up its tag — and the other way around</small>
+</div>
+
+<div class="section-label">trajectory · 13 turns</div>
+
+<div class="turns-controls">
+  <button id="expand-all" type="button">expand all</button>
+  <button id="collapse-all" type="button">collapse all</button>
+</div>
+
+<div id="turns-container"></div>
+
+<div class="summary-footer">
+  <h2>Summary findings</h2>
+  <div class="sub">Patterns that only become visible when every tag points at an exact quote</div>
+  <div class="findings"><div class="finding"><strong>T9 fires five groups in one paragraph</strong><span>Turn 9's thought spans Analysing, Retrieval, Inferring (twice: dataflow then diagnosis), and Planning — four subgroups in one unbroken paragraph. Whole-thought tagging collapses this into a single "Reasoning" label and loses the localize-to-edit pivot that Planning › Plan deeper inspection before edit captures.</span></div><div class="finding"><strong>Recovery lives in one clause</strong><span>At T6, <em>"use a different search term"</em> is the entire signal that separates genuine recovery (Deciding › Pick alternative strategy) from the repeated mistake at T5. Without quote-level grounding, the two turns look identical.</span></div><div class="finding"><strong>Sense groups cluster at phase boundaries</strong><span>Retrieval and Memory tags appear almost exclusively at the starts of phases — T2 reads the issue, T8 tracks the file cursor, T9 reads code semantics — while Think and Act dominate mid-phase turns. This boundary pattern is invisible at the turn level.</span></div></div>
+</div>
+
+<div id="patterns-summary"></div>
+
+</main>
+
+<aside class="codebook-panel">
+  <div id="panel-resize-handle" title="Drag to resize · double-click to reset"></div>
+  <div class="panel-title">What the agent did, by category</div>
+  <div class="panel-sub">Counted from the tagged quotes across all 13 agent steps</div>
+
+  <div class="pie-section">
+    <div class="pie-legend"><div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ink-mute); letter-spacing: 0.08em; text-transform: uppercase; text-align: center; margin-bottom: 10px;">39 tags across 9 groups</div></div>
+    <div class="pie-svg-wrap"><svg width="300" height="206" viewBox="0 0 300 206" xmlns="http://www.w3.org/2000/svg" style="display: block; margin: 0 auto;"><g class="pie-slice" data-grp="Reasoning" style="cursor: pointer;"><title>Reasoning: 18 (46%)</title><rect x="0" y="4" width="300" height="22" fill="transparent"/><text x="96" y="18.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Reasoning</text><rect x="102" y="9" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="9" width="164.0" height="12" fill="#4f46e5" rx="2"/><text x="298" y="18.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">18</text></g><g class="pie-slice" data-grp="Executing" style="cursor: pointer;"><title>Executing: 4 (10%)</title><rect x="0" y="26" width="300" height="22" fill="transparent"/><text x="96" y="40.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Executing</text><rect x="102" y="31" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="31" width="36.4" height="12" fill="#059669" rx="2"/><text x="298" y="40.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">4</text></g><g class="pie-slice" data-grp="Evaluating" style="cursor: pointer;"><title>Evaluating: 4 (10%)</title><rect x="0" y="48" width="300" height="22" fill="transparent"/><text x="96" y="62.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Evaluating</text><rect x="102" y="53" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="53" width="36.4" height="12" fill="#0d9488" rx="2"/><text x="298" y="62.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">4</text></g><g class="pie-slice" data-grp="Planning" style="cursor: pointer;"><title>Planning: 3 (8%)</title><rect x="0" y="70" width="300" height="22" fill="transparent"/><text x="96" y="84.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Planning</text><rect x="102" y="75" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="75" width="27.3" height="12" fill="#0284c7" rx="2"/><text x="298" y="84.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">3</text></g><g class="pie-slice" data-grp="Memory" style="cursor: pointer;"><title>Memory: 3 (8%)</title><rect x="0" y="92" width="300" height="22" fill="transparent"/><text x="96" y="106.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Memory</text><rect x="102" y="97" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="97" width="27.3" height="12" fill="#d97706" rx="2"/><text x="298" y="106.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">3</text></g><g class="pie-slice" data-grp="Retrieval" style="cursor: pointer;"><title>Retrieval: 3 (8%)</title><rect x="0" y="114" width="300" height="22" fill="transparent"/><text x="96" y="128.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Retrieval</text><rect x="102" y="119" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="119" width="27.3" height="12" fill="#0891b2" rx="2"/><text x="298" y="128.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">3</text></g><g class="pie-slice" data-grp="Reflection" style="cursor: pointer;"><title>Reflection: 2 (5%)</title><rect x="0" y="136" width="300" height="22" fill="transparent"/><text x="96" y="150.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Reflection</text><rect x="102" y="141" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="141" width="18.2" height="12" fill="#e11d48" rx="2"/><text x="298" y="150.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">2</text></g><g class="pie-slice" data-grp="Deciding" style="cursor: pointer;"><title>Deciding: 1 (3%)</title><rect x="0" y="158" width="300" height="22" fill="transparent"/><text x="96" y="172.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Deciding</text><rect x="102" y="163" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="163" width="9.1" height="12" fill="#7c3aed" rx="2"/><text x="298" y="172.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">1</text></g><g class="pie-slice" data-grp="Grounding" style="cursor: pointer;"><title>Grounding: 1 (3%)</title><rect x="0" y="180" width="300" height="22" fill="transparent"/><text x="96" y="194.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Grounding</text><rect x="102" y="185" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="185" width="9.1" height="12" fill="#c026d3" rx="2"/><text x="298" y="194.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">1</text></g></svg></div>
+  </div>
+
+  <div id="signature-container"></div>
+
+  <div id="codebook-container"></div>
+</aside>
+
+</div>
+
+<script>
+const turns = [{"n": 1, "phase": "reproduce", "phaseLabel": "Reproduction", "headline": "Create empty test file.", "obs": "Initial state: issue text + empty working directory. No file open.", "thought": "To begin addressing the issue, we should first try to replicate the bug as described. We can do this by creating a new Python script that includes the comments with the note tags \"YES\" and \"???\" and then running pylint with the --notes option. Let's start by creating a new file called test.py and adding the relevant comments to it.", "action": "create test.py", "quotes": [{"quote": "first try to replicate the bug as described", "grp": "Planning", "sub": "Decompose task", "leaf": "Decompose into subgoals with success conditions"}, {"quote": "creating a new Python script that includes the comments", "grp": "Reasoning", "sub": "Generating", "leaf": "Generate initial codes"}, {"quote": "creating a new file called test.py", "grp": "Executing", "sub": "Executing plan", "leaf": "Initiate planned action"}], "insight": "The canonical SWE-agent opening: <strong>create → edit → python</strong>. Planning anchors the subgoal, Reasoning generates the script design, Executing fires the command — three groups in one short thought."}, {"n": 2, "phase": "reproduce", "phaseLabel": "Reproduction", "headline": "Insert the two fixme comments.", "obs": "test.py exists, empty. File viewer open at line 1.", "thought": "Now let's add the example comments from the issue into test.py.", "action": "edit 1:1\n# YES: yes\n# ???: no\nend_of_edit", "quotes": [{"quote": "add the example comments from the issue", "grp": "Memory", "sub": "Read memory", "leaf": "Read from working memory"}], "insight": ""}, {"n": 3, "phase": "reproduce", "phaseLabel": "Reproduction", "headline": "Run pylint to surface the bug.", "obs": "File viewer shows test.py with the two comment lines.", "thought": "The test.py file has been updated with the example comments. Next, we should run pylint with the --notes option to see if we can replicate the issue where the second line with punctuation-only tags is ignored.", "action": "pylint test.py --notes=\"YES,???\"", "quotes": [{"quote": "see if we can replicate the issue", "grp": "Evaluating", "sub": "Evaluating with gold", "leaf": "Plan verification step"}, {"quote": "punctuation-only tags is ignored", "grp": "Reasoning", "sub": "Inferring", "leaf": "Form precursor hypothesis about cause"}], "insight": ""}, {"n": 4, "phase": "localize", "phaseLabel": "Localize", "headline": "Bug confirmed — pivot to code search.", "obs": "pylint output: only ONE W0511 fires (for \"YES\"). The \"???\" line is silently dropped.", "thought": "The output confirms the issue: pylint only reports a fixme warning for the first line with the \"YES\" tag and ignores the second line with the \"???\" tag. This matches the behavior described in the issue. The next step is to locate the part of the pylint code that handles the --notes option and determine why it's ignoring note tags that are entirely punctuation. We should start by finding the file that contains the relevant code. Since we don't know the exact file name, we can search the directory for files that might contain the string '--notes' to find where the option is handled.", "action": "search_dir \"--notes\"", "quotes": [{"quote": "output confirms the issue", "grp": "Evaluating", "sub": "Evaluating with gold", "leaf": "Confirm actual ≠ expected"}, {"quote": "matches the behavior described in the issue", "grp": "Reasoning", "sub": "Comparing & Ranking", "leaf": "Match observation against spec"}, {"quote": "next step is to locate the part of the pylint code", "grp": "Planning", "sub": "Decompose task", "leaf": "Phase transition: reproduce → localize"}, {"quote": "determine why it's ignoring note tags", "grp": "Reasoning", "sub": "Inferring", "leaf": "Initial diagnostic framing"}, {"quote": "search the directory for files", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus"}], "insight": "The densest phase-transition turn in the run: five distinct codebook moves in one paragraph — Evaluate closes reproduction, Reasoning and Planning open localization, Retrieval fires the action."}, {"n": 5, "phase": "recover", "phaseLabel": "Mini-recovery", "headline": "grep eats the --notes flag.", "obs": "grep: unrecognized option '--notes'. The literal string parsed as a flag.", "thought": "It seems that the search_dir command did not work as expected because --notes was interpreted as an option for grep rather than a search term. To avoid this issue, we can enclose the search term in quotes to ensure it's treated as a literal string. Let's try searching again using the correct format for the search term.", "action": "search_dir \"--notes\"", "quotes": [{"quote": "did not work as expected", "grp": "Reflection", "sub": "Reflect on errors and failures", "leaf": "Detect failed action"}, {"quote": "--notes was interpreted as an option for grep", "grp": "Reasoning", "sub": "Inferring", "leaf": "Diagnose Error Cause"}, {"quote": "enclose the search term in quotes", "grp": "Reasoning", "sub": "Generating", "leaf": "Propose action candidates"}], "insight": "A misdiagnosis turn: the agent correctly detects the failure but proposes the wrong fix (quoting won't help when the string itself starts with <code>--</code>). The same action fires again at T5 with identical result."}, {"n": 6, "phase": "recover", "phaseLabel": "Recovery", "headline": "Drop the dashes — search \"notes\" instead.", "obs": "Same grep error. Quoting did not help.", "thought": "It appears that the issue persists because the search term is still being interpreted as an option. To circumvent this, we can use a different search term that is less likely to be confused with a command-line option. Let's try searching for just \"notes\" instead, which should still lead us to the relevant part of the code.", "action": "search_dir \"notes\"", "quotes": [{"quote": "the issue persists", "grp": "Reflection", "sub": "Reflect on errors and failures", "leaf": "Detect prior fix did not work"}, {"quote": "use a different search term", "grp": "Deciding", "sub": "Make a decision", "leaf": "Pick alternative strategy"}, {"quote": "should still lead us to the relevant part of the code", "grp": "Reasoning", "sub": "Inferring", "leaf": "Infer causal relationship"}], "insight": "<em>\"use a different search term\"</em> is the entire recovery signal — four words that carry a Deciding tag and break the loop. Everything else in this thought is scaffolding."}, {"n": 7, "phase": "localize", "phaseLabel": "File-level localize", "headline": "Pick misc.py by match-count ranking.", "obs": "24 matches across multiple files. pylint/checkers/misc.py has 9 matches — the highest.", "thought": "The search results indicate that there are several matches for \"notes\" in the repository, but the most likely candidate for the code we need to examine is in pylint/checkers/misc.py, as it contains the most matches. This file is probably where the miscellaneous checkers, including the fixme warning (W0511), are implemented. Let's open the misc.py file to investigate further.", "action": "open pylint/checkers/misc.py", "quotes": [{"quote": "most likely candidate", "grp": "Reasoning", "sub": "Comparing & Ranking", "leaf": "Rank items by criteria"}, {"quote": "contains the most matches", "grp": "Reasoning", "sub": "Inferring", "leaf": "Infer hidden state from observable evidence"}, {"quote": "probably where the miscellaneous checkers", "grp": "Reasoning", "sub": "Inferring", "leaf": "Infer structure from indirect evidence"}, {"quote": "open the misc.py file", "grp": "Grounding", "sub": "Interact with digital environments", "leaf": "Issue operational commands"}], "insight": ""}, {"n": 8, "phase": "localize", "phaseLabel": "In-file navigate", "headline": "Scroll past license and boilerplate.", "obs": "First 100 lines: license header, imports, ByIdManagedMessagesChecker. No fixme handling visible.", "thought": "We have opened the misc.py file which likely contains the code for the fixme warning (W0511) related to the --notes option. Since the file is 203 lines long and we are currently viewing the first 100 lines, we need to scroll down or use the goto command to find the relevant section that handles the --notes option. Let's scroll down to see more of the file.", "action": "scroll_down", "quotes": [{"quote": "we are currently viewing the first 100 lines", "grp": "Memory", "sub": "Read memory", "leaf": "Track current view state"}, {"quote": "find the relevant section", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus"}], "insight": ""}, {"n": 9, "phase": "localize", "phaseLabel": "Pinpoint", "headline": "Identify \\b at lines 124–126 as the root cause.", "obs": "Lines 122–128 visible: EncodingChecker.open() builds the regex. Lines 124 and 126 end with \\b.", "thought": "We have found the relevant section of the misc.py file that handles the --notes option. The regular expression pattern used to match note tags is constructed in lines 122-128. It seems that the issue might be related to how the regular expression is constructed or how it is used to match comments in the source code. The regular expression is built from the notes configuration, which is a list of comma-separated values, and an optional notes-rgx regular expression. The pattern is then compiled and used in the process_tokens method to search for matching comments. The issue might be that the regular expression pattern does not account for note tags that consist entirely of punctuation characters. To fix this, we may need to adjust the regular expression pattern to ensure it matches these tags correctly. Before we make any changes, let's examine the regular expression pattern construction in more detail. We should look at the open method where the pattern is compiled, specifically lines 122-128.", "action": "goto 122", "quotes": [{"quote": "regular expression pattern used to match note tags is constructed in lines 122-128", "grp": "Reasoning", "sub": "Analysing", "leaf": "Analyse source code"}, {"quote": "is built from the notes configuration", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Read code semantics from open file"}, {"quote": "used in the process_tokens method", "grp": "Reasoning", "sub": "Inferring", "leaf": "Infer dataflow / control flow"}, {"quote": "pattern does not account for note tags that consist entirely of punctuation", "grp": "Reasoning", "sub": "Inferring", "leaf": "Diagnose Error Cause"}, {"quote": "examine the regular expression pattern construction in more detail", "grp": "Planning", "sub": "Decompose task", "leaf": "Plan deeper inspection before edit"}], "insight": "The cognitive peak of the run. Five distinct codebook moves in one thought paragraph: Analysing reads the code structure, Retrieval pulls semantic meaning, Inferring traces dataflow then diagnoses the cause, Planning defers the edit for one more inspection step."}, {"n": 10, "phase": "edit", "phaseLabel": "Patch", "headline": "Replace \\b with a lookahead assertion.", "obs": "File viewer centered on lines 122–128. The two \\b occurrences at 124 and 126 are visible.", "thought": "We are now looking at the section of the misc.py file where the regular expression for the --notes option is constructed. The regular expression is built from the notes configuration option, which is a list of note tags. These tags are escaped using re.escape and joined with a pipe | to form an alternation pattern. This pattern is then used to create a regular expression that matches comments starting with one of the note tags followed by a word boundary \\b. The issue might be with the word boundary \\b, which does not match if the tag is followed by punctuation. Since the tag \"???\" is entirely punctuation, the word boundary may not be recognized correctly, causing the tag not to match. To fix this issue, we can modify the regular expression to ensure that it matches note tags that are entirely punctuation. We can do this by removing the word boundary and allowing the tag to be followed by any non-word character or the end of the string. Let's edit the regular expression construction to fix the issue.", "action": "edit 124:126\n        regex_string = rf\"#\\s*({notes}|{self.config.notes_rgx})(?=\\W|$)\"\n    else:\n        regex_string = rf\"#\\s*({notes})(?=\\W|$)\"\nend_of_edit", "quotes": [{"quote": "word boundary \\b, which does not match if the tag is followed by punctuation", "grp": "Reasoning", "sub": "Inferring", "leaf": "Pinpoint root cause mechanism"}, {"quote": "word boundary may not be recognized correctly, causing the tag not to match", "grp": "Reasoning", "sub": "Inferring", "leaf": "Infer causal relationship"}, {"quote": "followed by any non-word character or the end of the string", "grp": "Reasoning", "sub": "Generating", "leaf": "Generate initial fix candidate"}, {"quote": "edit the regular expression construction", "grp": "Executing", "sub": "Executing plan", "leaf": "Apply patch via edit"}], "insight": ""}, {"n": 11, "phase": "verify", "phaseLabel": "Verify", "headline": "Re-run the original repro command.", "obs": "Edit accepted. File viewer confirms new lookahead at lines 124 and 126.", "thought": "The edit to the regular expression has been made successfully. We replaced the word boundary \\b with a lookahead assertion (?=\\W|$) that matches either a non-word character or the end of the string after the note tag. This should allow the regular expression to match note tags that consist entirely of punctuation. Before submitting the changes, we should test to ensure that the fix works as expected. We can do this by running pylint on the test.py file again with the --notes option to see if it now correctly identifies the \"???\" note tag. Let's run pylint on test.py with the updated code.", "action": "pylint test.py --notes=\"YES,???\"", "quotes": [{"quote": "should allow the regular expression to match note tags", "grp": "Reasoning", "sub": "Inferring", "leaf": "Predict patch effect"}, {"quote": "test to ensure that the fix works as expected", "grp": "Evaluating", "sub": "Evaluating with gold", "leaf": "Plan verification step"}, {"quote": "run pylint on test.py", "grp": "Executing", "sub": "Executing plan", "leaf": "Run verification command"}], "insight": ""}, {"n": 12, "phase": "other", "phaseLabel": "Cleanup", "headline": "Both W0511s fire — delete the repro file.", "obs": "pylint output: W0511 fires for BOTH \"YES\" and \"???\". Fix verified.", "thought": "The pylint output now shows that it correctly identifies both the \"YES\" and \"???\" note tags, which means the fix has resolved the issue. With the bug fixed, we can proceed to clean up any test files and then submit our changes to the code base. First, let's remove the test.py file since it was only needed for reproducing the issue.", "action": "rm test.py", "quotes": [{"quote": "correctly identifies both the \"YES\" and \"???\" note tags", "grp": "Evaluating", "sub": "Evaluating with gold", "leaf": "Confirm actual == expected"}, {"quote": "fix has resolved the issue", "grp": "Reasoning", "sub": "Inferring", "leaf": "Conclude success from evidence"}, {"quote": "clean up any test files", "grp": "Memory", "sub": "Discard information", "leaf": "Discard information from working memory"}], "insight": ""}, {"n": 13, "phase": "submit", "phaseLabel": "Submit", "headline": "Submit the patch.", "obs": "rm completed silently. test.py gone.", "thought": "The test.py file has been successfully removed. Now that we have fixed the issue and cleaned up the test files, we can submit our changes to the code base. Let's submit the changes using the submit command.", "action": "submit", "quotes": [{"quote": "submit our changes to the code base", "grp": "Executing", "sub": "Terminating", "leaf": "Terminate rollout with submission"}], "insight": ""}];
+const segments = [{"start": 1, "end": 3, "title": "Reproduce", "summary": "Agent builds the minimal two-line repro directly from the issue text (T1–T2) and confirms via <code>pylint --notes</code> that only the alphanumeric tag fires W0511 — the all-punctuation tag is silently dropped (T3)."}, {"start": 4, "end": 9, "title": "Localize", "summary": "Bug confirmed at T4, triggering a code search that immediately hits a two-turn recovery loop (T5–T6): <code>grep</code> interprets <code>--notes</code> as a flag, requiring a search-term substitution before results arrive. T7 ranks <code>misc.py</code> by match count, T8 scrolls past boilerplate, and T9 reaches the cognitive peak — five codebook moves pinpointing <code>\\b</code> at lines 124–126 as the root cause."}, {"start": 10, "end": 13, "title": "Edit · Verify · Submit", "summary": "T10 replaces <code>\\b</code> with a lookahead <code>(?=\\W|$)</code>. T11 re-runs the exact repro command from T3 and confirms both W0511s fire — verification is grounded, not circular. T12 cleans up the repro file and T13 submits."}];
+const QUOTE_TARGET = "thought"; // "thought" | "action"
+
+// Actor icons — Google Material Design icons (Apache 2.0):
+// "person" (social) for human turns, "smart_toy" (hardware) for agent turns.
+const ICON_HUMAN = '<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24" fill="currentColor"><path d="M0 0h24v24H0z" fill="none"/><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>';
+const ICON_AGENT = '<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24" fill="currentColor"><g><rect fill="none" height="24" width="24" y="0"/></g><g><path d="M20,9V7c0-1.1-0.9-2-2-2h-3c0-1.66-1.34-3-3-3S9,3.34,9,5H6C4.9,5,4,5.9,4,7v2c-1.66,0-3,1.34-3,3c0,1.66,1.34,3,3,3v4 c0,1.1,0.9,2,2,2h12c1.1,0,2-0.9,2-2v-4c1.66,0,3-1.34,3-3C23,10.34,21.66,9,20,9z M7.5,11.5C7.5,10.67,8.17,10,9,10 s1.5,0.67,1.5,1.5S9.83,13,9,13S7.5,12.33,7.5,11.5z M16,17H8v-2h8V17z M15,13c-0.83,0-1.5-0.67-1.5-1.5S14.17,10,15,10 s1.5,0.67,1.5,1.5S15.83,13,15,13z"/></g></svg>';
+
+function buildCodebook() {
+  const cb = {};
+  turns.forEach(t => {
+    t.quotes.forEach(q => {
+      if (!cb[q.grp]) cb[q.grp] = { items: {}, total: 0 };
+      const key = q.sub + ' › ' + q.leaf;
+      if (!cb[q.grp].items[key]) cb[q.grp].items[key] = { sub: q.sub, leaf: q.leaf, turns: [] };
+      cb[q.grp].items[key].turns.push(t.n);
+      cb[q.grp].total += 1;
+    });
+  });
+  return cb;
+}
+
+const codebook = buildCodebook();
+// Optional behavior-pattern layer: key = "`${sub} › ${leaf}`", value = {t, status, cause, advice}.
+// Injected from the annotated JSON's `patterns` field; {} when absent (nothing highlights).
+const PATTERNS = {};
+const ANOM_MARK = {lo:'⚠', hi:'▲', mid:'◆', ok:'✓'};
+
+const grpDisplayName = {};
+function displayGrp(g) { return grpDisplayName[g] || g; }
+
+function escapeHTML(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function highlightAction(s) {
+  let out = escapeHTML(s);
+  out = out.replace(/^(edit|create|open|search_dir|search_file|find_file|goto|scroll_down|scroll_up|submit|rm|pylint|python|pytest|cat|ls|cd|grep|sed|find|end_of_edit)(\b)/gm, '<span class="kw">$1</span>$2');
+  out = out.replace(/(#[^\n]*)/g, '<span class="cmt">$1</span>');
+  return out;
+}
+
+function renderThoughtWithQuotes(thought, quotes, turnNum, allQuotes = quotes) {
+  const positioned = quotes.map((q, idx) => {
+    const pos = thought.indexOf(q.quote);
+    return { ...q, idx: allQuotes.indexOf(q), pos };
+  }).filter(q => q.pos !== -1).sort((a, b) => a.pos - b.pos);
+
+  const filtered = [];
+  let lastEnd = -1;
+  for (const q of positioned) {
+    if (q.pos >= lastEnd) {
+      filtered.push(q);
+      lastEnd = q.pos + q.quote.length;
+    }
+  }
+
+  let out = '';
+  let cursor = 0;
+  for (const q of filtered) {
+    out += escapeHTML(thought.slice(cursor, q.pos));
+    out += `<span class="qmark" data-turn="${turnNum}" data-qidx="${q.idx}" data-grp="${q.grp}" data-key="${q.sub} › ${q.leaf}" style="--qcolor: var(--grp-${q.grp}); --qbg: var(--grp-${q.grp}-bg);">${escapeHTML(q.quote)}<sup>${q.idx + 1}</sup></span>`;
+    cursor = q.pos + q.quote.length;
+  }
+  out += escapeHTML(thought.slice(cursor));
+  return out;
+}
+
+function renderTurns() {
+  const container = document.getElementById('turns-container');
+  container.innerHTML = turns.map(t => {
+    // Human interaction events render as distinct verbatim-prompt cards.
+    if (t.kind === 'interaction') {
+      const intHeadline = t.headline || `${t.actor === 'human' ? 'Human' : escapeHTML(t.actor)} prompt`;
+      return `
+      <div class="turn interaction" data-turn="${t.id}">
+        <div class="interaction-header">
+          <span class="actor-icon actor-human" title="Human">${ICON_HUMAN}</span>
+          <div class="int-num"><small>prompt</small>${t.id}</div>
+          <div class="int-title">${escapeHTML(intHeadline)}</div>
+          ${t.label ? `<span class="int-label">${escapeHTML(t.label)}</span>` : ''}
+          <span class="turn-chevron">▶</span>
+        </div>
+        <div class="turn-body">
+          <div class="interaction-text">${escapeHTML(t.text)}</div>
+        </div>
+      </div>`;
+    }
+    const annotCount = t.quotes.length;
+    const annotRows = t.quotes.map((q, idx) => `
+      <div class="annot-row" data-turn="${t.n}" data-qidx="${idx}" data-grp="${q.grp}" data-key="${q.sub} › ${q.leaf}" style="--qcolor: var(--grp-${q.grp}); --qbg: var(--grp-${q.grp}-bg);">
+        <div class="annot-quote"><span class="qnum">${idx + 1}</span>${escapeHTML(q.quote)}</div>
+        <div class="annot-arrow">→</div>
+        <div class="annot-tag"><span class="annot-grp">${displayGrp(q.grp)}</span><span class="annot-sep">›</span>${q.sub}<span class="annot-sep">›</span><span class="annot-leaf">${q.leaf}</span></div>
+      </div>
+    `).join('');
+
+    let thoughtBlock, actionBlock, thoughtAnnotBlock = '', actionAnnotBlock = '', annotBlock = '';
+    if (QUOTE_TARGET === "action") {
+      // Action surface is the host: quote highlights live in the <code> action block.
+      // Thought becomes plain context.
+      const actionHTML = renderThoughtWithQuotes(t.action, t.quotes, t.n);
+      thoughtBlock = `
+        <div class="oat-block oat-thought">
+          <span class="lbl">Thought <span class="small">context · not annotated</span></span>
+          <div class="thought-text">${escapeHTML(t.thought)}</div>
+        </div>`;
+      actionBlock = `
+        <div class="oat-block oat-action">
+          <span class="lbl">Action <span class="small">verbatim · ${annotCount} annotation${annotCount === 1 ? '' : 's'}</span></span>
+          <code class="content">${actionHTML}</code>
+        </div>`;
+      annotBlock = annotCount > 0 ? `
+        <div class="annotations">
+          <div class="annotations-header">Quote-grounded annotations</div>
+          ${annotRows}
+        </div>` : '';
+    } else if (QUOTE_TARGET === "both") {
+      // Dual annotation: each quote carries its own target ("thought" | "action").
+      // Render both surfaces with their respective highlights, and put a small
+      // annotation table under each surface (so the reader can scan the surface,
+      // then immediately see what was tagged on it).
+      const thoughtQuotes = t.quotes.filter(q => (q.target || 'action') === 'thought');
+      const actionQuotes = t.quotes.filter(q => (q.target || 'action') === 'action');
+      const thoughtHTML = renderThoughtWithQuotes(t.thought, thoughtQuotes, t.n, t.quotes);
+      const actionHTML = renderThoughtWithQuotes(t.action, actionQuotes, t.n, t.quotes);
+      const tCount = thoughtQuotes.length;
+      const aCount = actionQuotes.length;
+      thoughtBlock = `
+        <div class="oat-block oat-thought">
+          <span class="lbl">Thought <span class="small">verbatim · ${tCount} meta annotation${tCount === 1 ? '' : 's'}</span></span>
+          <div class="thought-text">${thoughtHTML}</div>
+        </div>`;
+      actionBlock = `
+        <div class="oat-block oat-action">
+          <span class="lbl">Action <span class="small">verbatim · ${aCount} surface annotation${aCount === 1 ? '' : 's'}</span></span>
+          <code class="content">${actionHTML}</code>
+        </div>`;
+      // Two sub-tables, each grouping the rows for its host surface.
+      const buildRows = (quotes) => quotes.map((q) => {
+        const idx = t.quotes.indexOf(q);
+        return `
+          <div class="annot-row" data-turn="${t.n}" data-qidx="${idx}" data-grp="${q.grp}" data-key="${q.sub} › ${q.leaf}" style="--qcolor: var(--grp-${q.grp}); --qbg: var(--grp-${q.grp}-bg);">
+            <div class="annot-quote"><span class="qnum">${idx + 1}</span>${escapeHTML(q.quote)}</div>
+            <div class="annot-arrow">→</div>
+            <div class="annot-tag"><span class="annot-grp">${displayGrp(q.grp)}</span><span class="annot-sep">›</span>${q.sub}<span class="annot-sep">›</span><span class="annot-leaf">${q.leaf}</span></div>
+          </div>`;
+      }).join('');
+      thoughtAnnotBlock = tCount > 0 ? `
+        <div class="annotations">
+          <div class="annotations-header">Thought · meta-move annotations</div>
+          ${buildRows(thoughtQuotes)}
+        </div>` : '';
+      actionAnnotBlock = aCount > 0 ? `
+        <div class="annotations">
+          <div class="annotations-header">Action · surface annotations</div>
+          ${buildRows(actionQuotes)}
+        </div>` : '';
+    } else {
+      // Default: thought is the host (SWE-agent style).
+      const thoughtHTML = renderThoughtWithQuotes(t.thought, t.quotes, t.n);
+      thoughtBlock = `
+        <div class="oat-block oat-thought">
+          <span class="lbl">Thought <span class="small">verbatim · ${annotCount} annotation${annotCount === 1 ? '' : 's'}</span></span>
+          <div class="thought-text">${thoughtHTML}</div>
+        </div>`;
+      actionBlock = `
+        <div class="oat-block oat-action">
+          <span class="lbl">Action</span>
+          <code class="content">${highlightAction(t.action)}</code>
+        </div>`;
+      annotBlock = annotCount > 0 ? `
+        <div class="annotations">
+          <div class="annotations-header">Quote-grounded annotations</div>
+          ${annotRows}
+        </div>` : '';
+    }
+
+    // Layout per mode:
+    //   action mode  : Thought (context) → Action (highlighted) → annot table
+    //   both mode    : Thought (highlighted) → thought-table → Action (highlighted) → action-table
+    //   thought mode : Thought (highlighted) → annot table → Action (plain code)
+    let body;
+    if (QUOTE_TARGET === "action") {
+      body = `${thoughtBlock}${actionBlock}${annotBlock}`;
+    } else if (QUOTE_TARGET === "both") {
+      body = `${thoughtBlock}${thoughtAnnotBlock}${actionBlock}${actionAnnotBlock}`;
+    } else {
+      body = `${thoughtBlock}${annotBlock}${actionBlock}`;
+    }
+
+    const obsBlock = t.obs ? `
+        <div class="oat-block oat-obs">
+          <span class="lbl">Observation</span>
+          <div class="content">${escapeHTML(t.obs)}</div>
+        </div>` : '';
+    return `
+      <div class="turn" data-turn="${t.n}">
+        <div class="turn-header">
+          <span class="actor-icon actor-agent" title="Agent">${ICON_AGENT}</span>
+          <div class="turn-num"><small>turn</small>${String(t.n).padStart(2,'0')}</div>
+          <div class="turn-tag-line">${escapeHTML(t.headline || '')}</div>
+          <div class="turn-phase phase-${t.phase || 'other'}">${t.phaseLabel || 'Step'}</div>
+          <span class="turn-chevron">▶</span>
+        </div>
+        <div class="turn-body">
+          ${obsBlock}
+          ${body}
+          ${t.insight ? `<div class="insight">${t.insight}</div>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderSignature() {
+  // Build the codebook-group signature for the right panel.
+  // For each turn, list the groups of its quotes in firing order; show both a
+  // copy-pasteable flat block and a clickable per-turn row list. Sessions
+  // restarts are auto-detected as turns whose verbatim thought equals an
+  // earlier turn's thought, and shown as a `↺` divider.
+  const container = document.getElementById('signature-container');
+  if (!container) return;
+
+  // Detect restart points: turn n is a restart if t.thought has appeared earlier.
+  const seenThoughts = new Map(); // thought-text -> first turn index
+  const restartAtTurnN = new Set();
+  turns.forEach((t, i) => {
+    if (t.kind === 'interaction') return;
+    if (t.thought && seenThoughts.has(t.thought)) {
+      restartAtTurnN.add(t.n);
+    } else if (t.thought) {
+      seenThoughts.set(t.thought, i);
+    }
+  });
+
+  const pad2 = (n) => String(n).padStart(2, '0');
+
+  // Index segments by their `start` turn so we can interleave segment
+  // summaries both into the flat copy-paste block (as plain-text headers)
+  // and above the first row of each segment in the clickable list.
+  const segByStart = new Map();
+  (segments || []).forEach((s, i) => {
+    segByStart.set(s.start, { ...s, _idx: i + 1 });
+  });
+
+  // Strip inline HTML so segment summaries render cleanly inside the
+  // <pre> copy-paste block.  We unescape a small set of named entities
+  // (mdash/ndash/strong tags etc.) and drop everything else.
+  const stripHTML = (s) => {
+    if (!s) return '';
+    return s
+      .replace(/<[^>]+>/g, '')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&mdash;/g, '—')
+      .replace(/&ndash;/g, '–')
+      .replace(/&rarr;/g, '→')
+      .replace(/&middot;/g, '·')
+      .replace(/&nbsp;/g, ' ');
+  };
+
+  // Word-wrap a paragraph to ~78 cols so it copy-pastes cleanly into
+  // notebooks / chat panes without horizontal scrolling.
+  const wrap = (text, width = 78) => {
+    const words = text.split(/\s+/);
+    const out = [];
+    let line = '';
+    for (const w of words) {
+      if (line.length === 0) { line = w; continue; }
+      if (line.length + 1 + w.length > width) { out.push(line); line = w; }
+      else line += ' ' + w;
+    }
+    if (line) out.push(line);
+    return out.join('\n');
+  };
+
+  // Flat copy-pasteable signature block. Each segment gets a plain-text
+  // header ("=== SEQ 01 · T01–T05 · Title ===" + wrapped summary), then
+  // its turns are listed `T01 = [Group › Sub › Leaf, ...]` so the full
+  // codebook triple plus narrative context survive a copy/paste.
+  // A segment whose start turn directly follows an interaction should open
+  // BEFORE that interaction (the human prompt is what opens the cycle), so
+  // look ahead from interaction entries and mark consumed segments.
+  const segEmitted = new Set();
+  const emitSegFlat = (seg, i) => {
+    if (segEmitted.has(seg._idx)) return;
+    segEmitted.add(seg._idx);
+    if (i > 0) flatLines.push('');  // blank line before each segment except the first
+    const titleStr = stripHTML(seg.title || '');
+    flatLines.push(`=== SEQ ${String(seg._idx).padStart(2,'0')} · T${pad2(seg.start)}–T${pad2(seg.end)}${titleStr ? ' · ' + titleStr : ''} ===`);
+    if (seg.summary) {
+      flatLines.push(wrap(stripHTML(seg.summary)));
+    }
+    flatLines.push('');  // blank line between header and first turn
+  };
+  const flatLines = [];
+  turns.forEach((t, i) => {
+    if (t.kind === 'interaction') {
+      const nxt = turns[i + 1];
+      const nxtSeg = nxt && nxt.kind !== 'interaction' ? segByStart.get(nxt.n) : null;
+      if (nxtSeg) emitSegFlat(nxtSeg, i);
+      const txt = t.text.replace(/\s+/g, ' ');
+      flatLines.push(`${t.id} ▸ HUMAN${t.label ? ' (' + t.label + ')' : ''}: ${txt.length > 64 ? txt.slice(0, 64) + '…' : txt}`);
+      return;
+    }
+    const seg = segByStart.get(t.n);
+    if (seg) emitSegFlat(seg, i);
+    if (restartAtTurnN.has(t.n)) flatLines.push('↺');
+    const tags = t.quotes.map(q => `${displayGrp(q.grp)} › ${q.sub} › ${q.leaf}`);
+    flatLines.push(`T${pad2(t.n)} = [${tags.join(', ')}]`);
+  });
+  const flatStr = flatLines.join('\n');
+
+  // Per-turn rows.
+  // Chips show the full Group › Sub › Leaf triple, colored by group. Group
+  // is a small uppercase tag; sub is the dominant text; leaf trails in a
+  // muted italic. Full triple is also in the tooltip for hover affordance.
+  const segRowEmitted = new Set();
+  const segCardHTML = (seg) => {
+    if (!seg || segRowEmitted.has(seg._idx)) return '';
+    segRowEmitted.add(seg._idx);
+    return `
+      <div class="sig-segment">
+        <div class="sig-segment-tag">SEQ ${String(seg._idx).padStart(2,'0')} · T${pad2(seg.start)}–T${pad2(seg.end)}</div>
+        ${seg.title ? `<div class="sig-segment-title">${seg.title}</div>` : ''}
+        ${seg.summary ? `<div class="sig-segment-body">${seg.summary}</div>` : ''}
+      </div>
+    `;
+  };
+  const rowsHTML = turns.map((t, i) => {
+    if (t.kind === 'interaction') {
+      const nxt = turns[i + 1];
+      const nxtSeg = nxt && nxt.kind !== 'interaction' ? segByStart.get(nxt.n) : null;
+      const txt = t.text.replace(/\s+/g, ' ');
+      const short = txt.length > 56 ? txt.slice(0, 56) + '…' : txt;
+      const tipI = `${t.id} · human prompt${t.label ? ' · ' + t.label : ''}`;
+      return segCardHTML(nxtSeg) + `
+      <button class="sig-row sig-interaction" data-turn="${t.id}" title="${escapeHTML(tipI)}">
+        <span class="sig-num sig-num-h">${t.id}</span>
+        <span class="sig-int-text">${ICON_HUMAN}${escapeHTML(short)}</span>
+      </button>
+    `;
+    }
+    const segHTML = segCardHTML(segByStart.get(t.n));
+    const restartHTML = restartAtTurnN.has(t.n)
+      ? '<div class="sig-restart-row" title="Session restart — Planner thought matches an earlier turn verbatim"><span class="sig-restart-glyph">↺</span><span class="sig-restart-text">session restart · thought matches an earlier turn verbatim</span></div>'
+      : '';
+    const chipsHTML = t.quotes.length === 0
+      ? '<span class="sig-chip-empty">∅</span>'
+      : t.quotes.map(q => {
+          const _p = PATTERNS[q.sub + ' › ' + q.leaf];
+          const baseTip = `${displayGrp(q.grp)} › ${q.sub} › ${q.leaf}`;
+          const _cls = _p ? ` sig-chip-anom sig-chip-anom-${_p.t}` : '';
+          const _flag = _p ? `<span class="sig-chip-flag sig-chip-flag-${_p.t}">${ANOM_MARK[_p.t]}</span>` : '';
+          const _attr = _p ? `data-anom-key="${escapeHTML(q.sub + ' › ' + q.leaf)}"` : `title="${escapeHTML(baseTip)}"`;
+          return `<span class="sig-chip grp-${q.grp}${_cls}" ${_attr}><span class="sig-chip-grp">${displayGrp(q.grp)}</span><span class="sig-chip-sub">${escapeHTML(q.sub)}</span><span class="sig-chip-sep">›</span><span class="sig-chip-leaf">${escapeHTML(q.leaf)}</span>${_flag}</span>`;
+        }).join('');
+    const flag = (t.phase === 'submit') ? '<span class="sig-flag">‡</span>' : '';
+    const headline = (t.headline || '').replace(/"/g, '&quot;');
+    const tip = `T${pad2(t.n)} · ${t.phaseLabel} · ${headline}`;
+    return segHTML + restartHTML + `
+      <button class="sig-row" data-turn="${t.n}" title="${tip}">
+        <span class="sig-num">T${pad2(t.n)}${flag}</span>
+        <span class="sig-chips">${chipsHTML}</span>
+      </button>
+    `;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="signature-section">
+      <div class="sig-section-title">Trajectory signature</div>
+      <div class="sig-section-sub">One row per step, listing its tags in the order they appear. Amber rows are the human speaking. Click any row to jump to that step.</div>
+      <pre class="sig-flat" title="copy-paste signature">${escapeHTML(flatStr)}</pre>
+      <div class="sig-rows">${rowsHTML}</div>
+    </div>
+  `;
+}
+
+function renderCodebook() {
+  const container = document.getElementById('codebook-container');
+  const sorted = Object.entries(codebook).sort((a,b) => b[1].total - a[1].total);
+  if (sorted.length === 0) { container.innerHTML = '<em style="color: var(--ink-mute)">No annotations.</em>'; return; }
+  const maxCount = Math.max(...sorted.map(([,g]) => g.total));
+
+  const legend = Object.keys(PATTERNS).length
+    ? '<div class="cb-anom-legend"><strong>标注旗标:</strong> <span style="color:#16a34a">✓ 成功模式(做得好)</span> · ⚠ 缺失 · ▲ 冗余 · ◆ 时序/触发/沉淀错位 — 悬浮任意旗标 leaf 查看「模式类型 / 诊断原因 / 建议」</div>'
+    : '';
+  container.innerHTML = legend + sorted.map(([grpName, grp]) => {
+    const pct = (grp.total / maxCount) * 100;
+    const items = Object.values(grp.items).sort((a,b) => b.turns.length - a.turns.length);
+    return `
+      <div class="cb-group" data-group="${grpName}" style="--qcolor: var(--grp-${grpName}); --qbg: var(--grp-${grpName}-bg);">
+        <div class="cb-group-header">
+          <div class="cb-group-name">${displayGrp(grpName)}</div>
+          <div class="cb-count">${grp.total}</div>
+        </div>
+        <div class="cb-bar"><div class="cb-bar-fill" style="width: ${pct}%; background: var(--grp-${grpName});"></div></div>
+        <div class="cb-items">
+          ${items.map(item => {
+            const _p = PATTERNS[item.sub + ' › ' + item.leaf];
+            const _cls = _p ? ' cb-anom cb-anom-' + _p.t : '';
+            const _attr = _p ? ` data-anom-key="${item.sub} › ${item.leaf}"` : '';
+            const _badge = _p ? ` <span class="cb-anom-badge cb-anom-b-${_p.t}">${ANOM_MARK[_p.t]}</span>` : '';
+            return `
+            <div class="cb-item${_cls}" data-grp="${grpName}" data-key="${item.sub} › ${item.leaf}" data-turns="${item.turns.join(',')}" style="--qcolor: var(--grp-${grpName}); --qbg: var(--grp-${grpName}-bg);"${_attr}>
+              <span class="cb-item-text">${item.sub} <span style="opacity:0.5">›</span> ${item.leaf}${_badge}</span>
+              <span class="turn-refs">[${item.turns.map(n => 'T'+n).join(',')}]</span>
+            </div>
+          `;}).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function markPieAnomalies() {
+  const svgns = 'http://www.w3.org/2000/svg';
+  const byGrp = {};
+  Object.entries(codebook).forEach(([g, gd]) => {
+    Object.values(gd.items).forEach(it => {
+      const p = PATTERNS[it.sub + ' › ' + it.leaf];
+      if (p && p.t !== 'ok') (byGrp[g] = byGrp[g] || []).push(p);
+    });
+  });
+  Object.entries(byGrp).forEach(([g, list]) => {
+    const node = document.querySelector('.pie-slice[data-grp="' + g + '"]');
+    if (!node) return;
+    const label = node.querySelector('text');
+    if (!label) return;
+    const name = label.textContent;
+    label.textContent = '';
+    const ts = document.createElementNS(svgns, 'tspan');
+    ts.setAttribute('fill', '#e11d48'); ts.setAttribute('font-weight', '700');
+    ts.textContent = '⚠' + list.length + ' ';
+    const ts2 = document.createElementNS(svgns, 'tspan');
+    ts2.textContent = name;
+    label.appendChild(ts); label.appendChild(ts2);
+    const tt = document.createElementNS(svgns, 'title');
+    tt.textContent = g + ' — ' + list.length + ' 个待改进:\n' + list.map(a => '• [' + a.status + '] ' + a.advice).join('\n');
+    label.appendChild(tt);
+  });
+}
+
+function setupAnomalyTip() {
+  const tip = document.createElement('div');
+  tip.id = 'anom-tip';
+  document.body.appendChild(tip);
+  const place = (x, y) => {
+    const r = tip.getBoundingClientRect();
+    let nx = x + 16, ny = y + 16;
+    if (nx + r.width > window.innerWidth - 10) nx = x - r.width - 16;
+    if (ny + r.height > window.innerHeight - 10) ny = y - r.height - 16;
+    tip.style.left = Math.max(10, nx) + 'px';
+    tip.style.top = Math.max(10, ny) + 'px';
+  };
+  const show = (key, x, y) => {
+    const a = PATTERNS[key];
+    if (!a) return;
+    const ok = a.status === '成功';
+    tip.innerHTML =
+      '<span class="at-type ' + (ok ? 'at-ok' : 'at-bad') + '">模式类型:' + escapeHTML(a.status) + '</span>' +
+      '<div class="at-row"><span class="at-label">诊断原因</span><span class="at-val">' + escapeHTML(a.cause || '') + '</span></div>' +
+      '<div class="at-row"><span class="at-label">给用户 / agent 的建议</span><span class="at-val">' + escapeHTML(a.advice || '') + '</span></div>';
+    tip.classList.add('show');
+    place(x, y);
+  };
+  const hide = () => tip.classList.remove('show');
+  let suppressedEl = null, suppressedTitle = null;
+  const restoreTitle = () => {
+    if (suppressedEl) { suppressedEl.setAttribute('title', suppressedTitle); suppressedEl = null; suppressedTitle = null; }
+  };
+  document.addEventListener('mouseover', e => {
+    const el = e.target.closest && e.target.closest('[data-anom-key]');
+    if (!el) return;
+    show(el.getAttribute('data-anom-key'), e.clientX, e.clientY);
+    const titled = el.closest('[title]');
+    if (titled && titled !== suppressedEl) {
+      restoreTitle();
+      suppressedEl = titled; suppressedTitle = titled.getAttribute('title');
+      titled.removeAttribute('title');
+    }
+  });
+  document.addEventListener('mousemove', e => {
+    if (tip.classList.contains('show')) place(e.clientX, e.clientY);
+  });
+  document.addEventListener('mouseout', e => {
+    const el = e.target.closest && e.target.closest('[data-anom-key]');
+    if (!el) return;
+    if (e.relatedTarget && el.contains(e.relatedTarget)) return;
+    hide();
+    restoreTitle();
+  });
+}
+
+function renderPatternsSummary() {
+  const el = document.getElementById('patterns-summary');
+  if (!el) return;
+  const entries = Object.entries(PATTERNS);
+  if (entries.length === 0) return;
+  const order = {ok:0, lo:1, hi:2, mid:3};
+  entries.sort((a,b) => (order[a[1].t] ?? 9) - (order[b[1].t] ?? 9));
+  const rows = entries.map(([key, p]) => {
+    const ok = p.status === '成功';
+    const leaf = key.split(' › ').pop();
+    return `<tr>
+      <td><span class="ps-pill ${ok ? 'ps-ok' : 'ps-bad'}">${ANOM_MARK[p.t] || ''} ${escapeHTML(p.status)}</span></td>
+      <td><span class="ps-leaf">${escapeHTML(leaf)}</span><br><span class="ps-key">${escapeHTML(key)}</span></td>
+      <td>${escapeHTML(p.cause || '')}</td>
+      <td>${escapeHTML(p.advice || '')}</td>
+    </tr>`;
+  }).join('');
+  const nOk = entries.filter(([, p]) => p.status === '成功').length;
+  const nBad = entries.length - nOk;
+  el.innerHTML =
+    '<div class="section-label">behavior patterns · ' + nOk + ' 成功 / ' + nBad + ' 待改进</div>' +
+    '<div class="ps-table-wrap"><table class="ps-table">' +
+    '<thead><tr><th>模式类型</th><th>Act-onomy leaf</th><th>诊断原因</th><th>建议</th></tr></thead>' +
+    '<tbody>' + rows + '</tbody></table></div>';
+}
+
+function clearActive() {
+  document.querySelectorAll('.turn.active').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.cb-item.fired').forEach(el => el.classList.remove('fired', 'flash'));
+  document.querySelectorAll('.qmark.flash-pulse').forEach(el => el.classList.remove('flash-pulse'));
+  document.querySelectorAll('.annot-row.flash').forEach(el => el.classList.remove('flash'));
+  document.querySelectorAll('.pie-slice.dimmed').forEach(el => el.classList.remove('dimmed'));
+}
+
+function flashAnnotationLink(turnN, qidx, grp, key) {
+  document.querySelectorAll('.qmark.flash-pulse').forEach(el => el.classList.remove('flash-pulse'));
+  document.querySelectorAll('.annot-row.flash').forEach(el => el.classList.remove('flash'));
+  document.querySelectorAll('.cb-item.fired').forEach(el => el.classList.remove('fired', 'flash'));
+
+  const qm = document.querySelector(`.qmark[data-turn="${turnN}"][data-qidx="${qidx}"]`);
+  const row = document.querySelector(`.annot-row[data-turn="${turnN}"][data-qidx="${qidx}"]`);
+  const item = document.querySelector(`.cb-item[data-grp="${grp}"][data-key="${key}"]`);
+  if (qm) qm.classList.add('flash-pulse');
+  if (row) row.classList.add('flash');
+  if (item) item.classList.add('fired', 'flash');
+}
+
+function scrollToTurn(turnEl) {
+  if (!turnEl) return;
+  // Programmatic navigation always expands the target so highlights are visible.
+  turnEl.classList.add('expanded');
+  // Snapshot the right-side panel's internal scroll position BEFORE we touch
+  // the main page scroll. Some browsers will auto-scroll the focused element
+  // into view, which can cause the codebook panel to drift. We restore the
+  // exact position right after.
+  const panel = document.querySelector('aside.codebook-panel');
+  const panelScrollTop = panel ? panel.scrollTop : 0;
+
+  const rect = turnEl.getBoundingClientRect();
+  const targetY = window.scrollY + rect.top - 24;
+  window.scrollTo({ top: targetY, behavior: 'smooth' });
+
+  // Restore panel scroll on the next animation frame, and again after the
+  // smooth-scroll likely finishes. Both are cheap and cover edge cases.
+  if (panel) {
+    requestAnimationFrame(() => { panel.scrollTop = panelScrollTop; });
+    setTimeout(() => { panel.scrollTop = panelScrollTop; }, 50);
+    setTimeout(() => { panel.scrollTop = panelScrollTop; }, 500);
+  }
+}
+
+function activateCodebookItem(grp, key) {
+  clearActive();
+  const item = codebook[grp] && codebook[grp].items[key];
+  if (!item) return;
+  const itemEl = document.querySelector(`.cb-item[data-grp="${grp}"][data-key="${key}"]`);
+  if (itemEl) itemEl.classList.add('fired', 'flash');
+  item.turns.forEach(n => {
+    const turnEl = document.querySelector(`.turn[data-turn="${n}"]`);
+    if (turnEl) turnEl.classList.add('active', 'expanded');
+    document.querySelectorAll(`.qmark[data-turn="${n}"][data-grp="${grp}"][data-key="${key}"]`).forEach(qm => qm.classList.add('flash-pulse'));
+    document.querySelectorAll(`.annot-row[data-turn="${n}"][data-grp="${grp}"][data-key="${key}"]`).forEach(r => r.classList.add('flash'));
+  });
+  if (item.turns.length > 0) {
+    scrollToTurn(document.querySelector(`.turn[data-turn="${item.turns[0]}"]`));
+  }
+}
+
+function activateGroup(grp) {
+  clearActive();
+  document.querySelectorAll(`.cb-item[data-grp="${grp}"]`).forEach(el => el.classList.add('fired'));
+  document.querySelectorAll(`.qmark[data-grp="${grp}"]`).forEach(qm => qm.classList.add('flash-pulse'));
+  document.querySelectorAll(`.annot-row[data-grp="${grp}"]`).forEach(r => r.classList.add('flash'));
+  const turnsHit = new Set();
+  document.querySelectorAll(`.qmark[data-grp="${grp}"]`).forEach(qm => turnsHit.add(parseInt(qm.dataset.turn)));
+  turnsHit.forEach(n => {
+    const turnEl = document.querySelector(`.turn[data-turn="${n}"]`);
+    if (turnEl) turnEl.classList.add('active', 'expanded');
+  });
+  if (turnsHit.size > 0) {
+    const firstTurn = Math.min(...turnsHit);
+    scrollToTurn(document.querySelector(`.turn[data-turn="${firstTurn}"]`));
+  }
+}
+
+function setupInteractions() {
+  // Collapsible turns: header click toggles; expand/collapse-all controls.
+  document.querySelectorAll('.turn-header, .interaction-header').forEach(h => {
+    h.addEventListener('click', () => h.closest('.turn').classList.toggle('expanded'));
+  });
+  const exAll = document.getElementById('expand-all');
+  const coAll = document.getElementById('collapse-all');
+  if (exAll) exAll.addEventListener('click', () =>
+    document.querySelectorAll('.turn').forEach(el => el.classList.add('expanded')));
+  if (coAll) coAll.addEventListener('click', () =>
+    document.querySelectorAll('.turn').forEach(el => el.classList.remove('expanded')));
+
+  document.querySelectorAll('.qmark').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      flashAnnotationLink(parseInt(el.dataset.turn), parseInt(el.dataset.qidx), el.dataset.grp, el.dataset.key);
+    });
+  });
+  document.querySelectorAll('.annot-row').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      flashAnnotationLink(parseInt(el.dataset.turn), parseInt(el.dataset.qidx), el.dataset.grp, el.dataset.key);
+    });
+  });
+  document.querySelectorAll('.cb-item').forEach(el => {
+    el.addEventListener('click', () => {
+      activateCodebookItem(el.dataset.grp, el.dataset.key);
+    });
+  });
+  document.querySelectorAll('.pie-slice').forEach(el => {
+    el.addEventListener('click', () => {
+      activateGroup(el.dataset.grp);
+    });
+  });
+  document.querySelectorAll('.pie-legend-row').forEach(el => {
+    el.addEventListener('click', () => {
+      activateGroup(el.dataset.grp);
+    });
+  });
+  document.querySelectorAll('.sig-row').forEach(el => {
+    el.addEventListener('click', () => {
+      const n = el.dataset.turn; // agent turns are numeric, interactions are "H<k>"
+      const turnEl = document.querySelector(`.turn[data-turn="${n}"]`);
+      if (!turnEl) return;
+      document.querySelectorAll('.turn.active').forEach(x => x.classList.remove('active'));
+      turnEl.classList.add('active');
+      scrollToTurn(turnEl);
+    });
+  });
+}
+
+// Drag-to-resize handle on the left edge of the codebook panel.
+// The panel is `position: fixed; right: 0; width: 360px;` and the main has a
+// matching `margin-right: 360px`. We drive both off a single CSS variable
+// `--panel-w` so they stay in sync, and persist the user's last width in
+// localStorage so it sticks across reloads.
+function setupPanelResize() {
+  const panel = document.querySelector('aside.codebook-panel');
+  const main  = document.querySelector('main.trajectory');
+  const handle = document.getElementById('panel-resize-handle');
+  if (!panel || !main || !handle) return;
+
+  const MIN = 280;
+  const MAX_FRAC = 0.7;  // never let the panel eat more than 70% of the viewport
+  const STORAGE_KEY = 'tta.panel-width';
+
+  const apply = (w) => {
+    const cap = Math.max(MIN, Math.min(w, window.innerWidth * MAX_FRAC));
+    panel.style.width = cap + 'px';
+    main.style.marginRight = cap + 'px';
+  };
+
+  // Restore persisted width on load.
+  const saved = parseInt(localStorage.getItem(STORAGE_KEY) || '', 10);
+  if (!Number.isNaN(saved) && saved >= MIN) apply(saved);
+
+  let dragging = false;
+  let startX = 0;
+  let startW = 0;
+
+  handle.addEventListener('mousedown', (e) => {
+    dragging = true;
+    startX = e.clientX;
+    startW = panel.getBoundingClientRect().width;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    // Drag left = wider panel; drag right = narrower.
+    const w = startW + (startX - e.clientX);
+    apply(w);
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    localStorage.setItem(STORAGE_KEY, String(panel.getBoundingClientRect().width));
+  });
+
+  // Double-click the handle to reset to the default 360px.
+  handle.addEventListener('dblclick', () => {
+    apply(360);
+    localStorage.removeItem(STORAGE_KEY);
+  });
+}
+
+renderTurns();
+renderSignature();
+renderCodebook();
+markPieAnomalies();
+setupAnomalyTip();
+renderPatternsSummary();
+setupInteractions();
+setupPanelResize();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,1811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Trajectory & Behavior Profile · scikit-learn/scikit-learn-13142</title>
+<!-- Yuque-style restyle: system fonts only, no external font CDN -->
+<style>
+:root {
+  --bg: #f6f7f9;
+  --bg-panel: #ffffff;
+  --ink: #262626;
+  --ink-soft: #585d63;
+  --ink-mute: #8a8f8d;
+  --rule: #ebecef;
+  --rule-soft: #f2f3f5;
+  --accent: #00b96b;
+  --accent-soft: #b7e7d1;
+  --thought: #5a68c9;
+  --action: #0f9b8a;
+  --obs: #c77d1a;
+  --obs-soft: #f7edd6;
+  --highlight: #eafaf2;
+  --radius: 10px;
+
+  --grp-Retrieval: #0891b2;
+  --grp-Retrieval-bg: rgba(8, 145, 178, 0.10);
+  --grp-Memory: #d97706;
+  --grp-Memory-bg: rgba(217, 119, 6, 0.10);
+  --grp-Planning: #0284c7;
+  --grp-Planning-bg: rgba(2, 132, 199, 0.10);
+  --grp-Reasoning: #4f46e5;
+  --grp-Reasoning-bg: rgba(79, 70, 229, 0.10);
+  --grp-Evaluating: #0d9488;
+  --grp-Evaluating-bg: rgba(13, 148, 136, 0.10);
+  --grp-Deciding: #7c3aed;
+  --grp-Deciding-bg: rgba(124, 58, 237, 0.10);
+  --grp-Grounding: #c026d3;
+  --grp-Grounding-bg: rgba(192, 38, 211, 0.10);
+  --grp-Executing: #059669;
+  --grp-Executing-bg: rgba(5, 150, 105, 0.10);
+  --grp-Learning: #db2777;
+  --grp-Learning-bg: rgba(219, 39, 119, 0.10);
+  --grp-Reflection: #e11d48;
+  --grp-Reflection-bg: rgba(225, 29, 72, 0.10);
+
+  --panel-w: 360px;
+}
+
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#1b1c1e; --bg-panel:#232427;
+    --ink:#e6e6e6; --ink-soft:#b3b7bb; --ink-mute:#8d9195;
+    --rule:#303236; --rule-soft:#2a2c30;
+    --accent:#33c98d; --accent-soft:#2b5f48;
+    --thought:#8f9cf0; --action:#34c9b3; --obs:#e0a955; --obs-soft:#382f18;
+    --highlight:#18271f;
+  }
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+body {
+  min-height: 100vh;
+}
+
+header.masthead {
+  border-bottom: 1px solid var(--rule);
+  padding: 28px calc(var(--panel-w) + 24px) 24px 40px;
+  background: var(--bg-panel);
+  position: relative;
+  z-index: 5;
+}
+
+.eyebrow {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin-bottom: 8px;
+}
+
+h1.title {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-weight: 600;
+  font-variation-settings: 'opsz' 144;
+  font-size: 38px;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+}
+
+h1.title em {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--accent);
+}
+
+.subtitle {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 15px;
+  color: var(--ink-soft);
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1.55;
+  max-width: 820px;
+}
+
+.meta-row {
+  display: flex;
+  gap: 24px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: var(--ink-mute);
+}
+
+.meta-row span strong {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.outcome-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 2px;
+  font-weight: 600;
+}
+.outcome-resolved { background: rgba(5, 150, 105, 0.13); color: var(--grp-Executing); }
+.outcome-unresolved { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
+
+.app {
+  position: relative;
+  min-height: calc(100vh - 140px);
+}
+
+@media (max-width: 1100px) {
+  header.masthead { padding-right: 40px; }
+  main.trajectory { margin-right: 0 !important; max-width: 100% !important; }
+  aside.codebook-panel {
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    border-left: none !important;
+    border-top: 1px solid var(--rule);
+  }
+}
+
+main.trajectory {
+  padding: 32px 40px 80px;
+  max-width: 900px;
+  margin-right: var(--panel-w);
+}
+
+.section-label {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--rule); }
+
+.issue-block {
+  background: var(--bg-panel);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--accent);
+  padding: 18px 22px;
+  margin-bottom: 28px;
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  color: var(--ink-soft);
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+.issue-block strong { font-weight: 600; color: var(--ink); }
+.issue-block code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; background: var(--rule-soft); padding: 1px 5px; border-radius: 2px; }
+
+.summary-block {
+  background: var(--bg-panel);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--thought);
+  padding: 20px 24px 22px;
+  margin-bottom: 32px;
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: var(--ink);
+  position: relative;
+}
+.summary-block .summary-eyebrow {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--thought);
+  font-weight: 600;
+  margin-bottom: 10px;
+  display: block;
+}
+.summary-block .summary-text {
+  font-style: normal;
+  color: var(--ink);
+  letter-spacing: 0;
+}
+.summary-block .summary-text strong { font-style: normal; font-weight: 600; color: var(--ink); }
+.summary-block .summary-text em { font-style: normal; color: var(--accent); }
+.summary-block .summary-text code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-style: normal; font-size: 13px; background: var(--rule-soft); padding: 1px 5px; border-radius: 2px; color: var(--ink); }
+.summary-block .summary-text ul { margin: 10px 0; padding-left: 22px; }
+.summary-block .summary-text li { margin-bottom: 8px; line-height: 1.6; }
+.summary-block .summary-text p { margin: 0 0 10px 0; }
+.method-note ul { margin: 8px 0 4px 0; padding-left: 20px; }
+.method-note li { margin-bottom: 5px; line-height: 1.55; }
+
+.method-note {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-style: normal;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  margin-bottom: 24px;
+  padding: 12px 16px;
+  background: var(--highlight);
+  border-left: 2px solid var(--accent);
+  border-radius: 0 2px 2px 0;
+  line-height: 1.6;
+}
+.method-note strong { font-style: normal; font-weight: 600; color: var(--ink); }
+.method-note code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; background: rgba(0,0,0,0.06); padding: 1px 5px; border-radius: 2px; font-style: normal; }
+
+.turn {
+  position: relative;
+  margin-bottom: 28px;
+  padding: 22px 24px 20px 28px;
+  background: var(--bg-panel);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  transition: all 0.25s ease;
+}
+.turn::before { content: ''; position: absolute; left: -1px; top: -1px; bottom: -1px; width: 4px; background: var(--rule); transition: background 0.25s ease; }
+.turn.active { border-color: var(--ink); box-shadow: 0 1px 8px rgba(0,0,0,0.05); }
+.turn.active::before { background: var(--accent); width: 4px; }
+
+.turn-header {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--rule);
+}
+
+.turn-num {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-weight: 600;
+  font-size: 28px;
+  font-variation-settings: 'opsz' 144;
+  color: var(--accent);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.turn-num small { font-size: 11px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink-mute); font-weight: 400; display: block; letter-spacing: 0.1em; margin-bottom: 2px; }
+
+.turn-tag-line { font-family: -apple-system, "PingFang SC", "Helvetica Neue", "Segoe UI", sans-serif; font-style: normal; font-size: 15px; color: var(--ink); font-weight: 500; flex: 1; line-height: 1.45; }
+
+/* ===== Collapsible turns =====
+   Turns render collapsed by default: only the header row (icon, number,
+   headline, phase pill) is visible. Clicking the header toggles the body.
+   Programmatic activation (codebook / signature clicks) auto-expands. */
+.turn-header, .interaction-header { cursor: pointer; user-select: none; }
+.turn-body { display: none; }
+.turn.expanded > .turn-body { display: block; }
+.turn:not(.expanded) .turn-header,
+.turn:not(.expanded) .interaction-header {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+.turn:not(.expanded) { padding-top: 16px; padding-bottom: 16px; }
+.turn-chevron {
+  flex-shrink: 0;
+  align-self: center;
+  color: var(--ink-mute);
+  font-size: 11px;
+  transition: transform 0.2s ease;
+}
+.turn.expanded .turn-chevron { transform: rotate(90deg); }
+
+.turns-controls {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-bottom: 14px;
+}
+.turns-controls button {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: var(--bg-panel);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.turns-controls button:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ===== Actor icons (Google Material Design icons: person / smart_toy) ===== */
+.actor-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  align-self: center;
+}
+.actor-icon svg { width: 20px; height: 20px; }
+.actor-agent { color: var(--accent); background: var(--highlight); border: 1px solid var(--accent-soft); }
+.actor-human { color: #b45309; background: var(--obs-soft); border: 1px solid rgba(217, 119, 6, 0.35); }
+
+/* ===== Human interaction cards =====
+   First-class human turns interleaved with agent (obs, thought, action)
+   turns. Verbatim prompt, amber palette, person icon — visually distinct
+   from agent turn cards. */
+.turn.interaction {
+  background: #fffbeb;
+  border: 1px solid rgba(217, 119, 6, 0.35);
+  border-left: 3px solid var(--obs);
+}
+.interaction-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed rgba(217, 119, 6, 0.35);
+}
+.int-num {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-weight: 600;
+  font-size: 28px;
+  color: #b45309;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.int-num small { font-size: 11px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink-mute); font-weight: 400; display: block; letter-spacing: 0.1em; margin-bottom: 2px; }
+.int-title { font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; font-size: 15px; color: var(--ink); font-weight: 500; flex: 1; }
+.int-title .small { font-size: 10px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink-mute); font-weight: 400; margin-left: 6px; }
+.int-label {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border: 1px solid rgba(217, 119, 6, 0.4);
+  border-radius: 2px;
+  color: #b45309;
+  background: rgba(217, 119, 6, 0.08);
+}
+.interaction-text {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ink);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Interaction rows in the right-panel trajectory signature */
+.sig-row.sig-interaction {
+  background: #fffbeb;
+  border: 1px solid rgba(217, 119, 6, 0.3);
+  border-radius: 3px;
+}
+.sig-row.sig-interaction:hover { background: var(--obs-soft); }
+.sig-num-h { color: #b45309 !important; }
+.sig-int-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  color: #92400e;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sig-int-text svg { width: 12px; height: 12px; flex-shrink: 0; color: #b45309; }
+
+.turn-phase {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  color: var(--ink-soft);
+  background: var(--bg);
+}
+.phase-reproduce { color: var(--obs); border-color: var(--obs-soft); background: var(--obs-soft); }
+.phase-localize { color: var(--thought); border-color: rgba(91,74,138,0.2); background: rgba(91,74,138,0.08); }
+.phase-edit { color: var(--action); border-color: rgba(5, 150, 105, 0.2); background: rgba(5, 150, 105, 0.08); }
+.phase-recover { color: var(--accent); border-color: var(--accent-soft); background: var(--accent-soft); }
+.phase-verify { color: var(--grp-Evaluating); border-color: rgba(26,88,120,0.2); background: rgba(26,88,120,0.08); }
+.phase-submit { color: var(--ink); border-color: var(--rule); background: var(--rule-soft); }
+.phase-other { color: var(--ink-soft); border-color: var(--rule); background: var(--bg); }
+
+.oat-block { margin: 12px 0; padding-left: 14px; border-left: 2px solid; font-size: 14px; line-height: 1.55; }
+.oat-block .lbl { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 600; margin-bottom: 6px; display: block; }
+
+.oat-obs { border-color: var(--obs); }
+.oat-obs .lbl { color: var(--obs); }
+
+.oat-thought { border-color: var(--thought); background: rgba(91, 74, 138, 0.025); padding: 8px 14px 10px; border-radius: 0 2px 2px 0; }
+.oat-thought .lbl { color: var(--thought); }
+.oat-thought .lbl .small { opacity: 0.5; font-weight: 400; text-transform: none; letter-spacing: 0.05em; font-style: italic; }
+.thought-text { font-family: -apple-system, "PingFang SC", "Helvetica Neue", "Segoe UI", sans-serif; font-style: normal; font-size: 14px; color: var(--ink); line-height: 1.65; letter-spacing: 0; }
+
+.oat-action { border-color: var(--action); }
+.oat-action .lbl { color: var(--action); }
+.oat-action .content {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+  background: #1f1f1f;
+  color: #eaeaea;
+  padding: 8px 12px;
+  border-radius: 2px;
+  display: block;
+  margin-top: 4px;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+.oat-action .content .cmt { color: #888888; }
+.oat-action .content .kw { color: #d4a574; }
+
+.content { color: var(--ink); }
+.content code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; background: var(--rule-soft); padding: 1px 5px; border-radius: 2px; }
+
+.qmark {
+  font-style: italic;
+  background: var(--qbg, var(--rule-soft));
+  border-bottom: 1.5px solid var(--qcolor, var(--ink-mute));
+  padding: 0 2px;
+  margin: 0 1px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  border-radius: 1px;
+  position: relative;
+}
+.qmark:hover { background: var(--qcolor, var(--ink-mute)); color: var(--bg); }
+.qmark sup { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-style: normal; font-size: 9px; font-weight: 600; color: var(--qcolor, var(--ink-mute)); margin-left: 2px; letter-spacing: 0; vertical-align: super; line-height: 0; }
+.qmark:hover sup { color: var(--bg); }
+
+.annotations {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.annotations-header { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-mute); font-weight: 600; margin-bottom: 4px; }
+
+.annot-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1.1fr);
+  gap: 10px;
+  align-items: baseline;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 5px 6px;
+  border-radius: 2px;
+  transition: background 0.18s ease;
+}
+.annot-row:hover { background: var(--rule-soft); }
+.annot-row.flash { background: var(--qbg, var(--rule-soft)); }
+
+.annot-quote {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-style: italic;
+  color: var(--qcolor, var(--ink));
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.annot-quote::before { content: '"'; opacity: 0.5; }
+.annot-quote::after { content: '"'; opacity: 0.5; }
+.annot-quote .qnum { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-style: normal; font-size: 9px; font-weight: 600; margin-right: 4px; opacity: 0.7; vertical-align: super; }
+
+.annot-arrow { color: var(--ink-mute); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
+
+.annot-tag { font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; font-size: 11.5px; color: var(--ink-soft); letter-spacing: 0.005em; }
+.annot-tag .annot-grp { font-weight: 600; color: var(--qcolor, var(--ink)); }
+.annot-tag .annot-sep { margin: 0 4px; opacity: 0.4; }
+.annot-tag .annot-leaf { color: var(--ink); }
+
+.insight {
+  margin-top: 12px;
+  padding: 10px 12px 10px 14px;
+  background: var(--highlight);
+  border-radius: 2px;
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 13px;
+  font-style: normal;
+  color: var(--ink-soft);
+  position: relative;
+  line-height: 1.6;
+}
+.insight::before { content: '※'; position: absolute; left: -22px; top: 8px; font-size: 14px; color: var(--accent); font-style: normal; }
+.insight strong { font-style: normal; font-weight: 600; color: var(--ink); }
+
+/* Segment summary card inside the right-panel trajectory signature.
+   Sits above the first row of each `segments[]` entry — a compact "what
+   the agent is doing in this stretch" preface for the row block below. */
+.sig-segment {
+  margin: 14px 0 6px;
+  padding: 8px 10px;
+  background: var(--highlight);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 2px 2px 0;
+}
+.sig-segment:first-child { margin-top: 4px; }
+.sig-segment-tag {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 8.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+.sig-segment-title {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-weight: 600;
+  font-size: 12.5px;
+  font-style: italic;
+  color: var(--ink);
+  line-height: 1.3;
+  margin-bottom: 3px;
+}
+.sig-segment-body {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 12px;
+  color: var(--ink-soft);
+  line-height: 1.55;
+}
+.sig-segment-body code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+  background: rgba(79, 70, 229, 0.08);
+  padding: 0 3px;
+  border-radius: 2px;
+}
+
+aside.codebook-panel {
+  background: var(--bg-panel);
+  border-left: 1px solid var(--rule);
+  padding: 32px 24px 60px;
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: var(--panel-w);
+  height: 100vh;
+  overflow-y: auto;
+  z-index: 10;
+}
+aside.codebook-panel::-webkit-scrollbar { width: 6px; }
+aside.codebook-panel::-webkit-scrollbar-track { background: transparent; }
+aside.codebook-panel::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 3px; }
+
+/* Drag handle on the panel's left edge — sits over the border, 6px hit area,
+   shows a thin colored stripe on hover/drag. Double-click resets width. */
+#panel-resize-handle {
+  position: absolute;
+  top: 0;
+  left: -3px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 20;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+#panel-resize-handle:hover,
+#panel-resize-handle:active {
+  background: linear-gradient(to right, transparent 0%, transparent 40%, var(--accent) 40%, var(--accent) 60%, transparent 60%);
+}
+
+.panel-title { font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; font-weight: 600; font-size: 22px; font-variation-settings: 'opsz' 144; margin-bottom: 4px; letter-spacing: -0.01em; }
+.panel-sub { font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; font-style: normal; font-size: 12.5px; color: var(--ink-soft); line-height: 1.5; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--rule); }
+
+/* Pie chart section */
+.pie-section {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--rule);
+}
+.pie-svg-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+.pie-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 11px;
+}
+.pie-legend-row {
+  display: grid;
+  grid-template-columns: 12px 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  color: var(--ink-soft);
+}
+.pie-legend-swatch { width: 10px; height: 10px; border-radius: 1px; }
+.pie-legend-name { font-weight: 500; color: var(--ink); }
+.pie-legend-pct { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; color: var(--ink-mute); }
+.pie-legend-count { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; color: var(--ink-mute); }
+
+.pie-slice { transition: opacity 0.2s ease; cursor: pointer; }
+.pie-slice:hover { opacity: 0.8; }
+
+.cb-group { margin-bottom: 18px; }
+.cb-group-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+.cb-group-name { font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; font-weight: 600; font-size: 14px; font-style: italic; color: var(--qcolor, var(--ink)); }
+.cb-count { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; color: var(--ink-mute); background: var(--bg); padding: 1px 6px; border-radius: 8px; border: 1px solid var(--rule); }
+.cb-bar { height: 4px; background: var(--rule-soft); border-radius: 2px; margin-bottom: 8px; overflow: hidden; }
+.cb-bar-fill { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
+.cb-items { display: flex; flex-direction: column; gap: 2px; margin-left: 4px; }
+.cb-item {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  padding: 4px 8px 4px 12px;
+  border-left: 2px solid var(--rule);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 0 2px 2px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+}
+.cb-item:hover { background: var(--bg); border-left-color: var(--ink-soft); color: var(--ink); }
+.cb-item.fired { border-left-color: var(--qcolor, var(--accent)); color: var(--ink); background: var(--qbg, var(--accent-soft)); font-weight: 500; }
+.cb-item-text { flex: 1; }
+.cb-item .turn-refs { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; color: var(--ink-mute); flex-shrink: 0; }
+.cb-item.fired .turn-refs { color: var(--qcolor, var(--accent)); font-weight: 600; }
+
+.summary-footer {
+  margin-top: 60px;
+  padding: 28px;
+  background: var(--bg-panel);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+.summary-footer h2 { font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; font-weight: 600; font-size: 22px; margin-bottom: 4px; letter-spacing: -0.01em; }
+.summary-footer .sub { font-style: italic; color: var(--ink-soft); font-size: 14px; margin-bottom: 20px; }
+.findings { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+.finding { padding: 14px 16px; border-left: 2px solid var(--accent); background: var(--bg); font-size: 13px; line-height: 1.55; }
+.finding strong { font-weight: 600; display: block; margin-bottom: 4px; color: var(--ink); }
+.finding span { color: var(--ink-soft); }
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 40%, transparent); }
+  100% { box-shadow: 0 0 0 8px transparent; }
+}
+.cb-item.fired.flash, .annot-row.flash, .qmark.flash-pulse { animation: pulse-ring 0.6s ease-out; }
+
+.legend {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 24px;
+  padding: 10px 14px;
+  background: var(--bg-panel);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  color: var(--ink-soft);
+  flex-wrap: wrap;
+  align-items: center;
+}
+.legend-item { display: flex; align-items: center; gap: 6px; }
+.legend-dot { width: 8px; height: 8px; border-radius: 1px; }
+.legend-dot.obs { background: var(--obs); }
+.legend-dot.thought { background: var(--thought); }
+.legend-dot.action { background: var(--action); }
+.legend small { margin-left: auto; color: var(--ink-mute); font-style: italic; }
+
+/* ===== Trajectory signature (right panel, above the bar chart) =====
+   Auto-built in JS from the same turns/quotes data. No extra schema fields. */
+.signature-section {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--rule);
+}
+.sig-section-title {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+.sig-section-sub {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-style: italic;
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+.sig-flat {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  white-space: pre-wrap;
+  word-break: normal;
+  overflow-wrap: anywhere;
+  user-select: all;
+  cursor: text;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.sig-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+.sig-row {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 6px;
+  align-items: start;
+  padding: 5px 6px 5px 4px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 2px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  transition: background 0.15s ease;
+}
+.sig-row:hover { background: var(--bg); }
+.sig-row:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.sig-num {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  color: var(--ink-mute);
+  font-weight: 600;
+  text-align: right;
+  padding-right: 4px;
+  padding-top: 2px;
+}
+.sig-num .sig-flag {
+  display: inline;
+  margin-left: 2px;
+  color: var(--accent);
+  font-weight: 700;
+}
+.sig-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  align-items: center;
+}
+.sig-chip {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 1px 6px 2px;
+  border-radius: 2px;
+  border: 1px solid;
+  line-height: 1.35;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.sig-chip-grp {
+  text-transform: uppercase;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+}
+.sig-chip-sub {
+  font-size: 10px;
+  font-weight: 600;
+}
+.sig-chip-sep {
+  font-size: 10px;
+  opacity: 0.45;
+  margin: 0 1px;
+}
+.sig-chip-leaf {
+  font-size: 9.5px;
+  font-weight: 500;
+  font-style: italic;
+  opacity: 0.78;
+}
+.sig-chip-empty {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: var(--ink-mute);
+  padding: 0 4px;
+}
+.sig-chip.grp-Retrieval  { color: var(--grp-Retrieval);  background: var(--grp-Retrieval-bg);  border-color: var(--grp-Retrieval); }
+.sig-chip.grp-Memory     { color: var(--grp-Memory);     background: var(--grp-Memory-bg);     border-color: var(--grp-Memory); }
+.sig-chip.grp-Planning   { color: var(--grp-Planning);   background: var(--grp-Planning-bg);   border-color: var(--grp-Planning); }
+.sig-chip.grp-Reasoning  { color: var(--grp-Reasoning);  background: var(--grp-Reasoning-bg);  border-color: var(--grp-Reasoning); }
+.sig-chip.grp-Evaluating   { color: var(--grp-Evaluating);   background: var(--grp-Evaluating-bg);   border-color: var(--grp-Evaluating); }
+.sig-chip.grp-Deciding   { color: var(--grp-Deciding);   background: var(--grp-Deciding-bg);   border-color: var(--grp-Deciding); }
+.sig-chip.grp-Grounding  { color: var(--grp-Grounding);  background: var(--grp-Grounding-bg);  border-color: var(--grp-Grounding); }
+.sig-chip.grp-Executing  { color: var(--grp-Executing);  background: var(--grp-Executing-bg);  border-color: var(--grp-Executing); }
+.sig-chip.grp-Learning   { color: var(--grp-Learning);   background: var(--grp-Learning-bg);   border-color: var(--grp-Learning); }
+.sig-chip.grp-Reflection { color: var(--grp-Reflection); background: var(--grp-Reflection-bg); border-color: var(--grp-Reflection); }
+
+.sig-restart-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  margin: 4px 0;
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  border-left: 2px solid var(--accent);
+  border-radius: 0 2px 2px 0;
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-style: italic;
+  font-size: 11px;
+  color: var(--accent);
+  cursor: help;
+}
+.sig-restart-glyph { font-size: 16px; line-height: 1; }
+.sig-restart-text { color: var(--ink-soft); }
+
+/* ============ behavior-pattern (success / failure) layer ============ */
+/* driven by the optional `patterns` field in the annotated JSON; absent -> nothing renders */
+/* signature chip highlight */
+.sig-chip-anom { outline: 1.5px solid; outline-offset: 1px; border-radius: 3px; }
+.sig-chip-anom-lo { outline-color: #e11d48; }
+.sig-chip-anom-hi { outline-color: #d97706; }
+.sig-chip-anom-mid { outline-color: #2563eb; }
+.sig-chip-anom-ok { outline-color: #16a34a; }
+.sig-chip-flag { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8px; font-weight: 700; margin-left: 3px; padding: 0 3px; border-radius: var(--radius); vertical-align: middle; }
+.sig-chip-flag-lo { color: #be123c; background: rgba(225,29,72,0.18); }
+.sig-chip-flag-hi { color: #b45309; background: rgba(217,119,6,0.18); }
+.sig-chip-flag-mid { color: #1d4ed8; background: rgba(37,99,235,0.18); }
+.sig-chip-flag-ok { color: #15803d; background: rgba(34,197,94,0.18); }
+/* codebook-panel leaf highlight */
+.cb-anom-legend { font-size: 10px; color: var(--ink-soft); margin-bottom: 10px; padding: 6px 8px; background: var(--rule-soft); border-radius: 3px; line-height: 1.6; }
+.cb-item.cb-anom:not(.fired) { border-left-width: 3px; }
+.cb-item.cb-anom-lo:not(.fired) { border-left-color: #e11d48; background: rgba(225,29,72,0.07); }
+.cb-item.cb-anom-hi:not(.fired) { border-left-color: #d97706; background: rgba(217,119,6,0.07); }
+.cb-item.cb-anom-mid:not(.fired) { border-left-color: #2563eb; background: rgba(37,99,235,0.07); }
+.cb-item.cb-anom-ok:not(.fired) { border-left-color: #16a34a; background: rgba(34,197,94,0.07); }
+.cb-anom-badge { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; font-weight: 700; padding: 0 4px; border-radius: 6px; margin-left: 4px; }
+.cb-anom-b-lo { color: #be123c; background: rgba(225,29,72,0.16); }
+.cb-anom-b-hi { color: #b45309; background: rgba(217,119,6,0.16); }
+.cb-anom-b-mid { color: #1d4ed8; background: rgba(37,99,235,0.16); }
+.cb-anom-b-ok { color: #15803d; background: rgba(34,197,94,0.16); }
+/* custom hover card (模式类型 / 诊断原因 / 建议) */
+#anom-tip { position: fixed; z-index: 99999; max-width: 340px; background: #0f172a; color: #f8fafc; border-radius: 9px; padding: 12px 14px; font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; font-size: 12.5px; line-height: 1.55; box-shadow: 0 10px 34px rgba(0,0,0,0.32); pointer-events: none; opacity: 0; display: none; }
+#anom-tip.show { opacity: 1; display: block; }
+#anom-tip .at-type { font-weight: 700; font-size: 11px; letter-spacing: 0.03em; padding: 2px 9px; border-radius: 11px; }
+#anom-tip .at-ok { color: #86efac; background: rgba(34,197,94,0.20); }
+#anom-tip .at-bad { color: #fca5a5; background: rgba(239,68,68,0.20); }
+#anom-tip .at-row { margin-top: 9px; }
+#anom-tip .at-label { color: #94a3b8; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-bottom: 2px; }
+#anom-tip .at-val { color: #f1f5f9; }
+/* auto pattern-summary table (main column) */
+#patterns-summary { margin-top: 30px; }
+.ps-table-wrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--bg-panel); }
+table.ps-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 640px; }
+table.ps-table th { text-align: left; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-mute); font-weight: 600; padding: 10px 12px; border-bottom: 1px solid var(--rule); background: var(--rule-soft); }
+table.ps-table td { padding: 9px 12px; border-bottom: 1px solid var(--rule-soft); color: var(--ink-soft); vertical-align: top; line-height: 1.45; }
+table.ps-table tr:last-child td { border-bottom: none; }
+.ps-leaf { font-weight: 600; color: var(--ink); }
+.ps-key { font-size: 10px; color: var(--ink-mute); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.ps-pill { display: inline-block; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; letter-spacing: 0.03em; font-weight: 700; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+.ps-ok { color: #15803d; background: rgba(34,197,94,0.14); }
+.ps-bad { color: #be123c; background: rgba(225,29,72,0.13); }
+
+
+:root { --grp-Evaluate: var(--grp-Evaluating); --grp-Evaluate-bg: var(--grp-Evaluating-bg); }
+.sig-chip.grp-Evaluate {color:var(--grp-Evaluate);background:var(--grp-Evaluate-bg);border-color:var(--grp-Evaluate);}
+.sig-chip {display:inline-block;max-width:100%;white-space:normal;overflow-wrap:anywhere;}
+.sig-chip > span + span {margin-left:4px;}
+.archive-nav {font: 12px/1.7 Inter, sans-serif; margin-bottom:12px; overflow-wrap:anywhere; color:var(--ink-soft);}
+.archive-nav a {color:var(--accent);}
+.archive-notes {font: 13px/1.6 Inter, sans-serif; color:var(--ink-soft); margin: 14px 0;}
+.archive-notes summary {cursor:pointer; font-weight:600;}
+.archive-notes ul {padding-left:1.5rem;}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+<nav class="archive-nav"><a href="../index.html">Report index</a> &nbsp;›&nbsp; SWE-bench-Verified &nbsp;·&nbsp; <a href="scikit-learn__scikit-learn-13142__batch-4__claude-code__claude-opus-5__xhigh.annotated.json">Annotation JSON</a></nav>
+  <div class="eyebrow">Quote-grounded annotation</div>
+  <h1 class="title">Agent Trajectory <em>&</em> Behavior Profile</h1>
+  <div class="subtitle">This report walks through one agent session step by step. Every label is tied to the exact quoted words that justify it — so you can see what was asked, what the agent did, and why.</div>
+  <div class="meta-row">
+    <span><strong>Instance</strong> scikit-learn/scikit-learn-13142</span>
+    <span><strong>Model</strong> SWE-agent + Claude 3.5 Sonnet</span>
+    <span><strong>Turns</strong> 21</span>
+    
+    <span><strong>Outcome</strong> <span class="outcome-pill outcome-resolved">RESOLVED ✓</span></span>
+    <span><strong>Annotations</strong> 78</span>
+  </div>
+</header>
+
+<div class="app">
+
+<main class="trajectory">
+
+<div class="section-label">the task</div>
+<div class="issue-block">GaussianMixture predict and fit_predict disagree when n_init&gt;1
+#### Description
+When `n_init` is specified in GaussianMixture, the results of fit_predict(X) and predict(X) are often different.  The `test_gaussian_mixture_fit_predict` unit test doesn't catch this because it does not set `n_init`.
+
+#### Steps/Code to Reproduce
+```
+python
+from sklearn.mixture import GaussianMixture
+from sklearn.utils.testing import assert_array_equal
+import numpy
+X = numpy.random.randn(1000,5)
+print 'no n_init'
+gm = GaussianMixture(n_components=5)
+c1 = gm.fit_predict(X)
+c2 = gm.predict(X)
+assert_array_equal(c1,c2)
+print 'n_init=5'
+gm = GaussianMixture(n_components=5, n_init=5)
+c1 = gm.fit_predict(X)
+c2 = gm.predict(X)
+assert_array_equal(c1,c2)
+```
+
+#### Expected Results
+```
+no n_init
+n_init=5
+```
+No exceptions.
+
+#### Actual Results
+```
+no n_init
+n_init=5
+Traceback (most recent call last):
+  File &quot;test_gm.py&quot;, line 17, in &lt;module&gt;
+    assert_array_equal(c1,c2)
+  File &quot;/home/scott/.local/lib/python2.7/site-packages/numpy/testing/_private/utils.py&quot;, line 872, in assert_array_equal
+    verbose=verbose, header='Arrays are not equal')
+  File &quot;/home/scott/.local/lib/python2.7/site-packages/numpy/testing/_private/utils.py&quot;, line 796, in assert_array_compare
+    raise AssertionError(msg)
+AssertionError: 
+Arrays are not equal
+
+(mismatch 88.6%)
+ x: array([4, 0, 1, 1, 1, 3, 3, 4, 4, 2, 0, 0, 1, 2, 0, 2, 0, 1, 3, 1, 1, 3,
+       2, 1, 0, 2, 1, 0, 2, 0, 3, 1, 2, 3, 3, 1, 0, 2, 2, 0, 3, 0, 2, 0,
+       4, 2, 3, 0, 4, 2, 4, 1, 0, 2, 2, 1, 3, 2, 1, 4, 0, 2, 2, 1, 1, 2,...
+ y: array([4, 1, 0, 2, 2, 1, 1, 4, 4, 0, 4, 1, 0, 3, 1, 0, 2, 2, 1, 2, 0, 0,
+       1, 0, 4, 1, 0, 4, 0, 1, 1, 2, 3, 1, 4, 0, 1, 4, 4, 4, 0, 1, 0, 2,
+       4, 1, 1, 2, 4, 3, 4, 0, 2, 3, 2, 3, 0, 0, 2, 3, 3, 3, 3, 0, 3, 2,...
+```
+
+#### Versions
+```
+System:
+    python: 2.7.15rc1 (default, Nov 12 2018, 14:31:15)  [GCC 7.3.0]
+   machine: Linux-4.15.0-43-generic-x86_64-with-Ubuntu-18.04-bionic
+executable: /usr/bin/python
+
+BLAS:
+    macros: HAVE_CBLAS=None, NO_ATLAS_INFO=-1
+cblas_libs: cblas
+  lib_dirs: /usr/lib/x86_64-linux-gnu
+
+Python deps:
+    Cython: 0.28.5
+     scipy: 1.2.0
+setuptools: 39.0.1
+       pip: 19.0.1
+     numpy: 1.16.0
+    pandas: 0.23.1
+   sklearn: 0.20.2
+```</div>
+
+<div class="section-label">trajectory summary</div>
+<div class="summary-block">
+  <span class="summary-eyebrow">What happened in this run</span>
+  <div class="summary-text">The agent had to make <code>GaussianMixture.fit_predict(X)</code> and <code>predict(X)</code> agree when <code>n_init &gt; 1</code>, which they do not because <code>fit_predict</code> ends with an extra e-step run against the last initialization rather than the best one. The run splits cleanly into four blocks: <strong>T1–T3</strong> writes and runs a reproducer that fails exactly as the issue predicts; <strong>T4–T15</strong> is a long, entirely search-driven localization that walks <code>GaussianMixture</code> → <code>BaseMixture</code> and finally reads both methods side by side; <strong>T16</strong> is the single edit; <strong>T17–T21</strong> checks the edit, recovers from a malformed <code>edit</code> call, re-runs the reproducer, and submits. <strong>T14</strong> carries the real diagnostic weight — it names the post-loop e-step at line 263 as the mechanism — and <strong>T16</strong> converts that into a patch by re-pasting the whole method with <code>return self.predict(X)</code> in place of <code>return log_resp.argmax(axis=1)</code>, dropping the final e-step and its invariant comment by omission. The diagnosis is correct and the fix is a genuine fix rather than a symptom patch, but it is blunter than the diagnosis: the upstream project kept the final e-step and moved it after <code>_set_parameters</code>, whereas this patch deletes it and pays for a second full responsibility computation inside <code>predict</code>. Verification is real but thin — the agent re-runs its own reproducer only, never the <code>test_gaussian_mixture_fit_predict</code> test the issue explicitly blames, and never adds a regression test with <code>n_init</code> set. Three commands fail outright (<code>find_file … src</code> at T4, the argument-less <code>edit</code> at T18, and the wasted <code>search_file</code> pair at T8–T9), and the agent absorbs all three into polite apologies rather than any explicit statement that something went wrong.</div>
+</div>
+
+
+<div class="method-note">
+  <strong>How to read this.</strong> Every card below is one step of the session. Amber cards are the human speaking; white cards are the agent working. Cards start collapsed — click a header to open it. Inside an open agent card:<ul><li><em>Observation</em> — what the agent saw before acting (tool output, file contents).</li><li><em>Thought</em> — what the agent said to itself. Underlined phrases here explain <em>why</em> it acted.</li><li><em>Action</em> — what it actually did (commands, code edits). Underlined phrases here show <em>what</em> was done.</li></ul>Each underline carries a color-coded tag from the action codebook on the right. Click any underlined phrase, tag row, or codebook entry — the matching pieces light up together.
+</div>
+
+<div class="legend">
+  <div class="legend-item"><span class="legend-dot obs"></span> Observation</div>
+  <div class="legend-item"><span class="legend-dot thought"></span> Thought</div>
+  <div class="legend-item"><span class="legend-dot action"></span> Action</div>
+  <small>click anything underlined to light up its tag — and the other way around</small>
+</div>
+
+<div class="section-label">trajectory · 21 turns</div>
+
+<div class="turns-controls">
+  <button id="expand-all" type="button">expand all</button>
+  <button id="collapse-all" type="button">collapse all</button>
+</div>
+
+<div id="turns-container"></div>
+
+<div class="summary-footer">
+  <h2>Summary findings</h2>
+  <div class="sub">Patterns that only become visible when every tag points at an exact quote</div>
+  <div class="findings"><div class="finding"><strong>Three failed commands, zero Reflection spans</strong><span><code>find_file "GaussianMixture.py" src</code> (T4) returns "Directory src not found", <code>edit reproduce_gm_issue.py</code> (T18) returns a bare usage string, and the T8–T9 searches both come back empty — yet not one span in the run says a prior action failed. The recoveries surface instead as <em>Grounding › Express tone to user</em> at T5, T6, T17 and T19 ("I apologize for the confusion", "Thank you for the information") plus one <em>Planning › Replan dynamically based on feedback</em> at T19. Under the protocol's backward-reference requirement this run is Reflection-free, and that is a property of the agent's prose, not of the annotation.</span></div><div class="finding"><strong>The fix is one action token; the thought never names it</strong><span>T16's four thought spans plan in the vocabulary of "use the best parameters found during the fitting process", which describes an intent the code already had. The actual semantic change is visible only on the action surface, where <code>return self.predict(X)</code> replaces the argmax over <code>log_resp</code> and the final e-step vanishes by not being re-pasted. Quoting thought only, as batch-3 did, would have recorded this turn as pure Planning and lost the patch entirely.</span></div><div class="finding"><strong>Nine localization turns, two alternating leaves</strong><span>T7–T15 fire almost nothing but <em>Retrieval › Retrieve from local corpus</em> and <em>Reasoning › Analysing › Analyse source code</em>, in a strict read-then-restate rhythm: each turn re-states what the previous observation showed and issues one more <code>search_file</code>/<code>goto</code>. The two <em>Infer structure from indirect evidence</em> spans at T9 and T10 are near-verbatim duplicates of each other, marking a turn the agent spent re-deriving a conclusion it had already reached.</span></div><div class="finding"><strong>Evaluation clusters at the ends, never in the middle</strong><span>Every <em>Evaluating</em> span sits in T3–T4 or T17–T21; the entire ten-turn localization block contains none. The agent judges its reproduction and its result, but never once asks during localization whether the file it is reading is the right one — the search results are accepted as evidence without being scored.</span></div></div>
+</div>
+
+<div id="patterns-summary"></div>
+
+</main>
+
+<aside class="codebook-panel">
+  <div id="panel-resize-handle" title="Drag to resize · double-click to reset"></div>
+  <div class="panel-title">What the agent did, by category</div>
+  <div class="panel-sub">Counted from the tagged quotes across all 21 agent steps</div>
+
+  <div class="pie-section">
+    <div class="pie-legend"><div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ink-mute); letter-spacing: 0.08em; text-transform: uppercase; text-align: center; margin-bottom: 10px;">78 tags across 6 groups</div></div>
+    <div class="pie-svg-wrap"><svg width="300" height="140" viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" style="display: block; margin: 0 auto;"><g class="pie-slice" data-grp="Reasoning" style="cursor: pointer;"><title>Reasoning: 23 (29%)</title><rect x="0" y="4" width="300" height="22" fill="transparent"/><text x="96" y="18.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Reasoning</text><rect x="102" y="9" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="9" width="164.0" height="12" fill="#4f46e5" rx="2"/><text x="298" y="18.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">23</text></g><g class="pie-slice" data-grp="Retrieval" style="cursor: pointer;"><title>Retrieval: 22 (28%)</title><rect x="0" y="26" width="300" height="22" fill="transparent"/><text x="96" y="40.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Retrieval</text><rect x="102" y="31" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="31" width="156.9" height="12" fill="#0891b2" rx="2"/><text x="298" y="40.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">22</text></g><g class="pie-slice" data-grp="Planning" style="cursor: pointer;"><title>Planning: 10 (13%)</title><rect x="0" y="48" width="300" height="22" fill="transparent"/><text x="96" y="62.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Planning</text><rect x="102" y="53" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="53" width="71.3" height="12" fill="#0284c7" rx="2"/><text x="298" y="62.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">10</text></g><g class="pie-slice" data-grp="Evaluating" style="cursor: pointer;"><title>Evaluating: 10 (13%)</title><rect x="0" y="70" width="300" height="22" fill="transparent"/><text x="96" y="84.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Evaluating</text><rect x="102" y="75" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="75" width="71.3" height="12" fill="#0d9488" rx="2"/><text x="298" y="84.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">10</text></g><g class="pie-slice" data-grp="Grounding" style="cursor: pointer;"><title>Grounding: 8 (10%)</title><rect x="0" y="92" width="300" height="22" fill="transparent"/><text x="96" y="106.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Grounding</text><rect x="102" y="97" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="97" width="57.0" height="12" fill="#c026d3" rx="2"/><text x="298" y="106.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">8</text></g><g class="pie-slice" data-grp="Executing" style="cursor: pointer;"><title>Executing: 5 (6%)</title><rect x="0" y="114" width="300" height="22" fill="transparent"/><text x="96" y="128.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Executing</text><rect x="102" y="119" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="119" width="35.7" height="12" fill="#059669" rx="2"/><text x="298" y="128.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">5</text></g></svg></div>
+  </div>
+
+  <div id="signature-container"></div>
+
+  <div id="codebook-container"></div>
+</aside>
+
+</div>
+
+<script>
+const turns = [{"n": 1, "phase": "reproduce", "phaseLabel": "Reproduction setup", "headline": "Agent creates an empty reproduction script file.", "obs": "[File: /scikit-learn__scikit-learn/reproduce_gm_issue.py (1 lines total)]\n1:", "thought": "Let's start by creating a Python script to reproduce the issue as described in the bug report. We'll call this script `reproduce_gm_issue.py`.", "action": "create reproduce_gm_issue.py", "quotes": [{"quote": "creating a Python script to reproduce the issue", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Plan function or tool use", "target": "thought"}, {"quote": "We'll call this script `reproduce_gm_issue.py`", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Plan code or artifact structure", "target": "thought"}, {"quote": "create reproduce_gm_issue.py", "grp": "Executing", "sub": "Executing plan", "leaf": "Initiate planned action", "target": "action"}], "insight": ""}, {"n": 2, "phase": "reproduce", "phaseLabel": "Reproduction script", "headline": "Agent fills the script with the bug-report code.", "obs": "  File \"/root/commands/_split_string\", line 17\n    from __future__ import annotations\n    ^\nSyntaxError: future feature annotations is not defined\n[File: /scikit-learn__scikit-learn/reproduce_gm_issue.py (22 lines total)]\n1:from sklearn.mixture import GaussianMixture\n2:from sklearn.utils.testing import assert_array_equal\n3:import numpy as np\n4:\n5:np.random.seed(42)  # for reproducibility\n6:X = np.random.randn(1000, 5)\n7:\n8:print('Testing without n_init:')\n9:gm = GaussianMixture(n_components=5)\n10:c1 = gm.fit_predict(X)\n11:c2 = gm.predict(X)\n12:assert_array_equal(c1, c2)\n13:print('Test passed without n_init')\n14:\n15:print('\\nTesting with n_init=5:')\n16:gm = GaussianMixture(n_components=5, n_init=5)\n17:c1 = gm.fit_predict(X)\n18:c2 = gm.predict(X)\n19:assert_array_equal(c1, c2)\n20:print('Test passed with n_init=5')\n21:\n22:print(\"\\nScript completed successfully, no errors.\")\nFile updated. Please review the changes and make sure they are correct (correct indentation, no duplicate lines, etc). Edit the file again if necessary.", "thought": "Now, let's add the code from the bug report to our reproduction script. We'll also add some print statements to make the output clearer.", "action": "edit 1:1\nfrom sklearn.mixture import GaussianMixture\nfrom sklearn.utils.testing import assert_array_equal\nimport numpy as np\n\nnp.random.seed(42)  # for reproducibility\nX = np.random.randn(1000, 5)\n\nprint('Testing without n_init:')\ngm = GaussianMixture(n_components=5)\nc1 = gm.fit_predict(X)\nc2 = gm.predict(X)\nassert_array_equal(c1, c2)\nprint('Test passed without n_init')\n\nprint('\\nTesting with n_init=5:')\ngm = GaussianMixture(n_components=5, n_init=5)\nc1 = gm.fit_predict(X)\nc2 = gm.predict(X)\nassert_array_equal(c1, c2)\nprint('Test passed with n_init=5')\n\nprint(\"\\nScript completed successfully, no errors.\")\nend_of_edit", "quotes": [{"quote": "add the code from the bug report to our reproduction script", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Plan code or artifact structure", "target": "thought"}, {"quote": "add some print statements to make the output clearer", "grp": "Reasoning", "sub": "Generating", "leaf": "Generate initial codes", "target": "thought"}, {"quote": "edit 1:1", "grp": "Executing", "sub": "Executing plan", "leaf": "Apply patch via edit", "target": "action"}], "insight": ""}, {"n": 3, "phase": "reproduce", "phaseLabel": "Reproduction run", "headline": "Agent dismisses a stray SyntaxError and runs the reproducer.", "obs": "Testing without n_init:\nTest passed without n_init\n\nTesting with n_init=5:\nTraceback (most recent call last):\n  File \"reproduce_gm_issue.py\", line 19, in <module>\n    assert_array_equal(c1, c2)\n  File \"/root/miniconda3/envs/scikit-learn__scikit-learn__0.21/lib/python3.6/site-packages/numpy/testing/_private/utils.py\", line 931, in assert_array_equal\n    verbose=verbose, header='Arrays are not equal')\n  File \"/root/miniconda3/envs/scikit-learn__scikit-learn__0.21/lib/python3.6/site-packages/numpy/testing/_private/utils.py\", line 840, in assert_array_compare\n    raise AssertionError(msg)\nAssertionError: \nArrays are not equal\n\nMismatched elements: 862 / 1000 (86.2%)\nMax absolute difference: 4\nMax relative difference: 3.\n x: array([2, 0, 3, 1, 3, 2, 4, 3, 2, 0, 2, 2, 3, 2, 2, 2, 0, 0, 2, 1, 1, 4,\n       1, 2, 0, 3, 1, 3, 2, 3, 2, 4, 0, 0, 1, 0, 2, 2, 0, 2, 2, 0, 4, 2,\n       3, 3, 0, 2, 1, 1, 0, 4, 3, 4, 2, 2, 0, 1, 1, 4, 0, 4, 4, 2, 1, 0,...\n y: array([4, 1, 4, 4, 4, 0, 1, 2, 4, 4, 3, 4, 2, 4, 4, 4, 1, 1, 3, 2, 2, 1,\n       3, 3, 1, 4, 2, 2, 3, 3, 3, 1, 1, 1, 3, 0, 2, 4, 1, 4, 4, 0, 4, 4,\n       0, 2, 0, 0, 4, 3, 1, 3, 2, 2, 0, 3, 1, 2, 3, 1, 0, 3, 0, 3, 4, 0,...", "thought": "The script looks correct. The SyntaxError you're seeing is not related to our script, so we can ignore it. Now, let's run the script to see if we can reproduce the issue.", "action": "python reproduce_gm_issue.py", "quotes": [{"quote": "The script looks correct", "grp": "Evaluating", "sub": "Evaluating without ground truth", "leaf": "Provide qualitative judgement", "target": "thought"}, {"quote": "The SyntaxError you're seeing is not related to our script", "grp": "Reasoning", "sub": "Inferring", "leaf": "Diagnose Error Cause", "target": "thought"}, {"quote": "run the script to see if we can reproduce the issue", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Plan function or tool use", "target": "thought"}, {"quote": "python reproduce_gm_issue.py", "grp": "Grounding", "sub": "Augment with external computation", "leaf": "Execute code", "target": "action"}], "insight": "The SyntaxError comes from the harness's own <code>_split_string</code> command, not from the agent's script. The agent scopes it correctly and does not chase it — the one environment noise signal in the run that it reads right."}, {"n": 4, "phase": "localize", "phaseLabel": "Reproduce → localize", "headline": "Agent confirms the bug and starts hunting for the class file.", "obs": "Directory src not found", "thought": "The issue has been successfully reproduced. We can see that the test passes without `n_init`, but fails when `n_init=5`. This confirms the bug described in the issue.\n\nNow, let's investigate the source of this problem. The issue is likely in the `GaussianMixture` class implementation. We need to find the file where this class is defined.", "action": "find_file \"GaussianMixture.py\" src", "quotes": [{"quote": "The issue has been successfully reproduced", "grp": "Evaluating", "sub": "Evaluating with goals/requirements/constraints", "leaf": "Goal-completion check", "target": "thought"}, {"quote": "the test passes without `n_init`, but fails when `n_init=5`", "grp": "Reasoning", "sub": "Analysing", "leaf": "Interpret meaning of artifacts", "target": "thought"}, {"quote": "let's investigate the source of this problem", "grp": "Planning", "sub": "Decompose task", "leaf": "Phase transition: reproduce → localize", "target": "thought"}, {"quote": "The issue is likely in the `GaussianMixture` class implementation", "grp": "Reasoning", "sub": "Inferring", "leaf": "Initial diagnostic framing", "target": "thought"}, {"quote": "find_file \"GaussianMixture.py\" src", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus", "target": "action"}], "insight": ""}, {"n": 5, "phase": "localize", "phaseLabel": "File-level localize", "headline": "Agent retries the file search without a directory argument.", "obs": "./sklearn/mixture/bayesian_mixture.py\n./sklearn/mixture/gaussian_mixture.py\n./sklearn/mixture/tests/test_mixture.py\n./sklearn/mixture/tests/test_gaussian_mixture.py\n./sklearn/mixture/tests/test_bayesian_mixture.py", "thought": "I apologize for the confusion. Let's try to find the correct location of the GaussianMixture class. It's likely in a subdirectory of the current directory.", "action": "find . -name \"*mixture*.py\"", "quotes": [{"quote": "I apologize for the confusion", "grp": "Grounding", "sub": "Interact with users", "leaf": "Express tone to user", "target": "thought"}, {"quote": "find the correct location of the GaussianMixture class", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus", "target": "thought"}, {"quote": "It's likely in a subdirectory of the current directory", "grp": "Reasoning", "sub": "Inferring", "leaf": "Infer structure from indirect evidence", "target": "thought"}, {"quote": "find . -name \"*mixture*.py\"", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus", "target": "action"}], "insight": "The previous turn's <code>find_file … src</code> returned \"Directory src not found\". The agent silently switches tool and scope, but never states that the command failed — so nothing here clears the Reflection bar of an explicit backward reference."}, {"n": 6, "phase": "localize", "phaseLabel": "File-level localize", "headline": "Agent opens gaussian_mixture.py to inspect the class.", "obs": "[File: /scikit-learn__scikit-learn/sklearn/mixture/gaussian_mixture.py (755 lines total)]\n1:\"\"\"Gaussian Mixture Model.\"\"\"\n2:\n3:# Author: Wei Xue <xuewei4d@gmail.com>\n4:# Modified by Thierry Guillemot <thierry.guillemot.work@gmail.com>\n5:# License: BSD 3 clause\n6:\n7:import numpy as np\n8:\n9:from scipy import linalg\n10:\n11:from .base import BaseMixture, _check_shape\n12:from ..utils import check_array\n13:from ..utils.validation import check_is_fitted\n14:from ..utils.extmath import row_norms\n15:\n16:\n17:###############################################################################\n18:# Gaussian mixture shape checkers used by the GaussianMixture class\n19:\n20:def _check_weights(weights, n_components):\n21:    \"\"\"Check the user provided 'weights'.\n22:\n23:    Parameters\n24:    ----------\n25:    weights : array-like, shape (n_components,)\n26:        The proportions of components of each mixture.\n27:\n28:    n_components : int\n29:        Number of components.\n30:\n31:    Returns\n32:    -------\n33:    weights : array, shape (n_components,)\n34:    \"\"\"\n35:    weights = check_array(weights, dtype=[np.float64, np.float32],\n36:                          ensure_2d=False)\n37:    _check_shape(weights, (n_components,), 'weights')\n38:\n39:    # check range\n40:    if (any(np.less(weights, 0.)) or\n41:            any(np.greater(weights, 1.))):\n42:        raise ValueError(\"The parameter 'weights' should be in the range \"\n43:                         \"[0, 1], but got max value %.5f, min value %.5f\"\n44:                         % (np.min(weights), np.max(weights)))\n45:\n46:    # check normalization\n47:    if not np.allclose(np.abs(1. - np.sum(weights)), 0.):\n48:        raise ValueError(\"The parameter 'weights' should be normalized, \"\n49:                         \"but got sum(weights) = %.5f\" % np.sum(weights))\n50:    return weights\n51:\n52:\n53:def _check_means(means, n_components, n_features):\n54:    \"\"\"Validate the provided 'means'.\n55:\n56:    Parameters\n57:    ----------\n58:    means : array-like, shape (n_components, n_features)\n59:        The centers of the current components.\n60:\n61:    n_components : int\n62:        Number of components.\n63:\n64:    n_features : int\n65:        Number of features.\n66:\n67:    Returns\n68:    -------\n69:    means : array, (n_components, n_features)\n70:    \"\"\"\n71:    means = check_array(means, dtype=[np.float64, np.float32], ensure_2d=False)\n72:    _check_shape(means, (n_components, n_features), 'means')\n73:    return means\n74:\n75:\n76:def _check_precision_positivity(precision, covariance_type):\n77:    \"\"\"Check a precision vector is positive-definite.\"\"\"\n78:    if np.any(np.less_equal(precision, 0.0)):\n79:        raise ValueError(\"'%s precision' should be \"\n80:                         \"positive\" % covariance_type)\n81:\n82:\n83:def _check_precision_matrix(precision, covariance_type):\n84:    \"\"\"Check a precision matrix is symmetric and positive-definite.\"\"\"\n85:    if not (np.allclose(precision, precision.T) and\n86:            np.all(linalg.eigvalsh(precision) > 0.)):\n87:        raise ValueError(\"'%s precision' should be symmetric, \"\n88:                         \"positive-definite\" % covariance_type)\n89:\n90:\n91:def _check_precisions_full(precisions, covariance_type):\n92:    \"\"\"Check the precision matrices are symmetric and positive-definite.\"\"\"\n93:    for prec in precisions:\n94:        _check_precision_matrix(prec, covariance_type)\n95:\n96:\n97:def _check_precisions(precisions, covariance_type, n_components, n_features):\n98:    \"\"\"Validate user provided precisions.\n99:\n100:    Parameters\n(655 more lines below)", "thought": "Thank you for the information. The file we're looking for is `./sklearn/mixture/gaussian_mixture.py`. Let's open this file and examine the `GaussianMixture` class implementation.", "action": "open ./sklearn/mixture/gaussian_mixture.py", "quotes": [{"quote": "Thank you for the information", "grp": "Grounding", "sub": "Interact with users", "leaf": "Express tone to user", "target": "thought"}, {"quote": "The file we're looking for is `./sklearn/mixture/gaussian_mixture.py`", "grp": "Reasoning", "sub": "Analysing", "leaf": "Analyse source code", "target": "thought"}, {"quote": "open this file and examine the `GaussianMixture` class implementation", "grp": "Grounding", "sub": "Interact with digital environments", "leaf": "Navigate digital interfaces", "target": "thought"}, {"quote": "open ./sklearn/mixture/gaussian_mixture.py", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus", "target": "action"}], "insight": ""}, {"n": 7, "phase": "localize", "phaseLabel": "Method-level localize", "headline": "Agent searches the file for the GaussianMixture class definition.", "obs": "Found 1 matches for \"class GaussianMixture\" in /scikit-learn__scikit-learn/sklearn/mixture/gaussian_mixture.py:\nLine 434:class GaussianMixture(BaseMixture):\nEnd of matches for \"class GaussianMixture\" in /scikit-learn__scikit-learn/sklearn/mixture/gaussian_mixture.py", "thought": "Now that we have the file open, we need to find the `fit_predict` and `predict` methods of the `GaussianMixture` class. These methods are likely causing the discrepancy when `n_init > 1`. Let's search for the `GaussianMixture` class definition.", "action": "search_file \"class GaussianMixture\"", "quotes": [{"quote": "we need to find the `fit_predict` and `predict` methods", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus", "target": "thought"}, {"quote": "These methods are likely causing the discrepancy when `n_init > 1`", "grp": "Reasoning", "sub": "Inferring", "leaf": "Initial diagnostic framing", "target": "thought"}, {"quote": "search_file \"class GaussianMixture\"", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus", "target": "action"}], "insight": ""}, {"n": 8, "phase": "localize", "phaseLabel": "Method-level localize", "headline": "Agent searches for the fit_predict definition.", "obs": "No matches found for \"def fit_predict\" in /scikit-learn__scikit-learn/sklearn/mixture/gaussian_mixture.py", "thought": "Great, we've found the `GaussianMixture` class definition. Now, let's look at the `fit_predict` and `predict` methods. First, let's check the `fit_predict` method.", "action": "search_file \"def fit_predict\"", "quotes": [{"quote": "we've found the `GaussianMixture` class definition", "grp": "Reasoning", "sub": "Analysing", "leaf": "Analyse source code", "target": "thought"}, {"quote": "look at the `fit_predict` and `predict` methods", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus", "target": "thought"}, {"quote": "search_file \"def fit_predict\"", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus", "target": "action"}], "insight": ""}, {"n": 9, "phase": "localize", "phaseLabel": "Method-level localize", "headline": "Agent reads the empty result as inheritance and searches predict.", "obs": "No matches found for \"def predict\" in /scikit-learn__scikit-learn/sklearn/mixture/gaussian_mixture.py", "thought": "It seems that `fit_predict` is not directly defined in the `GaussianMixture` class. It's likely inherited from the `BaseMixture` class. Let's check for the `predict` method instead.", "action": "search_file \"def predict\"", "quotes": [{"quote": "`fit_predict` is not directly defined in the `GaussianMixture` class", "grp": "Reasoning", "sub": "Analysing", "leaf": "Analyse source code", "target": "thought"}, {"quote": "It's likely inherited from the `BaseMixture` class", "grp": "Reasoning", "sub": "Inferring", "leaf": "Infer structure from indirect evidence", "target": "thought"}, {"quote": "search_file \"def predict\"", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus", "target": "action"}], "insight": ""}, {"n": 10, "phase": "localize", "phaseLabel": "Inheritance localize", "headline": "Agent traces both methods up to BaseMixture.", "obs": "Found 1 matches for \"from .base import BaseMixture\" in /scikit-learn__scikit-learn/sklearn/mixture/gaussian_mixture.py:\nLine 11:from .base import BaseMixture, _check_shape\nEnd of matches for \"from .base import BaseMixture\" in /scikit-learn__scikit-learn/sklearn/mixture/gaussian_mixture.py", "thought": "It appears that both `fit_predict` and `predict` methods are not directly defined in the `GaussianMixture` class. They are likely inherited from the `BaseMixture` class. Let's check the `BaseMixture` class. First, we need to find where it's defined.", "action": "search_file \"from .base import BaseMixture\"", "quotes": [{"quote": "both `fit_predict` and `predict` methods are not directly defined", "grp": "Reasoning", "sub": "Analysing", "leaf": "Analyse source code", "target": "thought"}, {"quote": "They are likely inherited from the `BaseMixture` class", "grp": "Reasoning", "sub": "Inferring", "leaf": "Infer structure from indirect evidence", "target": "thought"}, {"quote": "we need to find where it's defined", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus", "target": "thought"}, {"quote": "search_file \"from .base import BaseMixture\"", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus", "target": "action"}], "insight": ""}, {"n": 11, "phase": "localize", "phaseLabel": "Inheritance localize", "headline": "Agent opens sklearn/mixture/base.py.", "obs": "[File: /scikit-learn__scikit-learn/sklearn/mixture/base.py (536 lines total)]\n1:\"\"\"Base class for mixture models.\"\"\"\n2:\n3:# Author: Wei Xue <xuewei4d@gmail.com>\n4:# Modified by Thierry Guillemot <thierry.guillemot.work@gmail.com>\n5:# License: BSD 3 clause\n6:\n7:import warnings\n8:from abc import ABCMeta, abstractmethod\n9:from time import time\n10:\n11:import numpy as np\n12:\n13:from .. import cluster\n14:from ..base import BaseEstimator\n15:from ..base import DensityMixin\n16:from ..exceptions import ConvergenceWarning\n17:from ..utils import check_array, check_random_state\n18:from ..utils.fixes import logsumexp\n19:\n20:\n21:def _check_shape(param, param_shape, name):\n22:    \"\"\"Validate the shape of the input parameter 'param'.\n23:\n24:    Parameters\n25:    ----------\n26:    param : array\n27:\n28:    param_shape : tuple\n29:\n30:    name : string\n31:    \"\"\"\n32:    param = np.array(param)\n33:    if param.shape != param_shape:\n34:        raise ValueError(\"The parameter '%s' should have the shape of %s, \"\n35:                         \"but got %s\" % (name, param_shape, param.shape))\n36:\n37:\n38:def _check_X(X, n_components=None, n_features=None, ensure_min_samples=1):\n39:    \"\"\"Check the input data X.\n40:\n41:    Parameters\n42:    ----------\n43:    X : array-like, shape (n_samples, n_features)\n44:\n45:    n_components : int\n46:\n47:    Returns\n48:    -------\n49:    X : array, shape (n_samples, n_features)\n50:    \"\"\"\n51:    X = check_array(X, dtype=[np.float64, np.float32],\n52:                    ensure_min_samples=ensure_min_samples)\n53:    if n_components is not None and X.shape[0] < n_components:\n54:        raise ValueError('Expected n_samples >= n_components '\n55:                         'but got n_components = %d, n_samples = %d'\n56:                         % (n_components, X.shape[0]))\n57:    if n_features is not None and X.shape[1] != n_features:\n58:        raise ValueError(\"Expected the input data X have %d features, \"\n59:                         \"but got %d features\"\n60:                         % (n_features, X.shape[1]))\n61:    return X\n62:\n63:\n64:class BaseMixture(DensityMixin, BaseEstimator, metaclass=ABCMeta):\n65:    \"\"\"Base class for mixture models.\n66:\n67:    This abstract class specifies an interface for all mixture classes and\n68:    provides basic common methods for mixture models.\n69:    \"\"\"\n70:\n71:    def __init__(self, n_components, tol, reg_covar,\n72:                 max_iter, n_init, init_params, random_state, warm_start,\n73:                 verbose, verbose_interval):\n74:        self.n_components = n_components\n75:        self.tol = tol\n76:        self.reg_covar = reg_covar\n77:        self.max_iter = max_iter\n78:        self.n_init = n_init\n79:        self.init_params = init_params\n80:        self.random_state = random_state\n81:        self.warm_start = warm_start\n82:        self.verbose = verbose\n83:        self.verbose_interval = verbose_interval\n84:\n85:    def _check_initial_parameters(self, X):\n86:        \"\"\"Check values of the basic parameters.\n87:\n88:        Parameters\n89:        ----------\n90:        X : array-like, shape (n_samples, n_features)\n91:        \"\"\"\n92:        if self.n_components < 1:\n93:            raise ValueError(\"Invalid value for 'n_components': %d \"\n94:                             \"Estimation requires at least one component\"\n95:                             % self.n_components)\n96:\n97:        if self.tol < 0.:\n98:            raise ValueError(\"Invalid value for 'tol': %.5f \"\n99:                             \"Tolerance used by the EM must be non-negative\"\n100:                             % self.tol)\n(436 more lines below)", "thought": "Now we know that `BaseMixture` is imported from a file named `base.py` in the same directory. Let's open that file to examine the `BaseMixture` class.", "action": "open ./sklearn/mixture/base.py", "quotes": [{"quote": "`BaseMixture` is imported from a file named `base.py` in the same directory", "grp": "Reasoning", "sub": "Analysing", "leaf": "Analyse source code", "target": "thought"}, {"quote": "open that file to examine the `BaseMixture` class", "grp": "Grounding", "sub": "Interact with digital environments", "leaf": "Navigate digital interfaces", "target": "thought"}, {"quote": "open ./sklearn/mixture/base.py", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus", "target": "action"}], "insight": ""}, {"n": 12, "phase": "localize", "phaseLabel": "Method-level localize", "headline": "Agent searches base.py for fit_predict.", "obs": "Found 1 matches for \"def fit_predict\" in /scikit-learn__scikit-learn/sklearn/mixture/base.py:\nLine 194:    def fit_predict(self, X, y=None):\nEnd of matches for \"def fit_predict\" in /scikit-learn__scikit-learn/sklearn/mixture/base.py", "thought": "Now that we have the `BaseMixture` class open, let's search for the `fit_predict` and `predict` methods.", "action": "search_file \"def fit_predict\"", "quotes": [{"quote": "search for the `fit_predict` and `predict` methods", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus", "target": "thought"}, {"quote": "search_file \"def fit_predict\"", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus", "target": "action"}], "insight": ""}, {"n": 13, "phase": "localize", "phaseLabel": "Read fit_predict", "headline": "Agent jumps to line 194 to read fit_predict.", "obs": "[File: /scikit-learn__scikit-learn/sklearn/mixture/base.py (536 lines total)]\n(178 more lines above)\n179:        calls, training starts where it left off.\n180:\n181:        Parameters\n182:        ----------\n183:        X : array-like, shape (n_samples, n_features)\n184:            List of n_features-dimensional data points. Each row\n185:            corresponds to a single data point.\n186:\n187:        Returns\n188:        -------\n189:        self\n190:        \"\"\"\n191:        self.fit_predict(X, y)\n192:        return self\n193:\n194:    def fit_predict(self, X, y=None):\n195:        \"\"\"Estimate model parameters using X and predict the labels for X.\n196:\n197:        The method fits the model n_init times and sets the parameters with\n198:        which the model has the largest likelihood or lower bound. Within each\n199:        trial, the method iterates between E-step and M-step for `max_iter`\n200:        times until the change of likelihood or lower bound is less than\n201:        `tol`, otherwise, a `ConvergenceWarning` is raised. After fitting, it\n202:        predicts the most probable label for the input data points.\n203:\n204:        .. versionadded:: 0.20\n205:\n206:        Parameters\n207:        ----------\n208:        X : array-like, shape (n_samples, n_features)\n209:            List of n_features-dimensional data points. Each row\n210:            corresponds to a single data point.\n211:\n212:        Returns\n213:        -------\n214:        labels : array, shape (n_samples,)\n215:            Component labels.\n216:        \"\"\"\n217:        X = _check_X(X, self.n_components, ensure_min_samples=2)\n218:        self._check_initial_parameters(X)\n219:\n220:        # if we enable warm_start, we will have a unique initialisation\n221:        do_init = not(self.warm_start and hasattr(self, 'converged_'))\n222:        n_init = self.n_init if do_init else 1\n223:\n224:        max_lower_bound = -np.infty\n225:        self.converged_ = False\n226:\n227:        random_state = check_random_state(self.random_state)\n228:\n229:        n_samples, _ = X.shape\n230:        for init in range(n_init):\n231:            self._print_verbose_msg_init_beg(init)\n232:\n233:            if do_init:\n234:                self._initialize_parameters(X, random_state)\n235:\n236:            lower_bound = (-np.infty if do_init else self.lower_bound_)\n237:\n238:            for n_iter in range(1, self.max_iter + 1):\n239:                prev_lower_bound = lower_bound\n240:\n241:                log_prob_norm, log_resp = self._e_step(X)\n242:                self._m_step(X, log_resp)\n243:                lower_bound = self._compute_lower_bound(\n244:                    log_resp, log_prob_norm)\n245:\n246:                change = lower_bound - prev_lower_bound\n247:                self._print_verbose_msg_iter_end(n_iter, change)\n248:\n249:                if abs(change) < self.tol:\n250:                    self.converged_ = True\n251:                    break\n252:\n253:            self._print_verbose_msg_init_end(lower_bound)\n254:\n255:            if lower_bound > max_lower_bound:\n256:                max_lower_bound = lower_bound\n257:                best_params = self._get_parameters()\n258:                best_n_iter = n_iter\n259:\n260:        # Always do a final e-step to guarantee that the labels returned by\n261:        # fit_predict(X) are always consistent with fit(X).predict(X)\n262:        # for any value of max_iter and tol (and any random_state).\n263:        _, log_resp = self._e_step(X)\n264:\n265:        if not self.converged_:\n266:            warnings.warn('Initialization %d did not converge. '\n267:                          'Try different init parameters, '\n268:                          'or increase max_iter, tol '\n269:                          'or check for degenerate data.'\n270:                          % (init + 1), ConvergenceWarning)\n271:\n272:        self._set_parameters(best_params)\n273:        self.n_iter_ = best_n_iter\n274:        self.lower_bound_ = max_lower_bound\n275:\n276:        return log_resp.argmax(axis=1)\n277:\n278:    def _e_step(self, X):\n(258 more lines below)", "thought": "Great, we've found the `fit_predict` method. Let's take a closer look at its implementation.", "action": "goto 194", "quotes": [{"quote": "we've found the `fit_predict` method", "grp": "Reasoning", "sub": "Analysing", "leaf": "Analyse source code", "target": "thought"}, {"quote": "take a closer look at its implementation", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Read code semantics from open file", "target": "thought"}, {"quote": "goto 194", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Read code semantics from open file", "target": "action"}], "insight": ""}, {"n": 14, "phase": "localize", "phaseLabel": "Mechanism pinpoint", "headline": "Agent names the final e-step as the suspect mechanism.", "obs": "Found 2 matches for \"def predict\" in /scikit-learn__scikit-learn/sklearn/mixture/base.py:\nLine 358:    def predict(self, X):\nLine 376:    def predict_proba(self, X):\nEnd of matches for \"def predict\" in /scikit-learn__scikit-learn/sklearn/mixture/base.py", "thought": "Now that we've seen the `fit_predict` method, we can see that it's performing multiple initializations when `n_init > 1`. The issue is likely in the fact that after finding the best parameters, it's doing a final e-step (line 263) and returning the result of that.\n\nLet's now look for the `predict` method to compare.", "action": "search_file \"def predict\"", "quotes": [{"quote": "it's performing multiple initializations when `n_init > 1`", "grp": "Reasoning", "sub": "Analysing", "leaf": "Analyse source code", "target": "thought"}, {"quote": "it's doing a final e-step (line 263) and returning the result of that", "grp": "Reasoning", "sub": "Inferring", "leaf": "Pinpoint root cause mechanism", "target": "thought"}, {"quote": "look for the `predict` method to compare", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus", "target": "thought"}, {"quote": "search_file \"def predict\"", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus", "target": "action"}], "insight": "This is the turn that actually solves the bug: line 263's post-loop e-step runs against the <em>last</em> initialization's parameters, while <code>_set_parameters</code> later installs the <em>best</em> ones. Every later turn is mechanics."}, {"n": 15, "phase": "localize", "phaseLabel": "Read predict", "headline": "Agent jumps to line 358 to read predict.", "obs": "[File: /scikit-learn__scikit-learn/sklearn/mixture/base.py (536 lines total)]\n(342 more lines above)\n343:        \"\"\"Compute the per-sample average log-likelihood of the given data X.\n344:\n345:        Parameters\n346:        ----------\n347:        X : array-like, shape (n_samples, n_dimensions)\n348:            List of n_features-dimensional data points. Each row\n349:            corresponds to a single data point.\n350:\n351:        Returns\n352:        -------\n353:        log_likelihood : float\n354:            Log likelihood of the Gaussian mixture given X.\n355:        \"\"\"\n356:        return self.score_samples(X).mean()\n357:\n358:    def predict(self, X):\n359:        \"\"\"Predict the labels for the data samples in X using trained model.\n360:\n361:        Parameters\n362:        ----------\n363:        X : array-like, shape (n_samples, n_features)\n364:            List of n_features-dimensional data points. Each row\n365:            corresponds to a single data point.\n366:\n367:        Returns\n368:        -------\n369:        labels : array, shape (n_samples,)\n370:            Component labels.\n371:        \"\"\"\n372:        self._check_is_fitted()\n373:        X = _check_X(X, None, self.means_.shape[1])\n374:        return self._estimate_weighted_log_prob(X).argmax(axis=1)\n375:\n376:    def predict_proba(self, X):\n377:        \"\"\"Predict posterior probability of each component given the data.\n378:\n379:        Parameters\n380:        ----------\n381:        X : array-like, shape (n_samples, n_features)\n382:            List of n_features-dimensional data points. Each row\n383:            corresponds to a single data point.\n384:\n385:        Returns\n386:        -------\n387:        resp : array, shape (n_samples, n_components)\n388:            Returns the probability each Gaussian (state) in\n389:            the model given each sample.\n390:        \"\"\"\n391:        self._check_is_fitted()\n392:        X = _check_X(X, None, self.means_.shape[1])\n393:        _, log_resp = self._estimate_log_prob_resp(X)\n394:        return np.exp(log_resp)\n395:\n396:    def sample(self, n_samples=1):\n397:        \"\"\"Generate random samples from the fitted Gaussian distribution.\n398:\n399:        Parameters\n400:        ----------\n401:        n_samples : int, optional\n402:            Number of samples to generate. Defaults to 1.\n403:\n404:        Returns\n405:        -------\n406:        X : array, shape (n_samples, n_features)\n407:            Randomly generated sample\n408:\n409:        y : array, shape (nsamples,)\n410:            Component labels\n411:\n412:        \"\"\"\n413:        self._check_is_fitted()\n414:\n415:        if n_samples < 1:\n416:            raise ValueError(\n417:                \"Invalid value for 'n_samples': %d . The sampling requires at \"\n418:                \"least one sample.\" % (self.n_components))\n419:\n420:        _, n_features = self.means_.shape\n421:        rng = check_random_state(self.random_state)\n422:        n_samples_comp = rng.multinomial(n_samples, self.weights_)\n423:\n424:        if self.covariance_type == 'full':\n425:            X = np.vstack([\n426:                rng.multivariate_normal(mean, covariance, int(sample))\n427:                for (mean, covariance, sample) in zip(\n428:                    self.means_, self.covariances_, n_samples_comp)])\n429:        elif self.covariance_type == \"tied\":\n430:            X = np.vstack([\n431:                rng.multivariate_normal(mean, self.covariances_, int(sample))\n432:                for (mean, sample) in zip(\n433:                    self.means_, n_samples_comp)])\n434:        else:\n435:            X = np.vstack([\n436:                mean + rng.randn(sample, n_features) * np.sqrt(covariance)\n437:                for (mean, covariance, sample) in zip(\n438:                    self.means_, self.covariances_, n_samples_comp)])\n439:\n440:        y = np.concatenate([np.full(sample, j, dtype=int)\n441:                           for j, sample in enumerate(n_samples_comp)])\n442:\n(94 more lines below)", "thought": "Let's examine the `predict` method. We'll go to line 358.", "action": "goto 358", "quotes": [{"quote": "examine the `predict` method", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Read code semantics from open file", "target": "thought"}, {"quote": "We'll go to line 358", "grp": "Grounding", "sub": "Interact with digital environments", "leaf": "Navigate digital interfaces", "target": "thought"}, {"quote": "goto 358", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Read code semantics from open file", "target": "action"}], "insight": ""}, {"n": 16, "phase": "edit", "phaseLabel": "Patch", "headline": "Agent rewrites fit_predict to end in self.predict(X).", "obs": "  File \"/root/commands/_split_string\", line 17\n    from __future__ import annotations\n    ^\nSyntaxError: future feature annotations is not defined\n[File: /scikit-learn__scikit-learn/sklearn/mixture/base.py (531 lines total)]\n(143 more lines above)\n144:            resp = np.zeros((n_samples, self.n_components))\n145:            label = cluster.KMeans(n_clusters=self.n_components, n_init=1,\n146:                                   random_state=random_state).fit(X).labels_\n147:            resp[np.arange(n_samples), label] = 1\n148:        elif self.init_params == 'random':\n149:            resp = random_state.rand(n_samples, self.n_components)\n150:            resp /= resp.sum(axis=1)[:, np.newaxis]\n151:        else:\n152:            raise ValueError(\"Unimplemented initialization method '%s'\"\n153:                             % self.init_params)\n154:\n155:        self._initialize(X, resp)\n156:\n157:    @abstractmethod\n158:    def _initialize(self, X, resp):\n159:        \"\"\"Initialize the model parameters of the derived class.\n160:\n161:        Parameters\n162:        ----------\n163:        X : array-like, shape  (n_samples, n_features)\n164:\n165:        resp : array-like, shape (n_samples, n_components)\n166:        \"\"\"\n167:        pass\n168:\n169:    def fit(self, X, y=None):\n170:        \"\"\"Estimate model parameters with the EM algorithm.\n171:\n172:        The method fits the model ``n_init`` times and sets the parameters with\n173:        which the model has the largest likelihood or lower bound. Within each\n174:        trial, the method iterates between E-step and M-step for ``max_iter``\n175:        times until the change of likelihood or lower bound is less than\n176:        ``tol``, otherwise, a ``ConvergenceWarning`` is raised.\n177:        If ``warm_start`` is ``True``, then ``n_init`` is ignored and a single\n178:        initialization is performed upon the first call. Upon consecutive\n179:        calls, training starts where it left off.\n180:\n181:        Parameters\n182:        ----------\n183:        X : array-like, shape (n_samples, n_features)\n184:            List of n_features-dimensional data points. Each row\n185:            corresponds to a single data point.\n186:\n187:        Returns\n188:        -------\n189:        self\n190:        \"\"\"\n191:        self.fit_predict(X, y)\n192:        return self\n193:\n194:    def fit_predict(self, X, y=None):\n195:        \"\"\"Estimate model parameters using X and predict the labels for X.\n196:\n197:        The method fits the model n_init times and sets the parameters with\n198:        which the model has the largest likelihood or lower bound. Within each\n199:        trial, the method iterates between E-step and M-step for `max_iter`\n200:        times until the change of likelihood or lower bound is less than\n201:        `tol`, otherwise, a `ConvergenceWarning` is raised. After fitting, it\n202:        predicts the most probable label for the input data points.\n203:\n204:        .. versionadded:: 0.20\n205:\n206:        Parameters\n207:        ----------\n208:        X : array-like, shape (n_samples, n_features)\n209:            List of n_features-dimensional data points. Each row\n210:            corresponds to a single data point.\n211:\n212:        Returns\n213:        -------\n214:        labels : array, shape (n_samples,)\n215:            Component labels.\n216:        \"\"\"\n217:        X = _check_X(X, self.n_components, ensure_min_samples=2)\n218:        self._check_initial_parameters(X)\n219:\n220:        # if we enable warm_start, we will have a unique initialisation\n221:        do_init = not(self.warm_start and hasattr(self, 'converged_'))\n222:        n_init = self.n_init if do_init else 1\n223:\n224:        max_lower_bound = -np.infty\n225:        self.converged_ = False\n226:\n227:        random_state = check_random_state(self.random_state)\n228:\n229:        n_samples, _ = X.shape\n230:        for init in range(n_init):\n231:            self._print_verbose_msg_init_beg(init)\n232:\n233:            if do_init:\n234:                self._initialize_parameters(X, random_state)\n235:\n236:            lower_bound = (-np.infty if do_init else self.lower_bound_)\n237:\n238:            for n_iter in range(1, self.max_iter + 1):\n239:                prev_lower_bound = lower_bound\n240:\n241:                log_prob_norm, log_resp = self._e_step(X)\n242:                self._m_step(X, log_resp)\n243:                lower_bound = self._compute_lower_bound(\n(288 more lines below)\nFile updated. Please review the changes and make sure they are correct (correct indentation, no duplicate lines, etc). Edit the file again if necessary.", "thought": "After examining both `fit_predict` and `predict` methods, we can see that the issue arises because `fit_predict` performs multiple initializations when `n_init > 1`, while `predict` simply uses the final fitted model.\n\nTo fix this issue, we need to ensure that `fit_predict` uses the same model that `predict` would use. We can do this by modifying the `fit_predict` method to use the best parameters found during the fitting process, rather than doing a final e-step with potentially different parameters.\n\nLet's modify the `fit_predict` method. We'll edit the file to make these changes:", "action": "edit 194:276\n    def fit_predict(self, X, y=None):\n        \"\"\"Estimate model parameters using X and predict the labels for X.\n\n        The method fits the model n_init times and sets the parameters with\n        which the model has the largest likelihood or lower bound. Within each\n        trial, the method iterates between E-step and M-step for `max_iter`\n        times until the change of likelihood or lower bound is less than\n        `tol`, otherwise, a `ConvergenceWarning` is raised. After fitting, it\n        predicts the most probable label for the input data points.\n\n        .. versionadded:: 0.20\n\n        Parameters\n        ----------\n        X : array-like, shape (n_samples, n_features)\n            List of n_features-dimensional data points. Each row\n            corresponds to a single data point.\n\n        Returns\n        -------\n        labels : array, shape (n_samples,)\n            Component labels.\n        \"\"\"\n        X = _check_X(X, self.n_components, ensure_min_samples=2)\n        self._check_initial_parameters(X)\n\n        # if we enable warm_start, we will have a unique initialisation\n        do_init = not(self.warm_start and hasattr(self, 'converged_'))\n        n_init = self.n_init if do_init else 1\n\n        max_lower_bound = -np.infty\n        self.converged_ = False\n\n        random_state = check_random_state(self.random_state)\n\n        n_samples, _ = X.shape\n        for init in range(n_init):\n            self._print_verbose_msg_init_beg(init)\n\n            if do_init:\n                self._initialize_parameters(X, random_state)\n\n            lower_bound = (-np.infty if do_init else self.lower_bound_)\n\n            for n_iter in range(1, self.max_iter + 1):\n                prev_lower_bound = lower_bound\n\n                log_prob_norm, log_resp = self._e_step(X)\n                self._m_step(X, log_resp)\n                lower_bound = self._compute_lower_bound(\n                    log_resp, log_prob_norm)\n\n                change = lower_bound - prev_lower_bound\n                self._print_verbose_msg_iter_end(n_iter, change)\n\n                if abs(change) < self.tol:\n                    self.converged_ = True\n                    break\n\n            self._print_verbose_msg_init_end(lower_bound)\n\n            if lower_bound > max_lower_bound:\n                max_lower_bound = lower_bound\n                best_params = self._get_parameters()\n                best_n_iter = n_iter\n\n        if not self.converged_:\n            warnings.warn('Initialization %d did not converge. '\n                          'Try different init parameters, '\n                          'or increase max_iter, tol '\n                          'or check for degenerate data.'\n                          % (init + 1), ConvergenceWarning)\n\n        self._set_parameters(best_params)\n        self.n_iter_ = best_n_iter\n        self.lower_bound_ = max_lower_bound\n\n        return self.predict(X)\nend_of_edit", "quotes": [{"quote": "the issue arises because `fit_predict` performs multiple initializations when `n_init > 1`", "grp": "Reasoning", "sub": "Inferring", "leaf": "Pinpoint root cause mechanism", "target": "thought"}, {"quote": "while `predict` simply uses the final fitted model", "grp": "Reasoning", "sub": "Analysing", "leaf": "Analyse source code", "target": "thought"}, {"quote": "we need to ensure that `fit_predict` uses the same model that `predict` would use", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Formulate a high-level plan", "target": "thought"}, {"quote": "modifying the `fit_predict` method to use the best parameters found during the fitting process", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Plan code or artifact structure", "target": "thought"}, {"quote": "edit 194:276", "grp": "Executing", "sub": "Executing plan", "leaf": "Apply patch via edit", "target": "action"}, {"quote": "return self.predict(X)", "grp": "Reasoning", "sub": "Generating", "leaf": "Generate initial fix candidate", "target": "action"}], "insight": "The whole patch is one replaced token inside an 83-line re-paste: <code>return log_resp.argmax(axis=1)</code> becomes <code>return self.predict(X)</code>, and the final e-step plus its three-line invariant comment are dropped by omission. The thought never mentions deleting the e-step, only \"using the best parameters\"."}, {"n": 17, "phase": "verify", "phaseLabel": "Edit check", "headline": "Agent re-reads line 270 to confirm the edit landed.", "obs": "[File: /scikit-learn__scikit-learn/sklearn/mixture/base.py (531 lines total)]\n(254 more lines above)\n255:            if lower_bound > max_lower_bound:\n256:                max_lower_bound = lower_bound\n257:                best_params = self._get_parameters()\n258:                best_n_iter = n_iter\n259:\n260:        if not self.converged_:\n261:            warnings.warn('Initialization %d did not converge. '\n262:                          'Try different init parameters, '\n263:                          'or increase max_iter, tol '\n264:                          'or check for degenerate data.'\n265:                          % (init + 1), ConvergenceWarning)\n266:\n267:        self._set_parameters(best_params)\n268:        self.n_iter_ = best_n_iter\n269:        self.lower_bound_ = max_lower_bound\n270:\n271:        return self.predict(X)\n272:\n273:    def _e_step(self, X):\n274:        \"\"\"E step.\n275:\n276:        Parameters\n277:        ----------\n278:        X : array-like, shape (n_samples, n_features)\n279:\n280:        Returns\n281:        -------\n282:        log_prob_norm : float\n283:            Mean of the logarithms of the probabilities of each sample in X\n284:\n285:        log_responsibility : array, shape (n_samples, n_components)\n286:            Logarithm of the posterior probabilities (or responsibilities) of\n287:            the point of each sample in X.\n288:        \"\"\"\n289:        log_prob_norm, log_resp = self._estimate_log_prob_resp(X)\n290:        return np.mean(log_prob_norm), log_resp\n291:\n292:    @abstractmethod\n293:    def _m_step(self, X, log_resp):\n294:        \"\"\"M step.\n295:\n296:        Parameters\n297:        ----------\n298:        X : array-like, shape (n_samples, n_features)\n299:\n300:        log_resp : array-like, shape (n_samples, n_components)\n301:            Logarithm of the posterior probabilities (or responsibilities) of\n302:            the point of each sample in X.\n303:        \"\"\"\n304:        pass\n305:\n306:    @abstractmethod\n307:    def _check_is_fitted(self):\n308:        pass\n309:\n310:    @abstractmethod\n311:    def _get_parameters(self):\n312:        pass\n313:\n314:    @abstractmethod\n315:    def _set_parameters(self, params):\n316:        pass\n317:\n318:    def score_samples(self, X):\n319:        \"\"\"Compute the weighted log probabilities for each sample.\n320:\n321:        Parameters\n322:        ----------\n323:        X : array-like, shape (n_samples, n_features)\n324:            List of n_features-dimensional data points. Each row\n325:            corresponds to a single data point.\n326:\n327:        Returns\n328:        -------\n329:        log_prob : array, shape (n_samples,)\n330:            Log probabilities of each data point in X.\n331:        \"\"\"\n332:        self._check_is_fitted()\n333:        X = _check_X(X, None, self.means_.shape[1])\n334:\n335:        return logsumexp(self._estimate_weighted_log_prob(X), axis=1)\n336:\n337:    def score(self, X, y=None):\n338:        \"\"\"Compute the per-sample average log-likelihood of the given data X.\n339:\n340:        Parameters\n341:        ----------\n342:        X : array-like, shape (n_samples, n_dimensions)\n343:            List of n_features-dimensional data points. Each row\n344:            corresponds to a single data point.\n345:\n346:        Returns\n347:        -------\n348:        log_likelihood : float\n349:            Log likelihood of the Gaussian mixture given X.\n350:        \"\"\"\n351:        return self.score_samples(X).mean()\n352:\n353:    def predict(self, X):\n354:        \"\"\"Predict the labels for the data samples in X using trained model.\n(177 more lines below)", "thought": "I apologize for the confusion. It seems the edit was successful, but there was an unrelated SyntaxError in a different part of the system. Let's verify that our changes were applied correctly by looking at the end of the `fit_predict` method.", "action": "goto 270", "quotes": [{"quote": "I apologize for the confusion", "grp": "Grounding", "sub": "Interact with users", "leaf": "Express tone to user", "target": "thought"}, {"quote": "the edit was successful", "grp": "Evaluating", "sub": "Evaluating with goals/requirements/constraints", "leaf": "Goal-completion check", "target": "thought"}, {"quote": "there was an unrelated SyntaxError in a different part of the system", "grp": "Reasoning", "sub": "Inferring", "leaf": "Diagnose Error Cause", "target": "thought"}, {"quote": "verify that our changes were applied correctly", "grp": "Evaluating", "sub": "Evaluating with gold", "leaf": "Plan verification step", "target": "thought"}, {"quote": "goto 270", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Read code semantics from open file", "target": "action"}], "insight": ""}, {"n": 18, "phase": "verify", "phaseLabel": "Verification setup", "headline": "Agent confirms the patch text and tries to edit the reproducer.", "obs": "Usage: edit <start_line>:<end_line>", "thought": "Great, I can see that our changes have been applied successfully. The `fit_predict` method now ends with `return self.predict(X)` on line 271, which is exactly what we wanted.\n\nNow that we've made this change, we should test it to see if it resolves the issue. Let's modify our `reproduce_gm_issue.py` script to include a check for equality between `fit_predict` and `predict`.", "action": "edit reproduce_gm_issue.py", "quotes": [{"quote": "our changes have been applied successfully", "grp": "Evaluating", "sub": "Evaluating with goals/requirements/constraints", "leaf": "Goal-completion check", "target": "thought"}, {"quote": "The `fit_predict` method now ends with `return self.predict(X)` on line 271", "grp": "Reasoning", "sub": "Analysing", "leaf": "Analyse source code", "target": "thought"}, {"quote": "we should test it to see if it resolves the issue", "grp": "Evaluating", "sub": "Evaluating with gold", "leaf": "Plan verification step", "target": "thought"}, {"quote": "modify our `reproduce_gm_issue.py` script to include a check for equality", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Plan code or artifact structure", "target": "thought"}, {"quote": "edit reproduce_gm_issue.py", "grp": "Executing", "sub": "Executing plan", "leaf": "Apply patch via edit", "target": "action"}], "insight": ""}, {"n": 19, "phase": "recover", "phaseLabel": "Command recovery", "headline": "Agent reopens the reproducer after the malformed edit call.", "obs": "[File: /scikit-learn__scikit-learn/reproduce_gm_issue.py (22 lines total)]\n1:from sklearn.mixture import GaussianMixture\n2:from sklearn.utils.testing import assert_array_equal\n3:import numpy as np\n4:\n5:np.random.seed(42)  # for reproducibility\n6:X = np.random.randn(1000, 5)\n7:\n8:print('Testing without n_init:')\n9:gm = GaussianMixture(n_components=5)\n10:c1 = gm.fit_predict(X)\n11:c2 = gm.predict(X)\n12:assert_array_equal(c1, c2)\n13:print('Test passed without n_init')\n14:\n15:print('\\nTesting with n_init=5:')\n16:gm = GaussianMixture(n_components=5, n_init=5)\n17:c1 = gm.fit_predict(X)\n18:c2 = gm.predict(X)\n19:assert_array_equal(c1, c2)\n20:print('Test passed with n_init=5')\n21:\n22:print(\"\\nScript completed successfully, no errors.\")", "thought": "I apologize for the confusion. Let's first open the `reproduce_gm_issue.py` file and then edit it.", "action": "open reproduce_gm_issue.py", "quotes": [{"quote": "I apologize for the confusion", "grp": "Grounding", "sub": "Interact with users", "leaf": "Express tone to user", "target": "thought"}, {"quote": "first open the `reproduce_gm_issue.py` file and then edit it", "grp": "Planning", "sub": "Modify Plan", "leaf": "Replan dynamically based on feedback", "target": "thought"}, {"quote": "open reproduce_gm_issue.py", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus", "target": "action"}], "insight": "The previous action <code>edit reproduce_gm_issue.py</code> had no line range and the shell answered with a bare usage string. The agent repairs the workflow, but again records the repair only as an apology — no span states what went wrong."}, {"n": 20, "phase": "verify", "phaseLabel": "Verification run", "headline": "Agent decides the script needs no edit and re-runs it.", "obs": "Testing without n_init:\nTest passed without n_init\n\nTesting with n_init=5:\nTest passed with n_init=5\n\nScript completed successfully, no errors.", "thought": "The script looks good as it is. It already includes the checks we need to verify if our fix has resolved the issue. Let's run this script to see if the problem has been solved.", "action": "python reproduce_gm_issue.py", "quotes": [{"quote": "The script looks good as it is", "grp": "Evaluating", "sub": "Evaluating without ground truth", "leaf": "Provide qualitative judgement", "target": "thought"}, {"quote": "It already includes the checks we need to verify", "grp": "Evaluating", "sub": "Evaluating with goals/requirements/constraints", "leaf": "Requirement-satisfaction check", "target": "thought"}, {"quote": "run this script to see if the problem has been solved", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Plan function or tool use", "target": "thought"}, {"quote": "python reproduce_gm_issue.py", "grp": "Executing", "sub": "Executing plan", "leaf": "Run verification command", "target": "action"}], "insight": ""}, {"n": 21, "phase": "submit", "phaseLabel": "Submit", "headline": "Agent summarizes the fix and submits the patch.", "obs": "\ndiff --git a/reproduce_gm_issue.py b/reproduce_gm_issue.py\nnew file mode 100644\nindex 000000000..75f0b7ca4\n--- /dev/null\n+++ b/reproduce_gm_issue.py\n@@ -0,0 +1,22 @@\n+from sklearn.mixture import GaussianMixture\n+from sklearn.utils.testing import assert_array_equal\n+import numpy as np\n+\n+np.random.seed(42)  # for reproducibility\n+X = np.random.randn(1000, 5)\n+\n+print('Testing without n_init:')\n+gm = GaussianMixture(n_components=5)\n+c1 = gm.fit_predict(X)\n+c2 = gm.predict(X)\n+assert_array_equal(c1, c2)\n+print('Test passed without n_init')\n+\n+print('\\nTesting with n_init=5:')\n+gm = GaussianMixture(n_components=5, n_init=5)\n+c1 = gm.fit_predict(X)\n+c2 = gm.predict(X)\n+assert_array_equal(c1, c2)\n+print('Test passed with n_init=5')\n+\n+print(\"\\nScript completed successfully, no errors.\")\ndiff --git a/sklearn/mixture/base.py b/sklearn/mixture/base.py\nindex bd34333c0..d5213ef11 100644\n--- a/sklearn/mixture/base.py\n+++ b/sklearn/mixture/base.py\n@@ -257,11 +257,6 @@ class BaseMixture(DensityMixin, BaseEstimator, metaclass=ABCMeta):\n                 best_params = self._get_parameters()\n                 best_n_iter = n_iter\n \n-        # Always do a final e-step to guarantee that the labels returned by\n-        # fit_predict(X) are always consistent with fit(X).predict(X)\n-        # for any value of max_iter and tol (and any random_state).\n-        _, log_resp = self._e_step(X)\n-\n         if not self.converged_:\n             warnings.warn('Initialization %d did not converge. '\n                           'Try different init parameters, '\n@@ -273,7 +268,7 @@ class BaseMixture(DensityMixin, BaseEstimator, metaclass=ABCMeta):\n         self.n_iter_ = best_n_iter\n         self.lower_bound_ = max_lower_bound\n \n-        return log_resp.argmax(axis=1)\n+        return self.predict(X)\n \n     def _e_step(self, X):\n         \"\"\"E step.\n", "thought": "Great news! The script ran successfully without any errors, which means our fix has resolved the issue. Both tests passed: the one without `n_init` and the one with `n_init=5`. This indicates that `fit_predict` and `predict` now produce consistent results, even when `n_init` is greater than 1.\n\nLet's summarize what we did to fix the issue:\n\n1. We identified that the problem was in the `fit_predict` method of the `BaseMixture` class.\n2. We modified the `fit_predict` method to use `self.predict(X)` at the end, ensuring that it uses the same model parameters as the `predict` method.\n3. We ran our test script, which confirmed that the issue has been resolved.\n\nNow that we've verified the fix, we can submit our changes.", "action": "submit", "quotes": [{"quote": "our fix has resolved the issue", "grp": "Evaluating", "sub": "Evaluating with goals/requirements/constraints", "leaf": "Goal-completion check", "target": "thought"}, {"quote": "Both tests passed: the one without `n_init` and the one with `n_init=5`", "grp": "Evaluating", "sub": "Evaluating with gold", "leaf": "Confirm actual == expected", "target": "thought"}, {"quote": "This indicates that `fit_predict` and `predict` now produce consistent results", "grp": "Reasoning", "sub": "Inferring", "leaf": "Conclude success from evidence", "target": "thought"}, {"quote": "Let's summarize what we did to fix the issue", "grp": "Reasoning", "sub": "Summarizing/Distilling", "leaf": "Summarize recent observations and trajectories", "target": "thought"}], "insight": ""}];
+const segments = [{"start": 1, "end": 3, "title": "Agent reproduces the disagreement", "summary": "Agent creates <code>reproduce_gm_issue.py</code>, pastes the issue's code with a fixed seed, and runs it. The <code>n_init=5</code> branch fails with an 86.2% mismatch."}, {"start": 4, "end": 15, "title": "Agent localizes from GaussianMixture down to BaseMixture", "summary": "Twelve turns of pure search: a failed <code>find_file</code>, a shell <code>find</code>, then four <code>search_file</code> calls that establish both methods are inherited, and finally two <code>goto</code>s that read <code>fit_predict</code> and <code>predict</code> side by side. <strong>T14</strong> names the post-loop e-step as the mechanism."}, {"start": 16, "end": 16, "title": "Agent applies the single patch", "summary": "One <code>edit 194:276</code> re-pastes the whole method, ending in <code>return self.predict(X)</code> and dropping the final e-step."}, {"start": 17, "end": 19, "title": "Agent checks the edit and recovers a malformed command", "summary": "Agent re-reads line 270 to confirm the patch text, then issues <code>edit reproduce_gm_issue.py</code> without a line range, gets a usage string, and repairs the workflow by opening the file first."}, {"start": 20, "end": 21, "title": "Agent re-runs the reproducer and submits", "summary": "Both assertions now pass. Agent recaps the change in three numbered steps and submits without running the project's own mixture tests."}];
+const QUOTE_TARGET = "both"; // "thought" | "action"
+
+// Actor icons — Google Material Design icons (Apache 2.0):
+// "person" (social) for human turns, "smart_toy" (hardware) for agent turns.
+const ICON_HUMAN = '<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24" fill="currentColor"><path d="M0 0h24v24H0z" fill="none"/><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>';
+const ICON_AGENT = '<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24" fill="currentColor"><g><rect fill="none" height="24" width="24" y="0"/></g><g><path d="M20,9V7c0-1.1-0.9-2-2-2h-3c0-1.66-1.34-3-3-3S9,3.34,9,5H6C4.9,5,4,5.9,4,7v2c-1.66,0-3,1.34-3,3c0,1.66,1.34,3,3,3v4 c0,1.1,0.9,2,2,2h12c1.1,0,2-0.9,2-2v-4c1.66,0,3-1.34,3-3C23,10.34,21.66,9,20,9z M7.5,11.5C7.5,10.67,8.17,10,9,10 s1.5,0.67,1.5,1.5S9.83,13,9,13S7.5,12.33,7.5,11.5z M16,17H8v-2h8V17z M15,13c-0.83,0-1.5-0.67-1.5-1.5S14.17,10,15,10 s1.5,0.67,1.5,1.5S15.83,13,15,13z"/></g></svg>';
+
+function buildCodebook() {
+  const cb = {};
+  turns.forEach(t => {
+    t.quotes.forEach(q => {
+      if (!cb[q.grp]) cb[q.grp] = { items: {}, total: 0 };
+      const key = q.sub + ' › ' + q.leaf;
+      if (!cb[q.grp].items[key]) cb[q.grp].items[key] = { sub: q.sub, leaf: q.leaf, turns: [] };
+      cb[q.grp].items[key].turns.push(t.n);
+      cb[q.grp].total += 1;
+    });
+  });
+  return cb;
+}
+
+const codebook = buildCodebook();
+// Optional behavior-pattern layer: key = "`${sub} › ${leaf}`", value = {t, status, cause, advice}.
+// Injected from the annotated JSON's `patterns` field; {} when absent (nothing highlights).
+const PATTERNS = {};
+const ANOM_MARK = {lo:'⚠', hi:'▲', mid:'◆', ok:'✓'};
+
+const grpDisplayName = {};
+function displayGrp(g) { return grpDisplayName[g] || g; }
+
+function escapeHTML(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function highlightAction(s) {
+  let out = escapeHTML(s);
+  out = out.replace(/^(edit|create|open|search_dir|search_file|find_file|goto|scroll_down|scroll_up|submit|rm|pylint|python|pytest|cat|ls|cd|grep|sed|find|end_of_edit)(\b)/gm, '<span class="kw">$1</span>$2');
+  out = out.replace(/(#[^\n]*)/g, '<span class="cmt">$1</span>');
+  return out;
+}
+
+function renderThoughtWithQuotes(thought, quotes, turnNum, allQuotes = quotes) {
+  const positioned = quotes.map((q, idx) => {
+    const pos = thought.indexOf(q.quote);
+    return { ...q, idx: allQuotes.indexOf(q), pos };
+  }).filter(q => q.pos !== -1).sort((a, b) => a.pos - b.pos);
+
+  const filtered = [];
+  let lastEnd = -1;
+  for (const q of positioned) {
+    if (q.pos >= lastEnd) {
+      filtered.push(q);
+      lastEnd = q.pos + q.quote.length;
+    }
+  }
+
+  let out = '';
+  let cursor = 0;
+  for (const q of filtered) {
+    out += escapeHTML(thought.slice(cursor, q.pos));
+    out += `<span class="qmark" data-turn="${turnNum}" data-qidx="${q.idx}" data-grp="${q.grp}" data-key="${q.sub} › ${q.leaf}" style="--qcolor: var(--grp-${q.grp}); --qbg: var(--grp-${q.grp}-bg);">${escapeHTML(q.quote)}<sup>${q.idx + 1}</sup></span>`;
+    cursor = q.pos + q.quote.length;
+  }
+  out += escapeHTML(thought.slice(cursor));
+  return out;
+}
+
+function renderTurns() {
+  const container = document.getElementById('turns-container');
+  container.innerHTML = turns.map(t => {
+    // Human interaction events render as distinct verbatim-prompt cards.
+    if (t.kind === 'interaction') {
+      const intHeadline = t.headline || `${t.actor === 'human' ? 'Human' : escapeHTML(t.actor)} prompt`;
+      return `
+      <div class="turn interaction" data-turn="${t.id}">
+        <div class="interaction-header">
+          <span class="actor-icon actor-human" title="Human">${ICON_HUMAN}</span>
+          <div class="int-num"><small>prompt</small>${t.id}</div>
+          <div class="int-title">${escapeHTML(intHeadline)}</div>
+          ${t.label ? `<span class="int-label">${escapeHTML(t.label)}</span>` : ''}
+          <span class="turn-chevron">▶</span>
+        </div>
+        <div class="turn-body">
+          <div class="interaction-text">${escapeHTML(t.text)}</div>
+        </div>
+      </div>`;
+    }
+    const annotCount = t.quotes.length;
+    const annotRows = t.quotes.map((q, idx) => `
+      <div class="annot-row" data-turn="${t.n}" data-qidx="${idx}" data-grp="${q.grp}" data-key="${q.sub} › ${q.leaf}" style="--qcolor: var(--grp-${q.grp}); --qbg: var(--grp-${q.grp}-bg);">
+        <div class="annot-quote"><span class="qnum">${idx + 1}</span>${escapeHTML(q.quote)}</div>
+        <div class="annot-arrow">→</div>
+        <div class="annot-tag"><span class="annot-grp">${displayGrp(q.grp)}</span><span class="annot-sep">›</span>${q.sub}<span class="annot-sep">›</span><span class="annot-leaf">${q.leaf}</span></div>
+      </div>
+    `).join('');
+
+    let thoughtBlock, actionBlock, thoughtAnnotBlock = '', actionAnnotBlock = '', annotBlock = '';
+    if (QUOTE_TARGET === "action") {
+      // Action surface is the host: quote highlights live in the <code> action block.
+      // Thought becomes plain context.
+      const actionHTML = renderThoughtWithQuotes(t.action, t.quotes, t.n);
+      thoughtBlock = `
+        <div class="oat-block oat-thought">
+          <span class="lbl">Thought <span class="small">context · not annotated</span></span>
+          <div class="thought-text">${escapeHTML(t.thought)}</div>
+        </div>`;
+      actionBlock = `
+        <div class="oat-block oat-action">
+          <span class="lbl">Action <span class="small">verbatim · ${annotCount} annotation${annotCount === 1 ? '' : 's'}</span></span>
+          <code class="content">${actionHTML}</code>
+        </div>`;
+      annotBlock = annotCount > 0 ? `
+        <div class="annotations">
+          <div class="annotations-header">Quote-grounded annotations</div>
+          ${annotRows}
+        </div>` : '';
+    } else if (QUOTE_TARGET === "both") {
+      // Dual annotation: each quote carries its own target ("thought" | "action").
+      // Render both surfaces with their respective highlights, and put a small
+      // annotation table under each surface (so the reader can scan the surface,
+      // then immediately see what was tagged on it).
+      const thoughtQuotes = t.quotes.filter(q => (q.target || 'action') === 'thought');
+      const actionQuotes = t.quotes.filter(q => (q.target || 'action') === 'action');
+      const thoughtHTML = renderThoughtWithQuotes(t.thought, thoughtQuotes, t.n, t.quotes);
+      const actionHTML = renderThoughtWithQuotes(t.action, actionQuotes, t.n, t.quotes);
+      const tCount = thoughtQuotes.length;
+      const aCount = actionQuotes.length;
+      thoughtBlock = `
+        <div class="oat-block oat-thought">
+          <span class="lbl">Thought <span class="small">verbatim · ${tCount} meta annotation${tCount === 1 ? '' : 's'}</span></span>
+          <div class="thought-text">${thoughtHTML}</div>
+        </div>`;
+      actionBlock = `
+        <div class="oat-block oat-action">
+          <span class="lbl">Action <span class="small">verbatim · ${aCount} surface annotation${aCount === 1 ? '' : 's'}</span></span>
+          <code class="content">${actionHTML}</code>
+        </div>`;
+      // Two sub-tables, each grouping the rows for its host surface.
+      const buildRows = (quotes) => quotes.map((q) => {
+        const idx = t.quotes.indexOf(q);
+        return `
+          <div class="annot-row" data-turn="${t.n}" data-qidx="${idx}" data-grp="${q.grp}" data-key="${q.sub} › ${q.leaf}" style="--qcolor: var(--grp-${q.grp}); --qbg: var(--grp-${q.grp}-bg);">
+            <div class="annot-quote"><span class="qnum">${idx + 1}</span>${escapeHTML(q.quote)}</div>
+            <div class="annot-arrow">→</div>
+            <div class="annot-tag"><span class="annot-grp">${displayGrp(q.grp)}</span><span class="annot-sep">›</span>${q.sub}<span class="annot-sep">›</span><span class="annot-leaf">${q.leaf}</span></div>
+          </div>`;
+      }).join('');
+      thoughtAnnotBlock = tCount > 0 ? `
+        <div class="annotations">
+          <div class="annotations-header">Thought · meta-move annotations</div>
+          ${buildRows(thoughtQuotes)}
+        </div>` : '';
+      actionAnnotBlock = aCount > 0 ? `
+        <div class="annotations">
+          <div class="annotations-header">Action · surface annotations</div>
+          ${buildRows(actionQuotes)}
+        </div>` : '';
+    } else {
+      // Default: thought is the host (SWE-agent style).
+      const thoughtHTML = renderThoughtWithQuotes(t.thought, t.quotes, t.n);
+      thoughtBlock = `
+        <div class="oat-block oat-thought">
+          <span class="lbl">Thought <span class="small">verbatim · ${annotCount} annotation${annotCount === 1 ? '' : 's'}</span></span>
+          <div class="thought-text">${thoughtHTML}</div>
+        </div>`;
+      actionBlock = `
+        <div class="oat-block oat-action">
+          <span class="lbl">Action</span>
+          <code class="content">${highlightAction(t.action)}</code>
+        </div>`;
+      annotBlock = annotCount > 0 ? `
+        <div class="annotations">
+          <div class="annotations-header">Quote-grounded annotations</div>
+          ${annotRows}
+        </div>` : '';
+    }
+
+    // Layout per mode:
+    //   action mode  : Thought (context) → Action (highlighted) → annot table
+    //   both mode    : Thought (highlighted) → thought-table → Action (highlighted) → action-table
+    //   thought mode : Thought (highlighted) → annot table → Action (plain code)
+    let body;
+    if (QUOTE_TARGET === "action") {
+      body = `${thoughtBlock}${actionBlock}${annotBlock}`;
+    } else if (QUOTE_TARGET === "both") {
+      body = `${thoughtBlock}${thoughtAnnotBlock}${actionBlock}${actionAnnotBlock}`;
+    } else {
+      body = `${thoughtBlock}${annotBlock}${actionBlock}`;
+    }
+
+    const obsBlock = t.obs ? `
+        <div class="oat-block oat-obs">
+          <span class="lbl">Observation</span>
+          <div class="content">${escapeHTML(t.obs)}</div>
+        </div>` : '';
+    return `
+      <div class="turn" data-turn="${t.n}">
+        <div class="turn-header">
+          <span class="actor-icon actor-agent" title="Agent">${ICON_AGENT}</span>
+          <div class="turn-num"><small>turn</small>${String(t.n).padStart(2,'0')}</div>
+          <div class="turn-tag-line">${escapeHTML(t.headline || '')}</div>
+          <div class="turn-phase phase-${t.phase || 'other'}">${t.phaseLabel || 'Step'}</div>
+          <span class="turn-chevron">▶</span>
+        </div>
+        <div class="turn-body">
+          ${obsBlock}
+          ${body}
+          ${t.insight ? `<div class="insight">${t.insight}</div>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderSignature() {
+  // Build the codebook-group signature for the right panel.
+  // For each turn, list the groups of its quotes in firing order; show both a
+  // copy-pasteable flat block and a clickable per-turn row list. Sessions
+  // restarts are auto-detected as turns whose verbatim thought equals an
+  // earlier turn's thought, and shown as a `↺` divider.
+  const container = document.getElementById('signature-container');
+  if (!container) return;
+
+  // Detect restart points: turn n is a restart if t.thought has appeared earlier.
+  const seenThoughts = new Map(); // thought-text -> first turn index
+  const restartAtTurnN = new Set();
+  turns.forEach((t, i) => {
+    if (t.kind === 'interaction') return;
+    if (t.thought && seenThoughts.has(t.thought)) {
+      restartAtTurnN.add(t.n);
+    } else if (t.thought) {
+      seenThoughts.set(t.thought, i);
+    }
+  });
+
+  const pad2 = (n) => String(n).padStart(2, '0');
+
+  // Index segments by their `start` turn so we can interleave segment
+  // summaries both into the flat copy-paste block (as plain-text headers)
+  // and above the first row of each segment in the clickable list.
+  const segByStart = new Map();
+  (segments || []).forEach((s, i) => {
+    segByStart.set(s.start, { ...s, _idx: i + 1 });
+  });
+
+  // Strip inline HTML so segment summaries render cleanly inside the
+  // <pre> copy-paste block.  We unescape a small set of named entities
+  // (mdash/ndash/strong tags etc.) and drop everything else.
+  const stripHTML = (s) => {
+    if (!s) return '';
+    return s
+      .replace(/<[^>]+>/g, '')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&mdash;/g, '—')
+      .replace(/&ndash;/g, '–')
+      .replace(/&rarr;/g, '→')
+      .replace(/&middot;/g, '·')
+      .replace(/&nbsp;/g, ' ');
+  };
+
+  // Word-wrap a paragraph to ~78 cols so it copy-pastes cleanly into
+  // notebooks / chat panes without horizontal scrolling.
+  const wrap = (text, width = 78) => {
+    const words = text.split(/\s+/);
+    const out = [];
+    let line = '';
+    for (const w of words) {
+      if (line.length === 0) { line = w; continue; }
+      if (line.length + 1 + w.length > width) { out.push(line); line = w; }
+      else line += ' ' + w;
+    }
+    if (line) out.push(line);
+    return out.join('\n');
+  };
+
+  // Flat copy-pasteable signature block. Each segment gets a plain-text
+  // header ("=== SEQ 01 · T01–T05 · Title ===" + wrapped summary), then
+  // its turns are listed `T01 = [Group › Sub › Leaf, ...]` so the full
+  // codebook triple plus narrative context survive a copy/paste.
+  // A segment whose start turn directly follows an interaction should open
+  // BEFORE that interaction (the human prompt is what opens the cycle), so
+  // look ahead from interaction entries and mark consumed segments.
+  const segEmitted = new Set();
+  const emitSegFlat = (seg, i) => {
+    if (segEmitted.has(seg._idx)) return;
+    segEmitted.add(seg._idx);
+    if (i > 0) flatLines.push('');  // blank line before each segment except the first
+    const titleStr = stripHTML(seg.title || '');
+    flatLines.push(`=== SEQ ${String(seg._idx).padStart(2,'0')} · T${pad2(seg.start)}–T${pad2(seg.end)}${titleStr ? ' · ' + titleStr : ''} ===`);
+    if (seg.summary) {
+      flatLines.push(wrap(stripHTML(seg.summary)));
+    }
+    flatLines.push('');  // blank line between header and first turn
+  };
+  const flatLines = [];
+  turns.forEach((t, i) => {
+    if (t.kind === 'interaction') {
+      const nxt = turns[i + 1];
+      const nxtSeg = nxt && nxt.kind !== 'interaction' ? segByStart.get(nxt.n) : null;
+      if (nxtSeg) emitSegFlat(nxtSeg, i);
+      const txt = t.text.replace(/\s+/g, ' ');
+      flatLines.push(`${t.id} ▸ HUMAN${t.label ? ' (' + t.label + ')' : ''}: ${txt.length > 64 ? txt.slice(0, 64) + '…' : txt}`);
+      return;
+    }
+    const seg = segByStart.get(t.n);
+    if (seg) emitSegFlat(seg, i);
+    if (restartAtTurnN.has(t.n)) flatLines.push('↺');
+    const tags = t.quotes.map(q => `${displayGrp(q.grp)} › ${q.sub} › ${q.leaf}`);
+    flatLines.push(`T${pad2(t.n)} = [${tags.join(', ')}]`);
+  });
+  const flatStr = flatLines.join('\n');
+
+  // Per-turn rows.
+  // Chips show the full Group › Sub › Leaf triple, colored by group. Group
+  // is a small uppercase tag; sub is the dominant text; leaf trails in a
+  // muted italic. Full triple is also in the tooltip for hover affordance.
+  const segRowEmitted = new Set();
+  const segCardHTML = (seg) => {
+    if (!seg || segRowEmitted.has(seg._idx)) return '';
+    segRowEmitted.add(seg._idx);
+    return `
+      <div class="sig-segment">
+        <div class="sig-segment-tag">SEQ ${String(seg._idx).padStart(2,'0')} · T${pad2(seg.start)}–T${pad2(seg.end)}</div>
+        ${seg.title ? `<div class="sig-segment-title">${seg.title}</div>` : ''}
+        ${seg.summary ? `<div class="sig-segment-body">${seg.summary}</div>` : ''}
+      </div>
+    `;
+  };
+  const rowsHTML = turns.map((t, i) => {
+    if (t.kind === 'interaction') {
+      const nxt = turns[i + 1];
+      const nxtSeg = nxt && nxt.kind !== 'interaction' ? segByStart.get(nxt.n) : null;
+      const txt = t.text.replace(/\s+/g, ' ');
+      const short = txt.length > 56 ? txt.slice(0, 56) + '…' : txt;
+      const tipI = `${t.id} · human prompt${t.label ? ' · ' + t.label : ''}`;
+      return segCardHTML(nxtSeg) + `
+      <button class="sig-row sig-interaction" data-turn="${t.id}" title="${escapeHTML(tipI)}">
+        <span class="sig-num sig-num-h">${t.id}</span>
+        <span class="sig-int-text">${ICON_HUMAN}${escapeHTML(short)}</span>
+      </button>
+    `;
+    }
+    const segHTML = segCardHTML(segByStart.get(t.n));
+    const restartHTML = restartAtTurnN.has(t.n)
+      ? '<div class="sig-restart-row" title="Session restart — Planner thought matches an earlier turn verbatim"><span class="sig-restart-glyph">↺</span><span class="sig-restart-text">session restart · thought matches an earlier turn verbatim</span></div>'
+      : '';
+    const chipsHTML = t.quotes.length === 0
+      ? '<span class="sig-chip-empty">∅</span>'
+      : t.quotes.map(q => {
+          const _p = PATTERNS[q.sub + ' › ' + q.leaf];
+          const baseTip = `${displayGrp(q.grp)} › ${q.sub} › ${q.leaf}`;
+          const _cls = _p ? ` sig-chip-anom sig-chip-anom-${_p.t}` : '';
+          const _flag = _p ? `<span class="sig-chip-flag sig-chip-flag-${_p.t}">${ANOM_MARK[_p.t]}</span>` : '';
+          const _attr = _p ? `data-anom-key="${escapeHTML(q.sub + ' › ' + q.leaf)}"` : `title="${escapeHTML(baseTip)}"`;
+          return `<span class="sig-chip grp-${q.grp}${_cls}" ${_attr}><span class="sig-chip-grp">${displayGrp(q.grp)}</span><span class="sig-chip-sub">${escapeHTML(q.sub)}</span><span class="sig-chip-sep">›</span><span class="sig-chip-leaf">${escapeHTML(q.leaf)}</span>${_flag}</span>`;
+        }).join('');
+    const flag = (t.phase === 'submit') ? '<span class="sig-flag">‡</span>' : '';
+    const headline = (t.headline || '').replace(/"/g, '&quot;');
+    const tip = `T${pad2(t.n)} · ${t.phaseLabel} · ${headline}`;
+    return segHTML + restartHTML + `
+      <button class="sig-row" data-turn="${t.n}" title="${tip}">
+        <span class="sig-num">T${pad2(t.n)}${flag}</span>
+        <span class="sig-chips">${chipsHTML}</span>
+      </button>
+    `;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="signature-section">
+      <div class="sig-section-title">Trajectory signature</div>
+      <div class="sig-section-sub">One row per step, listing its tags in the order they appear. Amber rows are the human speaking. Click any row to jump to that step.</div>
+      <pre class="sig-flat" title="copy-paste signature">${escapeHTML(flatStr)}</pre>
+      <div class="sig-rows">${rowsHTML}</div>
+    </div>
+  `;
+}
+
+function renderCodebook() {
+  const container = document.getElementById('codebook-container');
+  const sorted = Object.entries(codebook).sort((a,b) => b[1].total - a[1].total);
+  if (sorted.length === 0) { container.innerHTML = '<em style="color: var(--ink-mute)">No annotations.</em>'; return; }
+  const maxCount = Math.max(...sorted.map(([,g]) => g.total));
+
+  const legend = Object.keys(PATTERNS).length
+    ? '<div class="cb-anom-legend"><strong>标注旗标:</strong> <span style="color:#16a34a">✓ 成功模式(做得好)</span> · ⚠ 缺失 · ▲ 冗余 · ◆ 时序/触发/沉淀错位 — 悬浮任意旗标 leaf 查看「模式类型 / 诊断原因 / 建议」</div>'
+    : '';
+  container.innerHTML = legend + sorted.map(([grpName, grp]) => {
+    const pct = (grp.total / maxCount) * 100;
+    const items = Object.values(grp.items).sort((a,b) => b.turns.length - a.turns.length);
+    return `
+      <div class="cb-group" data-group="${grpName}" style="--qcolor: var(--grp-${grpName}); --qbg: var(--grp-${grpName}-bg);">
+        <div class="cb-group-header">
+          <div class="cb-group-name">${displayGrp(grpName)}</div>
+          <div class="cb-count">${grp.total}</div>
+        </div>
+        <div class="cb-bar"><div class="cb-bar-fill" style="width: ${pct}%; background: var(--grp-${grpName});"></div></div>
+        <div class="cb-items">
+          ${items.map(item => {
+            const _p = PATTERNS[item.sub + ' › ' + item.leaf];
+            const _cls = _p ? ' cb-anom cb-anom-' + _p.t : '';
+            const _attr = _p ? ` data-anom-key="${item.sub} › ${item.leaf}"` : '';
+            const _badge = _p ? ` <span class="cb-anom-badge cb-anom-b-${_p.t}">${ANOM_MARK[_p.t]}</span>` : '';
+            return `
+            <div class="cb-item${_cls}" data-grp="${grpName}" data-key="${item.sub} › ${item.leaf}" data-turns="${item.turns.join(',')}" style="--qcolor: var(--grp-${grpName}); --qbg: var(--grp-${grpName}-bg);"${_attr}>
+              <span class="cb-item-text">${item.sub} <span style="opacity:0.5">›</span> ${item.leaf}${_badge}</span>
+              <span class="turn-refs">[${item.turns.map(n => 'T'+n).join(',')}]</span>
+            </div>
+          `;}).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function markPieAnomalies() {
+  const svgns = 'http://www.w3.org/2000/svg';
+  const byGrp = {};
+  Object.entries(codebook).forEach(([g, gd]) => {
+    Object.values(gd.items).forEach(it => {
+      const p = PATTERNS[it.sub + ' › ' + it.leaf];
+      if (p && p.t !== 'ok') (byGrp[g] = byGrp[g] || []).push(p);
+    });
+  });
+  Object.entries(byGrp).forEach(([g, list]) => {
+    const node = document.querySelector('.pie-slice[data-grp="' + g + '"]');
+    if (!node) return;
+    const label = node.querySelector('text');
+    if (!label) return;
+    const name = label.textContent;
+    label.textContent = '';
+    const ts = document.createElementNS(svgns, 'tspan');
+    ts.setAttribute('fill', '#e11d48'); ts.setAttribute('font-weight', '700');
+    ts.textContent = '⚠' + list.length + ' ';
+    const ts2 = document.createElementNS(svgns, 'tspan');
+    ts2.textContent = name;
+    label.appendChild(ts); label.appendChild(ts2);
+    const tt = document.createElementNS(svgns, 'title');
+    tt.textContent = g + ' — ' + list.length + ' 个待改进:\n' + list.map(a => '• [' + a.status + '] ' + a.advice).join('\n');
+    label.appendChild(tt);
+  });
+}
+
+function setupAnomalyTip() {
+  const tip = document.createElement('div');
+  tip.id = 'anom-tip';
+  document.body.appendChild(tip);
+  const place = (x, y) => {
+    const r = tip.getBoundingClientRect();
+    let nx = x + 16, ny = y + 16;
+    if (nx + r.width > window.innerWidth - 10) nx = x - r.width - 16;
+    if (ny + r.height > window.innerHeight - 10) ny = y - r.height - 16;
+    tip.style.left = Math.max(10, nx) + 'px';
+    tip.style.top = Math.max(10, ny) + 'px';
+  };
+  const show = (key, x, y) => {
+    const a = PATTERNS[key];
+    if (!a) return;
+    const ok = a.status === '成功';
+    tip.innerHTML =
+      '<span class="at-type ' + (ok ? 'at-ok' : 'at-bad') + '">模式类型:' + escapeHTML(a.status) + '</span>' +
+      '<div class="at-row"><span class="at-label">诊断原因</span><span class="at-val">' + escapeHTML(a.cause || '') + '</span></div>' +
+      '<div class="at-row"><span class="at-label">给用户 / agent 的建议</span><span class="at-val">' + escapeHTML(a.advice || '') + '</span></div>';
+    tip.classList.add('show');
+    place(x, y);
+  };
+  const hide = () => tip.classList.remove('show');
+  let suppressedEl = null, suppressedTitle = null;
+  const restoreTitle = () => {
+    if (suppressedEl) { suppressedEl.setAttribute('title', suppressedTitle); suppressedEl = null; suppressedTitle = null; }
+  };
+  document.addEventListener('mouseover', e => {
+    const el = e.target.closest && e.target.closest('[data-anom-key]');
+    if (!el) return;
+    show(el.getAttribute('data-anom-key'), e.clientX, e.clientY);
+    const titled = el.closest('[title]');
+    if (titled && titled !== suppressedEl) {
+      restoreTitle();
+      suppressedEl = titled; suppressedTitle = titled.getAttribute('title');
+      titled.removeAttribute('title');
+    }
+  });
+  document.addEventListener('mousemove', e => {
+    if (tip.classList.contains('show')) place(e.clientX, e.clientY);
+  });
+  document.addEventListener('mouseout', e => {
+    const el = e.target.closest && e.target.closest('[data-anom-key]');
+    if (!el) return;
+    if (e.relatedTarget && el.contains(e.relatedTarget)) return;
+    hide();
+    restoreTitle();
+  });
+}
+
+function renderPatternsSummary() {
+  const el = document.getElementById('patterns-summary');
+  if (!el) return;
+  const entries = Object.entries(PATTERNS);
+  if (entries.length === 0) return;
+  const order = {ok:0, lo:1, hi:2, mid:3};
+  entries.sort((a,b) => (order[a[1].t] ?? 9) - (order[b[1].t] ?? 9));
+  const rows = entries.map(([key, p]) => {
+    const ok = p.status === '成功';
+    const leaf = key.split(' › ').pop();
+    return `<tr>
+      <td><span class="ps-pill ${ok ? 'ps-ok' : 'ps-bad'}">${ANOM_MARK[p.t] || ''} ${escapeHTML(p.status)}</span></td>
+      <td><span class="ps-leaf">${escapeHTML(leaf)}</span><br><span class="ps-key">${escapeHTML(key)}</span></td>
+      <td>${escapeHTML(p.cause || '')}</td>
+      <td>${escapeHTML(p.advice || '')}</td>
+    </tr>`;
+  }).join('');
+  const nOk = entries.filter(([, p]) => p.status === '成功').length;
+  const nBad = entries.length - nOk;
+  el.innerHTML =
+    '<div class="section-label">behavior patterns · ' + nOk + ' 成功 / ' + nBad + ' 待改进</div>' +
+    '<div class="ps-table-wrap"><table class="ps-table">' +
+    '<thead><tr><th>模式类型</th><th>Act-onomy leaf</th><th>诊断原因</th><th>建议</th></tr></thead>' +
+    '<tbody>' + rows + '</tbody></table></div>';
+}
+
+function clearActive() {
+  document.querySelectorAll('.turn.active').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.cb-item.fired').forEach(el => el.classList.remove('fired', 'flash'));
+  document.querySelectorAll('.qmark.flash-pulse').forEach(el => el.classList.remove('flash-pulse'));
+  document.querySelectorAll('.annot-row.flash').forEach(el => el.classList.remove('flash'));
+  document.querySelectorAll('.pie-slice.dimmed').forEach(el => el.classList.remove('dimmed'));
+}
+
+function flashAnnotationLink(turnN, qidx, grp, key) {
+  document.querySelectorAll('.qmark.flash-pulse').forEach(el => el.classList.remove('flash-pulse'));
+  document.querySelectorAll('.annot-row.flash').forEach(el => el.classList.remove('flash'));
+  document.querySelectorAll('.cb-item.fired').forEach(el => el.classList.remove('fired', 'flash'));
+
+  const qm = document.querySelector(`.qmark[data-turn="${turnN}"][data-qidx="${qidx}"]`);
+  const row = document.querySelector(`.annot-row[data-turn="${turnN}"][data-qidx="${qidx}"]`);
+  const item = document.querySelector(`.cb-item[data-grp="${grp}"][data-key="${key}"]`);
+  if (qm) qm.classList.add('flash-pulse');
+  if (row) row.classList.add('flash');
+  if (item) item.classList.add('fired', 'flash');
+}
+
+function scrollToTurn(turnEl) {
+  if (!turnEl) return;
+  // Programmatic navigation always expands the target so highlights are visible.
+  turnEl.classList.add('expanded');
+  // Snapshot the right-side panel's internal scroll position BEFORE we touch
+  // the main page scroll. Some browsers will auto-scroll the focused element
+  // into view, which can cause the codebook panel to drift. We restore the
+  // exact position right after.
+  const panel = document.querySelector('aside.codebook-panel');
+  const panelScrollTop = panel ? panel.scrollTop : 0;
+
+  const rect = turnEl.getBoundingClientRect();
+  const targetY = window.scrollY + rect.top - 24;
+  window.scrollTo({ top: targetY, behavior: 'smooth' });
+
+  // Restore panel scroll on the next animation frame, and again after the
+  // smooth-scroll likely finishes. Both are cheap and cover edge cases.
+  if (panel) {
+    requestAnimationFrame(() => { panel.scrollTop = panelScrollTop; });
+    setTimeout(() => { panel.scrollTop = panelScrollTop; }, 50);
+    setTimeout(() => { panel.scrollTop = panelScrollTop; }, 500);
+  }
+}
+
+function activateCodebookItem(grp, key) {
+  clearActive();
+  const item = codebook[grp] && codebook[grp].items[key];
+  if (!item) return;
+  const itemEl = document.querySelector(`.cb-item[data-grp="${grp}"][data-key="${key}"]`);
+  if (itemEl) itemEl.classList.add('fired', 'flash');
+  item.turns.forEach(n => {
+    const turnEl = document.querySelector(`.turn[data-turn="${n}"]`);
+    if (turnEl) turnEl.classList.add('active', 'expanded');
+    document.querySelectorAll(`.qmark[data-turn="${n}"][data-grp="${grp}"][data-key="${key}"]`).forEach(qm => qm.classList.add('flash-pulse'));
+    document.querySelectorAll(`.annot-row[data-turn="${n}"][data-grp="${grp}"][data-key="${key}"]`).forEach(r => r.classList.add('flash'));
+  });
+  if (item.turns.length > 0) {
+    scrollToTurn(document.querySelector(`.turn[data-turn="${item.turns[0]}"]`));
+  }
+}
+
+function activateGroup(grp) {
+  clearActive();
+  document.querySelectorAll(`.cb-item[data-grp="${grp}"]`).forEach(el => el.classList.add('fired'));
+  document.querySelectorAll(`.qmark[data-grp="${grp}"]`).forEach(qm => qm.classList.add('flash-pulse'));
+  document.querySelectorAll(`.annot-row[data-grp="${grp}"]`).forEach(r => r.classList.add('flash'));
+  const turnsHit = new Set();
+  document.querySelectorAll(`.qmark[data-grp="${grp}"]`).forEach(qm => turnsHit.add(parseInt(qm.dataset.turn)));
+  turnsHit.forEach(n => {
+    const turnEl = document.querySelector(`.turn[data-turn="${n}"]`);
+    if (turnEl) turnEl.classList.add('active', 'expanded');
+  });
+  if (turnsHit.size > 0) {
+    const firstTurn = Math.min(...turnsHit);
+    scrollToTurn(document.querySelector(`.turn[data-turn="${firstTurn}"]`));
+  }
+}
+
+function setupInteractions() {
+  // Collapsible turns: header click toggles; expand/collapse-all controls.
+  document.querySelectorAll('.turn-header, .interaction-header').forEach(h => {
+    h.addEventListener('click', () => h.closest('.turn').classList.toggle('expanded'));
+  });
+  const exAll = document.getElementById('expand-all');
+  const coAll = document.getElementById('collapse-all');
+  if (exAll) exAll.addEventListener('click', () =>
+    document.querySelectorAll('.turn').forEach(el => el.classList.add('expanded')));
+  if (coAll) coAll.addEventListener('click', () =>
+    document.querySelectorAll('.turn').forEach(el => el.classList.remove('expanded')));
+
+  document.querySelectorAll('.qmark').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      flashAnnotationLink(parseInt(el.dataset.turn), parseInt(el.dataset.qidx), el.dataset.grp, el.dataset.key);
+    });
+  });
+  document.querySelectorAll('.annot-row').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      flashAnnotationLink(parseInt(el.dataset.turn), parseInt(el.dataset.qidx), el.dataset.grp, el.dataset.key);
+    });
+  });
+  document.querySelectorAll('.cb-item').forEach(el => {
+    el.addEventListener('click', () => {
+      activateCodebookItem(el.dataset.grp, el.dataset.key);
+    });
+  });
+  document.querySelectorAll('.pie-slice').forEach(el => {
+    el.addEventListener('click', () => {
+      activateGroup(el.dataset.grp);
+    });
+  });
+  document.querySelectorAll('.pie-legend-row').forEach(el => {
+    el.addEventListener('click', () => {
+      activateGroup(el.dataset.grp);
+    });
+  });
+  document.querySelectorAll('.sig-row').forEach(el => {
+    el.addEventListener('click', () => {
+      const n = el.dataset.turn; // agent turns are numeric, interactions are "H<k>"
+      const turnEl = document.querySelector(`.turn[data-turn="${n}"]`);
+      if (!turnEl) return;
+      document.querySelectorAll('.turn.active').forEach(x => x.classList.remove('active'));
+      turnEl.classList.add('active');
+      scrollToTurn(turnEl);
+    });
+  });
+}
+
+// Drag-to-resize handle on the left edge of the codebook panel.
+// The panel is `position: fixed; right: 0; width: 360px;` and the main has a
+// matching `margin-right: 360px`. We drive both off a single CSS variable
+// `--panel-w` so they stay in sync, and persist the user's last width in
+// localStorage so it sticks across reloads.
+function setupPanelResize() {
+  const panel = document.querySelector('aside.codebook-panel');
+  const main  = document.querySelector('main.trajectory');
+  const handle = document.getElementById('panel-resize-handle');
+  if (!panel || !main || !handle) return;
+
+  const MIN = 280;
+  const MAX_FRAC = 0.7;  // never let the panel eat more than 70% of the viewport
+  const STORAGE_KEY = 'tta.panel-width';
+
+  const apply = (w) => {
+    const cap = Math.max(MIN, Math.min(w, window.innerWidth * MAX_FRAC));
+    panel.style.width = cap + 'px';
+    main.style.marginRight = cap + 'px';
+  };
+
+  // Restore persisted width on load.
+  const saved = parseInt(localStorage.getItem(STORAGE_KEY) || '', 10);
+  if (!Number.isNaN(saved) && saved >= MIN) apply(saved);
+
+  let dragging = false;
+  let startX = 0;
+  let startW = 0;
+
+  handle.addEventListener('mousedown', (e) => {
+    dragging = true;
+    startX = e.clientX;
+    startW = panel.getBoundingClientRect().width;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    // Drag left = wider panel; drag right = narrower.
+    const w = startW + (startX - e.clientX);
+    apply(w);
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    localStorage.setItem(STORAGE_KEY, String(panel.getBoundingClientRect().width));
+  });
+
+  // Double-click the handle to reset to the default 360px.
+  handle.addEventListener('dblclick', () => {
+    apply(360);
+    localStorage.removeItem(STORAGE_KEY);
+  });
+}
+
+renderTurns();
+renderSignature();
+renderCodebook();
+markPieAnomalies();
+setupAnomalyTip();
+renderPatternsSummary();
+setupInteractions();
+setupPanelResize();
+
+</script>
+</body>
+</html>

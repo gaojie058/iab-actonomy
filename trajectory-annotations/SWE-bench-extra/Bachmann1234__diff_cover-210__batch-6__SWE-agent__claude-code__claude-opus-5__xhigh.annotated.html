@@ -1,0 +1,1741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Trajectory & Behavior Profile · Bachmann1234/diff_cover-210</title>
+<!-- Yuque-style restyle: system fonts only, no external font CDN -->
+<style>
+:root {
+  --bg: #f6f7f9;
+  --bg-panel: #ffffff;
+  --ink: #262626;
+  --ink-soft: #585d63;
+  --ink-mute: #8a8f8d;
+  --rule: #ebecef;
+  --rule-soft: #f2f3f5;
+  --accent: #00b96b;
+  --accent-soft: #b7e7d1;
+  --thought: #5a68c9;
+  --action: #0f9b8a;
+  --obs: #c77d1a;
+  --obs-soft: #f7edd6;
+  --highlight: #eafaf2;
+  --radius: 10px;
+
+  --grp-Retrieval: #0891b2;
+  --grp-Retrieval-bg: rgba(8, 145, 178, 0.10);
+  --grp-Memory: #d97706;
+  --grp-Memory-bg: rgba(217, 119, 6, 0.10);
+  --grp-Planning: #0284c7;
+  --grp-Planning-bg: rgba(2, 132, 199, 0.10);
+  --grp-Reasoning: #4f46e5;
+  --grp-Reasoning-bg: rgba(79, 70, 229, 0.10);
+  --grp-Evaluating: #0d9488;
+  --grp-Evaluating-bg: rgba(13, 148, 136, 0.10);
+  --grp-Deciding: #7c3aed;
+  --grp-Deciding-bg: rgba(124, 58, 237, 0.10);
+  --grp-Grounding: #c026d3;
+  --grp-Grounding-bg: rgba(192, 38, 211, 0.10);
+  --grp-Executing: #059669;
+  --grp-Executing-bg: rgba(5, 150, 105, 0.10);
+  --grp-Learning: #db2777;
+  --grp-Learning-bg: rgba(219, 39, 119, 0.10);
+  --grp-Reflection: #e11d48;
+  --grp-Reflection-bg: rgba(225, 29, 72, 0.10);
+
+  --panel-w: 360px;
+}
+
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#1b1c1e; --bg-panel:#232427;
+    --ink:#e6e6e6; --ink-soft:#b3b7bb; --ink-mute:#8d9195;
+    --rule:#303236; --rule-soft:#2a2c30;
+    --accent:#33c98d; --accent-soft:#2b5f48;
+    --thought:#8f9cf0; --action:#34c9b3; --obs:#e0a955; --obs-soft:#382f18;
+    --highlight:#18271f;
+  }
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+body {
+  min-height: 100vh;
+}
+
+header.masthead {
+  border-bottom: 1px solid var(--rule);
+  padding: 28px calc(var(--panel-w) + 24px) 24px 40px;
+  background: var(--bg-panel);
+  position: relative;
+  z-index: 5;
+}
+
+.eyebrow {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin-bottom: 8px;
+}
+
+h1.title {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-weight: 600;
+  font-variation-settings: 'opsz' 144;
+  font-size: 38px;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+}
+
+h1.title em {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--accent);
+}
+
+.subtitle {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 15px;
+  color: var(--ink-soft);
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1.55;
+  max-width: 820px;
+}
+
+.meta-row {
+  display: flex;
+  gap: 24px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: var(--ink-mute);
+}
+
+.meta-row span strong {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.outcome-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 2px;
+  font-weight: 600;
+}
+.outcome-resolved { background: rgba(5, 150, 105, 0.13); color: var(--grp-Executing); }
+.outcome-unresolved { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
+
+.app {
+  position: relative;
+  min-height: calc(100vh - 140px);
+}
+
+@media (max-width: 1100px) {
+  header.masthead { padding-right: 40px; }
+  main.trajectory { margin-right: 0 !important; max-width: 100% !important; }
+  aside.codebook-panel {
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    border-left: none !important;
+    border-top: 1px solid var(--rule);
+  }
+}
+
+main.trajectory {
+  padding: 32px 40px 80px;
+  max-width: 900px;
+  margin-right: var(--panel-w);
+}
+
+.section-label {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--rule); }
+
+.issue-block {
+  background: var(--bg-panel);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--accent);
+  padding: 18px 22px;
+  margin-bottom: 28px;
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  color: var(--ink-soft);
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+.issue-block strong { font-weight: 600; color: var(--ink); }
+.issue-block code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; background: var(--rule-soft); padding: 1px 5px; border-radius: 2px; }
+
+.summary-block {
+  background: var(--bg-panel);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--thought);
+  padding: 20px 24px 22px;
+  margin-bottom: 32px;
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: var(--ink);
+  position: relative;
+}
+.summary-block .summary-eyebrow {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--thought);
+  font-weight: 600;
+  margin-bottom: 10px;
+  display: block;
+}
+.summary-block .summary-text {
+  font-style: normal;
+  color: var(--ink);
+  letter-spacing: 0;
+}
+.summary-block .summary-text strong { font-style: normal; font-weight: 600; color: var(--ink); }
+.summary-block .summary-text em { font-style: normal; color: var(--accent); }
+.summary-block .summary-text code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-style: normal; font-size: 13px; background: var(--rule-soft); padding: 1px 5px; border-radius: 2px; color: var(--ink); }
+.summary-block .summary-text ul { margin: 10px 0; padding-left: 22px; }
+.summary-block .summary-text li { margin-bottom: 8px; line-height: 1.6; }
+.summary-block .summary-text p { margin: 0 0 10px 0; }
+.method-note ul { margin: 8px 0 4px 0; padding-left: 20px; }
+.method-note li { margin-bottom: 5px; line-height: 1.55; }
+
+.method-note {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-style: normal;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  margin-bottom: 24px;
+  padding: 12px 16px;
+  background: var(--highlight);
+  border-left: 2px solid var(--accent);
+  border-radius: 0 2px 2px 0;
+  line-height: 1.6;
+}
+.method-note strong { font-style: normal; font-weight: 600; color: var(--ink); }
+.method-note code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; background: rgba(0,0,0,0.06); padding: 1px 5px; border-radius: 2px; font-style: normal; }
+
+.turn {
+  position: relative;
+  margin-bottom: 28px;
+  padding: 22px 24px 20px 28px;
+  background: var(--bg-panel);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  transition: all 0.25s ease;
+}
+.turn::before { content: ''; position: absolute; left: -1px; top: -1px; bottom: -1px; width: 4px; background: var(--rule); transition: background 0.25s ease; }
+.turn.active { border-color: var(--ink); box-shadow: 0 1px 8px rgba(0,0,0,0.05); }
+.turn.active::before { background: var(--accent); width: 4px; }
+
+.turn-header {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--rule);
+}
+
+.turn-num {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-weight: 600;
+  font-size: 28px;
+  font-variation-settings: 'opsz' 144;
+  color: var(--accent);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.turn-num small { font-size: 11px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink-mute); font-weight: 400; display: block; letter-spacing: 0.1em; margin-bottom: 2px; }
+
+.turn-tag-line { font-family: -apple-system, "PingFang SC", "Helvetica Neue", "Segoe UI", sans-serif; font-style: normal; font-size: 15px; color: var(--ink); font-weight: 500; flex: 1; line-height: 1.45; }
+
+/* ===== Collapsible turns =====
+   Turns render collapsed by default: only the header row (icon, number,
+   headline, phase pill) is visible. Clicking the header toggles the body.
+   Programmatic activation (codebook / signature clicks) auto-expands. */
+.turn-header, .interaction-header { cursor: pointer; user-select: none; }
+.turn-body { display: none; }
+.turn.expanded > .turn-body { display: block; }
+.turn:not(.expanded) .turn-header,
+.turn:not(.expanded) .interaction-header {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+.turn:not(.expanded) { padding-top: 16px; padding-bottom: 16px; }
+.turn-chevron {
+  flex-shrink: 0;
+  align-self: center;
+  color: var(--ink-mute);
+  font-size: 11px;
+  transition: transform 0.2s ease;
+}
+.turn.expanded .turn-chevron { transform: rotate(90deg); }
+
+.turns-controls {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-bottom: 14px;
+}
+.turns-controls button {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: var(--bg-panel);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.turns-controls button:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ===== Actor icons (Google Material Design icons: person / smart_toy) ===== */
+.actor-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  align-self: center;
+}
+.actor-icon svg { width: 20px; height: 20px; }
+.actor-agent { color: var(--accent); background: var(--highlight); border: 1px solid var(--accent-soft); }
+.actor-human { color: #b45309; background: var(--obs-soft); border: 1px solid rgba(217, 119, 6, 0.35); }
+
+/* ===== Human interaction cards =====
+   First-class human turns interleaved with agent (obs, thought, action)
+   turns. Verbatim prompt, amber palette, person icon — visually distinct
+   from agent turn cards. */
+.turn.interaction {
+  background: #fffbeb;
+  border: 1px solid rgba(217, 119, 6, 0.35);
+  border-left: 3px solid var(--obs);
+}
+.interaction-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed rgba(217, 119, 6, 0.35);
+}
+.int-num {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-weight: 600;
+  font-size: 28px;
+  color: #b45309;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.int-num small { font-size: 11px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink-mute); font-weight: 400; display: block; letter-spacing: 0.1em; margin-bottom: 2px; }
+.int-title { font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; font-size: 15px; color: var(--ink); font-weight: 500; flex: 1; }
+.int-title .small { font-size: 10px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink-mute); font-weight: 400; margin-left: 6px; }
+.int-label {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border: 1px solid rgba(217, 119, 6, 0.4);
+  border-radius: 2px;
+  color: #b45309;
+  background: rgba(217, 119, 6, 0.08);
+}
+.interaction-text {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ink);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Interaction rows in the right-panel trajectory signature */
+.sig-row.sig-interaction {
+  background: #fffbeb;
+  border: 1px solid rgba(217, 119, 6, 0.3);
+  border-radius: 3px;
+}
+.sig-row.sig-interaction:hover { background: var(--obs-soft); }
+.sig-num-h { color: #b45309 !important; }
+.sig-int-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  color: #92400e;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sig-int-text svg { width: 12px; height: 12px; flex-shrink: 0; color: #b45309; }
+
+.turn-phase {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  color: var(--ink-soft);
+  background: var(--bg);
+}
+.phase-reproduce { color: var(--obs); border-color: var(--obs-soft); background: var(--obs-soft); }
+.phase-localize { color: var(--thought); border-color: rgba(91,74,138,0.2); background: rgba(91,74,138,0.08); }
+.phase-edit { color: var(--action); border-color: rgba(5, 150, 105, 0.2); background: rgba(5, 150, 105, 0.08); }
+.phase-recover { color: var(--accent); border-color: var(--accent-soft); background: var(--accent-soft); }
+.phase-verify { color: var(--grp-Evaluating); border-color: rgba(26,88,120,0.2); background: rgba(26,88,120,0.08); }
+.phase-submit { color: var(--ink); border-color: var(--rule); background: var(--rule-soft); }
+.phase-other { color: var(--ink-soft); border-color: var(--rule); background: var(--bg); }
+
+.oat-block { margin: 12px 0; padding-left: 14px; border-left: 2px solid; font-size: 14px; line-height: 1.55; }
+.oat-block .lbl { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 600; margin-bottom: 6px; display: block; }
+
+.oat-obs { border-color: var(--obs); }
+.oat-obs .lbl { color: var(--obs); }
+
+.oat-thought { border-color: var(--thought); background: rgba(91, 74, 138, 0.025); padding: 8px 14px 10px; border-radius: 0 2px 2px 0; }
+.oat-thought .lbl { color: var(--thought); }
+.oat-thought .lbl .small { opacity: 0.5; font-weight: 400; text-transform: none; letter-spacing: 0.05em; font-style: italic; }
+.thought-text { font-family: -apple-system, "PingFang SC", "Helvetica Neue", "Segoe UI", sans-serif; font-style: normal; font-size: 14px; color: var(--ink); line-height: 1.65; letter-spacing: 0; }
+
+.oat-action { border-color: var(--action); }
+.oat-action .lbl { color: var(--action); }
+.oat-action .content {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+  background: #1f1f1f;
+  color: #eaeaea;
+  padding: 8px 12px;
+  border-radius: 2px;
+  display: block;
+  margin-top: 4px;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+.oat-action .content .cmt { color: #888888; }
+.oat-action .content .kw { color: #d4a574; }
+
+.content { color: var(--ink); }
+.content code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; background: var(--rule-soft); padding: 1px 5px; border-radius: 2px; }
+
+.qmark {
+  font-style: italic;
+  background: var(--qbg, var(--rule-soft));
+  border-bottom: 1.5px solid var(--qcolor, var(--ink-mute));
+  padding: 0 2px;
+  margin: 0 1px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  border-radius: 1px;
+  position: relative;
+}
+.qmark:hover { background: var(--qcolor, var(--ink-mute)); color: var(--bg); }
+.qmark sup { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-style: normal; font-size: 9px; font-weight: 600; color: var(--qcolor, var(--ink-mute)); margin-left: 2px; letter-spacing: 0; vertical-align: super; line-height: 0; }
+.qmark:hover sup { color: var(--bg); }
+
+.annotations {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.annotations-header { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-mute); font-weight: 600; margin-bottom: 4px; }
+
+.annot-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1.1fr);
+  gap: 10px;
+  align-items: baseline;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 5px 6px;
+  border-radius: 2px;
+  transition: background 0.18s ease;
+}
+.annot-row:hover { background: var(--rule-soft); }
+.annot-row.flash { background: var(--qbg, var(--rule-soft)); }
+
+.annot-quote {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-style: italic;
+  color: var(--qcolor, var(--ink));
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.annot-quote::before { content: '"'; opacity: 0.5; }
+.annot-quote::after { content: '"'; opacity: 0.5; }
+.annot-quote .qnum { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-style: normal; font-size: 9px; font-weight: 600; margin-right: 4px; opacity: 0.7; vertical-align: super; }
+
+.annot-arrow { color: var(--ink-mute); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
+
+.annot-tag { font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; font-size: 11.5px; color: var(--ink-soft); letter-spacing: 0.005em; }
+.annot-tag .annot-grp { font-weight: 600; color: var(--qcolor, var(--ink)); }
+.annot-tag .annot-sep { margin: 0 4px; opacity: 0.4; }
+.annot-tag .annot-leaf { color: var(--ink); }
+
+.insight {
+  margin-top: 12px;
+  padding: 10px 12px 10px 14px;
+  background: var(--highlight);
+  border-radius: 2px;
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 13px;
+  font-style: normal;
+  color: var(--ink-soft);
+  position: relative;
+  line-height: 1.6;
+}
+.insight::before { content: '※'; position: absolute; left: -22px; top: 8px; font-size: 14px; color: var(--accent); font-style: normal; }
+.insight strong { font-style: normal; font-weight: 600; color: var(--ink); }
+
+/* Segment summary card inside the right-panel trajectory signature.
+   Sits above the first row of each `segments[]` entry — a compact "what
+   the agent is doing in this stretch" preface for the row block below. */
+.sig-segment {
+  margin: 14px 0 6px;
+  padding: 8px 10px;
+  background: var(--highlight);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 2px 2px 0;
+}
+.sig-segment:first-child { margin-top: 4px; }
+.sig-segment-tag {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 8.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+.sig-segment-title {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-weight: 600;
+  font-size: 12.5px;
+  font-style: italic;
+  color: var(--ink);
+  line-height: 1.3;
+  margin-bottom: 3px;
+}
+.sig-segment-body {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 12px;
+  color: var(--ink-soft);
+  line-height: 1.55;
+}
+.sig-segment-body code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+  background: rgba(79, 70, 229, 0.08);
+  padding: 0 3px;
+  border-radius: 2px;
+}
+
+aside.codebook-panel {
+  background: var(--bg-panel);
+  border-left: 1px solid var(--rule);
+  padding: 32px 24px 60px;
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: var(--panel-w);
+  height: 100vh;
+  overflow-y: auto;
+  z-index: 10;
+}
+aside.codebook-panel::-webkit-scrollbar { width: 6px; }
+aside.codebook-panel::-webkit-scrollbar-track { background: transparent; }
+aside.codebook-panel::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 3px; }
+
+/* Drag handle on the panel's left edge — sits over the border, 6px hit area,
+   shows a thin colored stripe on hover/drag. Double-click resets width. */
+#panel-resize-handle {
+  position: absolute;
+  top: 0;
+  left: -3px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 20;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+#panel-resize-handle:hover,
+#panel-resize-handle:active {
+  background: linear-gradient(to right, transparent 0%, transparent 40%, var(--accent) 40%, var(--accent) 60%, transparent 60%);
+}
+
+.panel-title { font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; font-weight: 600; font-size: 22px; font-variation-settings: 'opsz' 144; margin-bottom: 4px; letter-spacing: -0.01em; }
+.panel-sub { font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; font-style: normal; font-size: 12.5px; color: var(--ink-soft); line-height: 1.5; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--rule); }
+
+/* Pie chart section */
+.pie-section {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--rule);
+}
+.pie-svg-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+.pie-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 11px;
+}
+.pie-legend-row {
+  display: grid;
+  grid-template-columns: 12px 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  color: var(--ink-soft);
+}
+.pie-legend-swatch { width: 10px; height: 10px; border-radius: 1px; }
+.pie-legend-name { font-weight: 500; color: var(--ink); }
+.pie-legend-pct { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; color: var(--ink-mute); }
+.pie-legend-count { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; color: var(--ink-mute); }
+
+.pie-slice { transition: opacity 0.2s ease; cursor: pointer; }
+.pie-slice:hover { opacity: 0.8; }
+
+.cb-group { margin-bottom: 18px; }
+.cb-group-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+.cb-group-name { font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; font-weight: 600; font-size: 14px; font-style: italic; color: var(--qcolor, var(--ink)); }
+.cb-count { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; color: var(--ink-mute); background: var(--bg); padding: 1px 6px; border-radius: 8px; border: 1px solid var(--rule); }
+.cb-bar { height: 4px; background: var(--rule-soft); border-radius: 2px; margin-bottom: 8px; overflow: hidden; }
+.cb-bar-fill { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
+.cb-items { display: flex; flex-direction: column; gap: 2px; margin-left: 4px; }
+.cb-item {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  padding: 4px 8px 4px 12px;
+  border-left: 2px solid var(--rule);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 0 2px 2px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+}
+.cb-item:hover { background: var(--bg); border-left-color: var(--ink-soft); color: var(--ink); }
+.cb-item.fired { border-left-color: var(--qcolor, var(--accent)); color: var(--ink); background: var(--qbg, var(--accent-soft)); font-weight: 500; }
+.cb-item-text { flex: 1; }
+.cb-item .turn-refs { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; color: var(--ink-mute); flex-shrink: 0; }
+.cb-item.fired .turn-refs { color: var(--qcolor, var(--accent)); font-weight: 600; }
+
+.summary-footer {
+  margin-top: 60px;
+  padding: 28px;
+  background: var(--bg-panel);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+.summary-footer h2 { font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; font-weight: 600; font-size: 22px; margin-bottom: 4px; letter-spacing: -0.01em; }
+.summary-footer .sub { font-style: italic; color: var(--ink-soft); font-size: 14px; margin-bottom: 20px; }
+.findings { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+.finding { padding: 14px 16px; border-left: 2px solid var(--accent); background: var(--bg); font-size: 13px; line-height: 1.55; }
+.finding strong { font-weight: 600; display: block; margin-bottom: 4px; color: var(--ink); }
+.finding span { color: var(--ink-soft); }
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 40%, transparent); }
+  100% { box-shadow: 0 0 0 8px transparent; }
+}
+.cb-item.fired.flash, .annot-row.flash, .qmark.flash-pulse { animation: pulse-ring 0.6s ease-out; }
+
+.legend {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 24px;
+  padding: 10px 14px;
+  background: var(--bg-panel);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  color: var(--ink-soft);
+  flex-wrap: wrap;
+  align-items: center;
+}
+.legend-item { display: flex; align-items: center; gap: 6px; }
+.legend-dot { width: 8px; height: 8px; border-radius: 1px; }
+.legend-dot.obs { background: var(--obs); }
+.legend-dot.thought { background: var(--thought); }
+.legend-dot.action { background: var(--action); }
+.legend small { margin-left: auto; color: var(--ink-mute); font-style: italic; }
+
+/* ===== Trajectory signature (right panel, above the bar chart) =====
+   Auto-built in JS from the same turns/quotes data. No extra schema fields. */
+.signature-section {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--rule);
+}
+.sig-section-title {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+.sig-section-sub {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-style: italic;
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+.sig-flat {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  white-space: pre-wrap;
+  word-break: normal;
+  overflow-wrap: anywhere;
+  user-select: all;
+  cursor: text;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.sig-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+.sig-row {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 6px;
+  align-items: start;
+  padding: 5px 6px 5px 4px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 2px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  transition: background 0.15s ease;
+}
+.sig-row:hover { background: var(--bg); }
+.sig-row:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.sig-num {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  color: var(--ink-mute);
+  font-weight: 600;
+  text-align: right;
+  padding-right: 4px;
+  padding-top: 2px;
+}
+.sig-num .sig-flag {
+  display: inline;
+  margin-left: 2px;
+  color: var(--accent);
+  font-weight: 700;
+}
+.sig-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  align-items: center;
+}
+.sig-chip {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 1px 6px 2px;
+  border-radius: 2px;
+  border: 1px solid;
+  line-height: 1.35;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.sig-chip-grp {
+  text-transform: uppercase;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+}
+.sig-chip-sub {
+  font-size: 10px;
+  font-weight: 600;
+}
+.sig-chip-sep {
+  font-size: 10px;
+  opacity: 0.45;
+  margin: 0 1px;
+}
+.sig-chip-leaf {
+  font-size: 9.5px;
+  font-weight: 500;
+  font-style: italic;
+  opacity: 0.78;
+}
+.sig-chip-empty {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: var(--ink-mute);
+  padding: 0 4px;
+}
+.sig-chip.grp-Retrieval  { color: var(--grp-Retrieval);  background: var(--grp-Retrieval-bg);  border-color: var(--grp-Retrieval); }
+.sig-chip.grp-Memory     { color: var(--grp-Memory);     background: var(--grp-Memory-bg);     border-color: var(--grp-Memory); }
+.sig-chip.grp-Planning   { color: var(--grp-Planning);   background: var(--grp-Planning-bg);   border-color: var(--grp-Planning); }
+.sig-chip.grp-Reasoning  { color: var(--grp-Reasoning);  background: var(--grp-Reasoning-bg);  border-color: var(--grp-Reasoning); }
+.sig-chip.grp-Evaluating   { color: var(--grp-Evaluating);   background: var(--grp-Evaluating-bg);   border-color: var(--grp-Evaluating); }
+.sig-chip.grp-Deciding   { color: var(--grp-Deciding);   background: var(--grp-Deciding-bg);   border-color: var(--grp-Deciding); }
+.sig-chip.grp-Grounding  { color: var(--grp-Grounding);  background: var(--grp-Grounding-bg);  border-color: var(--grp-Grounding); }
+.sig-chip.grp-Executing  { color: var(--grp-Executing);  background: var(--grp-Executing-bg);  border-color: var(--grp-Executing); }
+.sig-chip.grp-Learning   { color: var(--grp-Learning);   background: var(--grp-Learning-bg);   border-color: var(--grp-Learning); }
+.sig-chip.grp-Reflection { color: var(--grp-Reflection); background: var(--grp-Reflection-bg); border-color: var(--grp-Reflection); }
+
+.sig-restart-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  margin: 4px 0;
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  border-left: 2px solid var(--accent);
+  border-radius: 0 2px 2px 0;
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-style: italic;
+  font-size: 11px;
+  color: var(--accent);
+  cursor: help;
+}
+.sig-restart-glyph { font-size: 16px; line-height: 1; }
+.sig-restart-text { color: var(--ink-soft); }
+
+/* ============ behavior-pattern (success / failure) layer ============ */
+/* driven by the optional `patterns` field in the annotated JSON; absent -> nothing renders */
+/* signature chip highlight */
+.sig-chip-anom { outline: 1.5px solid; outline-offset: 1px; border-radius: 3px; }
+.sig-chip-anom-lo { outline-color: #e11d48; }
+.sig-chip-anom-hi { outline-color: #d97706; }
+.sig-chip-anom-mid { outline-color: #2563eb; }
+.sig-chip-anom-ok { outline-color: #16a34a; }
+.sig-chip-flag { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8px; font-weight: 700; margin-left: 3px; padding: 0 3px; border-radius: var(--radius); vertical-align: middle; }
+.sig-chip-flag-lo { color: #be123c; background: rgba(225,29,72,0.18); }
+.sig-chip-flag-hi { color: #b45309; background: rgba(217,119,6,0.18); }
+.sig-chip-flag-mid { color: #1d4ed8; background: rgba(37,99,235,0.18); }
+.sig-chip-flag-ok { color: #15803d; background: rgba(34,197,94,0.18); }
+/* codebook-panel leaf highlight */
+.cb-anom-legend { font-size: 10px; color: var(--ink-soft); margin-bottom: 10px; padding: 6px 8px; background: var(--rule-soft); border-radius: 3px; line-height: 1.6; }
+.cb-item.cb-anom:not(.fired) { border-left-width: 3px; }
+.cb-item.cb-anom-lo:not(.fired) { border-left-color: #e11d48; background: rgba(225,29,72,0.07); }
+.cb-item.cb-anom-hi:not(.fired) { border-left-color: #d97706; background: rgba(217,119,6,0.07); }
+.cb-item.cb-anom-mid:not(.fired) { border-left-color: #2563eb; background: rgba(37,99,235,0.07); }
+.cb-item.cb-anom-ok:not(.fired) { border-left-color: #16a34a; background: rgba(34,197,94,0.07); }
+.cb-anom-badge { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; font-weight: 700; padding: 0 4px; border-radius: 6px; margin-left: 4px; }
+.cb-anom-b-lo { color: #be123c; background: rgba(225,29,72,0.16); }
+.cb-anom-b-hi { color: #b45309; background: rgba(217,119,6,0.16); }
+.cb-anom-b-mid { color: #1d4ed8; background: rgba(37,99,235,0.16); }
+.cb-anom-b-ok { color: #15803d; background: rgba(34,197,94,0.16); }
+/* custom hover card (模式类型 / 诊断原因 / 建议) */
+#anom-tip { position: fixed; z-index: 99999; max-width: 340px; background: #0f172a; color: #f8fafc; border-radius: 9px; padding: 12px 14px; font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; font-size: 12.5px; line-height: 1.55; box-shadow: 0 10px 34px rgba(0,0,0,0.32); pointer-events: none; opacity: 0; display: none; }
+#anom-tip.show { opacity: 1; display: block; }
+#anom-tip .at-type { font-weight: 700; font-size: 11px; letter-spacing: 0.03em; padding: 2px 9px; border-radius: 11px; }
+#anom-tip .at-ok { color: #86efac; background: rgba(34,197,94,0.20); }
+#anom-tip .at-bad { color: #fca5a5; background: rgba(239,68,68,0.20); }
+#anom-tip .at-row { margin-top: 9px; }
+#anom-tip .at-label { color: #94a3b8; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-bottom: 2px; }
+#anom-tip .at-val { color: #f1f5f9; }
+/* auto pattern-summary table (main column) */
+#patterns-summary { margin-top: 30px; }
+.ps-table-wrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--bg-panel); }
+table.ps-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 640px; }
+table.ps-table th { text-align: left; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-mute); font-weight: 600; padding: 10px 12px; border-bottom: 1px solid var(--rule); background: var(--rule-soft); }
+table.ps-table td { padding: 9px 12px; border-bottom: 1px solid var(--rule-soft); color: var(--ink-soft); vertical-align: top; line-height: 1.45; }
+table.ps-table tr:last-child td { border-bottom: none; }
+.ps-leaf { font-weight: 600; color: var(--ink); }
+.ps-key { font-size: 10px; color: var(--ink-mute); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.ps-pill { display: inline-block; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; letter-spacing: 0.03em; font-weight: 700; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+.ps-ok { color: #15803d; background: rgba(34,197,94,0.14); }
+.ps-bad { color: #be123c; background: rgba(225,29,72,0.13); }
+
+
+:root { --grp-Evaluate: var(--grp-Evaluating); --grp-Evaluate-bg: var(--grp-Evaluating-bg); }
+.sig-chip.grp-Evaluate {color:var(--grp-Evaluate);background:var(--grp-Evaluate-bg);border-color:var(--grp-Evaluate);}
+.sig-chip {display:inline-block;max-width:100%;white-space:normal;overflow-wrap:anywhere;}
+.sig-chip > span + span {margin-left:4px;}
+.archive-nav {font: 12px/1.7 Inter, sans-serif; margin-bottom:12px; overflow-wrap:anywhere; color:var(--ink-soft);}
+.archive-nav a {color:var(--accent);}
+.archive-notes {font: 13px/1.6 Inter, sans-serif; color:var(--ink-soft); margin: 14px 0;}
+.archive-notes summary {cursor:pointer; font-weight:600;}
+.archive-notes ul {padding-left:1.5rem;}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+<nav class="archive-nav"><a href="../index.html">Report index</a> &nbsp;›&nbsp; SWE-bench-extra &nbsp;·&nbsp; <a href="Bachmann1234__diff_cover-210__batch-6__SWE-agent__claude-code__claude-opus-5__xhigh.annotated.json">Annotation JSON</a></nav>
+  <div class="eyebrow">Quote-grounded annotation</div>
+  <h1 class="title">Agent Trajectory <em>&</em> Behavior Profile</h1>
+  <div class="subtitle">This report walks through one agent session step by step. Every label is tied to the exact quoted words that justify it — so you can see what was asked, what the agent did, and why.</div>
+  <div class="meta-row">
+    <span><strong>Instance</strong> Bachmann1234/diff_cover-210</span>
+    <span><strong>Model</strong> SWE-agent (swe-agent-llama-70b)</span>
+    <span><strong>Turns</strong> 22</span>
+    
+    <span><strong>Outcome</strong> <span class="outcome-pill outcome-resolved">RESOLVED ✓</span></span>
+    <span><strong>Annotations</strong> 83</span>
+  </div>
+</header>
+
+<div class="app">
+
+<main class="trajectory">
+
+<div class="section-label">the task</div>
+<div class="issue-block">why HTML&amp;JSON reports are prohibited and why they cannot be generated at the same time
+Want to know why HTML&amp;JSON reports are prohibited and why they cannot be generated at the same time
+
+`output_format = parser.add_mutually_exclusive_group()`</div>
+
+<div class="section-label">trajectory summary</div>
+<div class="summary-block">
+  <span class="summary-eyebrow">What happened in this run</span>
+  <div class="summary-text">The agent had to explain, and then remove, the <code>argparse</code> restriction that stops <code>diff-cover</code> from emitting an HTML and a JSON report in the same invocation. Localization was fast: <strong>T1–T2</strong> grep for <code>output_format</code>, open <code>diff_cover/diff_cover_tool.py</code>, and read the <code>add_mutually_exclusive_group()</code> call that is the whole mechanism. The production fix is finished by <strong>T4</strong> &mdash; <strong>T3</strong> naively comments out line 63 and is rejected with four <code>F821</code> errors, and <strong>T4</strong> recovers by rewriting the entire <code>63:91</code> block so each report flag is registered on <code>parser</code> directly. Everything after T4 is verification that never lands: <strong>T5–T7</strong> build a <code>subprocess</code> harness that shells out to a <code>diff_cover</code> binary that does not exist (the console script is named <code>diff-cover</code>), and <strong>T8–T14</strong> burn seven turns on a PATH hunt that ends with the agent finding <code>diff-cover</code> in <code>bin/</code> and then re-running the <em>unedited</em> script anyway. <strong>T15–T20</strong> invoke <code>diff-cover</code> directly with both <code>--html-report</code> and <code>--json-report</code>, which is the one command that would actually exercise the patch; argparse accepts both flags and the run dies much later on a missing <code>coverage.xml</code> and then on <code>git diff</code>, but the agent reads only the tracebacks and never notices that the mutual-exclusion error is gone. <strong>T21</strong> gives up on testing, deletes the fixtures, and asserts the change is correct on the strength of having made it; <strong>T22</strong> submits. The patch is a real root-cause fix rather than a symptom patch, but the verification is entirely unrealized &mdash; the run is graded resolved on evidence the agent collected and then discarded.</div>
+</div>
+
+
+<div class="method-note">
+  <strong>How to read this.</strong> Every card below is one step of the session. Amber cards are the human speaking; white cards are the agent working. Cards start collapsed — click a header to open it. Inside an open agent card:<ul><li><em>Observation</em> — what the agent saw before acting (tool output, file contents).</li><li><em>Thought</em> — what the agent said to itself. Underlined phrases here explain <em>why</em> it acted.</li><li><em>Action</em> — what it actually did (commands, code edits). Underlined phrases here show <em>what</em> was done.</li></ul>Each underline carries a color-coded tag from the action codebook on the right. Click any underlined phrase, tag row, or codebook entry — the matching pieces light up together.
+</div>
+
+<div class="legend">
+  <div class="legend-item"><span class="legend-dot obs"></span> Observation</div>
+  <div class="legend-item"><span class="legend-dot thought"></span> Thought</div>
+  <div class="legend-item"><span class="legend-dot action"></span> Action</div>
+  <small>click anything underlined to light up its tag — and the other way around</small>
+</div>
+
+<div class="section-label">trajectory · 22 turns</div>
+
+<div class="turns-controls">
+  <button id="expand-all" type="button">expand all</button>
+  <button id="collapse-all" type="button">collapse all</button>
+</div>
+
+<div id="turns-container"></div>
+
+<div class="summary-footer">
+  <h2>Summary findings</h2>
+  <div class="sub">Patterns that only become visible when every tag points at an exact quote</div>
+  <div class="findings"><div class="finding"><strong>Eighteen of twenty-two turns never touch the fix</strong><span>The production change is complete at <strong>T4</strong> and <code>diff_cover_tool.py</code> is never edited again. T5–T22 are entirely environment wrangling: a harness (T5–T7), a PATH hunt (T8–T14), a fixture hunt (T15–T19), a git workaround (T20), and cleanup (T21–T22). The signature panel makes this visible as a long tail with no <code>Apply patch via edit</code> chip after T4.</span></div><div class="finding"><strong>T14 announces a change it never makes</strong><span>After discovering <code>diff-cover</code> (hyphen) in <code>bin/</code>, T14's thought says <em>"run the `test_reports.py` script with the full path to the `diff-cover` command"</em> &mdash; but the action is byte-identical to T7 and T10 (<code>python test_reports.py</code>), and the script still spawns <code>"diff_cover"</code> (underscore). Quoting the action surface separately from the thought is what exposes the gap: the thought span is <code>Planning &rsaquo; Plan function or tool use</code> and the action span is <code>Executing &rsaquo; Run verification command</code>, and the two describe different commands.</span></div><div class="finding"><strong>The verification succeeded and the agent did not read it</strong><span><strong>T15</strong>, <strong>T19</strong> and <strong>T20</strong> each pass <code>--html-report</code> and <code>--json-report</code> in one invocation. Under the pre-patch code argparse would have exited with a mutual-exclusion error; instead every traceback originates from <code>generate_coverage_report</code>, well past parsing. That is a clean positive result for the patch, and no quote in T16, T20 or T21 registers it &mdash; the agent's only <code>Goal-completion check</code> spans (T21, T22) are grounded in having <em>written</em> the change, not in having observed it work.</span></div><div class="finding"><strong>Reflection fires only on the word &quot;persists&quot;</strong><span>All four <code>Reflection &rsaquo; Detect failed action</code> spans (T4, T8, T11, T15) sit on phrases with an explicit backward failure marker (<em>"The edit command failed"</em>, <em>"The error persists"</em>). The structurally identical failure recognitions at T12 (<em>"the `find` command is not locating the `diff_cover` executable"</em>) and T16 carry no such marker and fall to <code>Reasoning &rsaquo; Inferring</code>, so the run's Reflection count tracks the agent's phrasing habits at least as much as its actual error-recovery behaviour.</span></div></div>
+</div>
+
+<div id="patterns-summary"></div>
+
+</main>
+
+<aside class="codebook-panel">
+  <div id="panel-resize-handle" title="Drag to resize · double-click to reset"></div>
+  <div class="panel-title">What the agent did, by category</div>
+  <div class="panel-sub">Counted from the tagged quotes across all 22 agent steps</div>
+
+  <div class="pie-section">
+    <div class="pie-legend"><div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ink-mute); letter-spacing: 0.08em; text-transform: uppercase; text-align: center; margin-bottom: 10px;">83 tags across 9 groups</div></div>
+    <div class="pie-svg-wrap"><svg width="300" height="206" viewBox="0 0 300 206" xmlns="http://www.w3.org/2000/svg" style="display: block; margin: 0 auto;"><g class="pie-slice" data-grp="Reasoning" style="cursor: pointer;"><title>Reasoning: 21 (25%)</title><rect x="0" y="4" width="300" height="22" fill="transparent"/><text x="96" y="18.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Reasoning</text><rect x="102" y="9" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="9" width="164.0" height="12" fill="#4f46e5" rx="2"/><text x="298" y="18.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">21</text></g><g class="pie-slice" data-grp="Planning" style="cursor: pointer;"><title>Planning: 18 (22%)</title><rect x="0" y="26" width="300" height="22" fill="transparent"/><text x="96" y="40.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Planning</text><rect x="102" y="31" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="31" width="140.6" height="12" fill="#0284c7" rx="2"/><text x="298" y="40.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">18</text></g><g class="pie-slice" data-grp="Executing" style="cursor: pointer;"><title>Executing: 14 (17%)</title><rect x="0" y="48" width="300" height="22" fill="transparent"/><text x="96" y="62.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Executing</text><rect x="102" y="53" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="53" width="109.3" height="12" fill="#059669" rx="2"/><text x="298" y="62.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">14</text></g><g class="pie-slice" data-grp="Retrieval" style="cursor: pointer;"><title>Retrieval: 12 (14%)</title><rect x="0" y="70" width="300" height="22" fill="transparent"/><text x="96" y="84.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Retrieval</text><rect x="102" y="75" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="75" width="93.7" height="12" fill="#0891b2" rx="2"/><text x="298" y="84.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">12</text></g><g class="pie-slice" data-grp="Evaluating" style="cursor: pointer;"><title>Evaluating: 7 (8%)</title><rect x="0" y="92" width="300" height="22" fill="transparent"/><text x="96" y="106.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Evaluating</text><rect x="102" y="97" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="97" width="54.7" height="12" fill="#0d9488" rx="2"/><text x="298" y="106.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">7</text></g><g class="pie-slice" data-grp="Reflection" style="cursor: pointer;"><title>Reflection: 6 (7%)</title><rect x="0" y="114" width="300" height="22" fill="transparent"/><text x="96" y="128.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Reflection</text><rect x="102" y="119" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="119" width="46.9" height="12" fill="#e11d48" rx="2"/><text x="298" y="128.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">6</text></g><g class="pie-slice" data-grp="Grounding" style="cursor: pointer;"><title>Grounding: 2 (2%)</title><rect x="0" y="136" width="300" height="22" fill="transparent"/><text x="96" y="150.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Grounding</text><rect x="102" y="141" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="141" width="15.6" height="12" fill="#c026d3" rx="2"/><text x="298" y="150.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">2</text></g><g class="pie-slice" data-grp="Deciding" style="cursor: pointer;"><title>Deciding: 2 (2%)</title><rect x="0" y="158" width="300" height="22" fill="transparent"/><text x="96" y="172.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Deciding</text><rect x="102" y="163" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="163" width="15.6" height="12" fill="#7c3aed" rx="2"/><text x="298" y="172.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">2</text></g><g class="pie-slice" data-grp="Memory" style="cursor: pointer;"><title>Memory: 1 (1%)</title><rect x="0" y="180" width="300" height="22" fill="transparent"/><text x="96" y="194.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Memory</text><rect x="102" y="185" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="185" width="7.8" height="12" fill="#d97706" rx="2"/><text x="298" y="194.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">1</text></g></svg></div>
+  </div>
+
+  <div id="signature-container"></div>
+
+  <div id="codebook-container"></div>
+</aside>
+
+</div>
+
+<script>
+const turns = [{"n": 1, "phase": "localize", "phaseLabel": "Repo-level localize", "headline": "Agent greps the repository for `output_format` to find the parser group.", "obs": "Initial state: issue text + INSTRUCTIONS delivered. No file open; agent is in the repo root.", "thought": "First, let's locate the file where the `output_format` parser group is defined. This will allow us to understand why HTML and JSON reports are prohibited from being generated simultaneously. We can start by searching for the term `output_format` in the repository to find the relevant file.", "action": "search_dir \"output_format\"", "quotes": [{"quote": "locate the file where the `output_format` parser group is defined", "target": "thought", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus"}, {"quote": "understand why HTML and JSON reports are prohibited from being generated simultaneously", "target": "thought", "grp": "Reasoning", "sub": "Analysing", "leaf": "Understanding intent"}, {"quote": "searching for the term `output_format` in the repository to find the relevant file", "target": "thought", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Plan function or tool use"}, {"quote": "search_dir \"output_format\"", "target": "action", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus"}], "insight": ""}, {"n": 2, "phase": "localize", "phaseLabel": "File-level localize", "headline": "Agent opens `diff_cover_tool.py` where all five matches sit.", "obs": "Found 5 matches for \"output_format\" in /diff_cover:\n/diff_cover/diff_cover/diff_cover_tool.py (5 matches)\nEnd of matches for \"output_format\" in /diff_cover", "thought": "The search results indicate that the term `output_format` appears five times in the `diff_cover_tool.py` file within the `diff_cover` directory. Let's open this file to examine the occurrences and understand why HTML and JSON reports are mutually exclusive.", "action": "open diff_cover/diff_cover_tool.py", "quotes": [{"quote": "the term `output_format` appears five times in the `diff_cover_tool.py` file", "target": "thought", "grp": "Memory", "sub": "Read memory", "leaf": "Read from working memory"}, {"quote": "open this file", "target": "thought", "grp": "Grounding", "sub": "Interact with digital environments", "leaf": "Navigate digital interfaces"}, {"quote": "examine the occurrences and understand why HTML and JSON reports are mutually exclusive", "target": "thought", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus"}, {"quote": "open diff_cover/diff_cover_tool.py", "target": "action", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus"}], "insight": ""}, {"n": 3, "phase": "edit", "phaseLabel": "First patch attempt", "headline": "Agent comments out the mutually exclusive group line alone.", "obs": "[File: /diff_cover/diff_cover/diff_cover_tool.py (262 lines total)]\n1:import argparse\n2:import io\n3:import logging\n4:import os\n5:import sys\n6:import xml.etree.ElementTree as etree\n7:\n8:from diff_cover import DESCRIPTION, VERSION\n9:from diff_cover.diff_reporter import GitDiffReporter\n10:from diff_cover.git_diff import GitDiffTool\n11:from diff_cover.git_path import GitPathTool\n12:from diff_cover.report_generator import (\n13:    HtmlReportGenerator,\n14:    JsonReportGenerator,\n15:    MarkdownReportGenerator,\n16:    StringReportGenerator,\n17:)\n18:from diff_cover.violationsreporters.violations_reporter import XmlCoverageReporter\n19:\n20:HTML_REPORT_HELP = \"Diff coverage HTML output\"\n21:JSON_REPORT_HELP = \"Diff coverage JSON output\"\n22:MARKDOWN_REPORT_HELP = \"Diff coverage Markdown output\"\n23:COMPARE_BRANCH_HELP = \"Branch to compare\"\n24:CSS_FILE_HELP = \"Write CSS into an external file\"\n25:FAIL_UNDER_HELP = (\n26:    \"Returns an error code if coverage or quality score is below this value\"\n27:)\n28:IGNORE_STAGED_HELP = \"Ignores staged changes\"\n29:IGNORE_UNSTAGED_HELP = \"Ignores unstaged changes\"\n30:IGNORE_WHITESPACE = \"When getting a diff ignore any and all whitespace\"\n31:EXCLUDE_HELP = \"Exclude files, more patterns supported\"\n32:SRC_ROOTS_HELP = \"List of source directories (only for jacoco coverage reports)\"\n33:COVERAGE_XML_HELP = \"XML coverage report\"\n34:DIFF_RANGE_NOTATION_HELP = (\n35:    \"Git diff range notation to use when comparing branches, defaults to '...'\"\n36:)\n37:QUIET_HELP = \"Only print errors and failures\"\n38:SHOW_UNCOVERED = \"Show uncovered lines on the console\"\n39:\n40:LOGGER = logging.getLogger(__name__)\n41:\n42:\n43:def parse_coverage_args(argv):\n44:    \"\"\"\n45:    Parse command line arguments, returning a dict of\n46:    valid options:\n47:\n48:        {\n49:            'coverage_xml': COVERAGE_XML,\n50:            'html_report': None | HTML_REPORT,\n51:            'json_report': None | JSON_REPORT,\n52:            'external_css_file': None | CSS_FILE,\n53:        }\n54:\n55:    where `COVERAGE_XML`, `HTML_REPORT`, `JSON_REPORT`, and `CSS_FILE` are paths.\n56:\n57:    The path strings may or may not exist.\n58:    \"\"\"\n59:    parser = argparse.ArgumentParser(description=DESCRIPTION)\n60:\n61:    parser.add_argument(\"coverage_xml\", type=str, help=COVERAGE_XML_HELP, nargs=\"+\")\n62:\n63:    output_format = parser.add_mutually_exclusive_group()\n64:\n65:    output_format.add_argument(\n66:        \"--html-report\",\n67:        metavar=\"FILENAME\",\n68:        type=str,\n69:        default=None,\n70:        help=HTML_REPORT_HELP,\n71:    )\n72:\n73:    output_format.add_argument(\n74:        \"--json-report\",\n75:        metavar=\"FILENAME\",\n76:        type=str,\n77:        default=None,\n78:        help=JSON_REPORT_HELP,\n79:    )\n80:\n81:    output_format.add_argument(\n82:        \"--markdown-report\",\n83:        metavar=\"FILENAME\",\n84:        type=str,\n85:        default=None,\n86:        help=MARKDOWN_REPORT_HELP,\n87:    )\n88:\n89:    output_format.add_argument(\n90:        \"--show-uncovered\", action=\"store_true\", default=False, help=SHOW_UNCOVERED\n91:    )\n92:\n93:    parser.add_argument(\n94:        \"--external-css-file\",\n95:        metavar=\"FILENAME\",\n96:        type=str,\n97:        default=None,\n98:        help=CSS_FILE_HELP,\n99:    )\n100:\n(162 more lines below)", "thought": "The `diff_cover_tool.py` file contains the parser configuration for the `diff_cover` tool. The `output_format` group is defined as a mutually exclusive group, which means that only one of the options (`--html-report`, `--json-report`, `--markdown-report`, `--show-uncovered`) can be selected at a time.\n\nTo allow HTML and JSON reports to be generated simultaneously, we need to remove the mutually exclusive restriction on the `output_format` group. Let's make the necessary edit to the code to remove the `add_mutually_exclusive_group` function and allow multiple report formats to be selected.", "action": "edit 63:63\n# output_format = parser.add_mutually_exclusive_group()\nend_of_edit", "quotes": [{"quote": "The `output_format` group is defined as a mutually exclusive group", "target": "thought", "grp": "Reasoning", "sub": "Analysing", "leaf": "Analyse source code"}, {"quote": "only one of the options (`--html-report`, `--json-report`, `--markdown-report`, `--show-uncovered`) can be selected at a time", "target": "thought", "grp": "Reasoning", "sub": "Inferring", "leaf": "Pinpoint root cause mechanism"}, {"quote": "we need to remove the mutually exclusive restriction on the `output_format` group", "target": "thought", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Formulate a high-level plan"}, {"quote": "make the necessary edit to the code to remove the `add_mutually_exclusive_group` function", "target": "thought", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Plan code or artifact structure"}, {"quote": "edit 63:63", "target": "action", "grp": "Executing", "sub": "Executing plan", "leaf": "Apply patch via edit"}], "insight": "The mechanism-level answer to the issue is stated correctly here: a single `add_mutually_exclusive_group()` call, not a design constraint on the report writers. Everything downstream is consequence of this one diagnosis."}, {"n": 4, "phase": "recover", "phaseLabel": "Recover from lint failure", "headline": "Agent rewrites the whole block onto `parser` after four F821 errors.", "obs": "Your proposed edit has introduced new syntax error(s). Please read this error message carefully and then retry editing the file.\n\nERRORS:\n- F821 undefined name 'output_format'\n- F821 undefined name 'output_format'\n- F821 undefined name 'output_format'\n- F821 undefined name 'output_format'\n\nThis is how your edit would have looked if applied\n-------------------------------------------------\n[File: /diff_cover/diff_cover/diff_cover_tool.py (262 lines total)]\n(56 more lines above)\n57:    The path strings may or may not exist.\n58:    \"\"\"\n59:    parser = argparse.ArgumentParser(description=DESCRIPTION)\n60:\n61:    parser.add_argument(\"coverage_xml\", type=str, help=COVERAGE_XML_HELP, nargs=\"+\")\n62:\n63:# output_format = parser.add_mutually_exclusive_group()\n64:\n65:    output_format.add_argument(\n66:        \"--html-report\",\n67:        metavar=\"FILENAME\",\n(195 more lines below)\n-------------------------------------------------\n\nThis is the original code before your edit\n-------------------------------------------------\n[File: /diff_cover/diff_cover/diff_cover_tool.py (262 lines total)]\n(57 more lines above)\n58:    \"\"\"\n59:    parser = argparse.ArgumentParser(description=DESCRIPTION)\n60:\n61:    parser.add_argument(\"coverage_xml\", type=str, help=COVERAGE_XML_HELP, nargs=\"+\")\n62:\n63:    output_format = parser.add_mutually_exclusive_group()\n64:\n65:    output_format.add_argument(\n66:        \"--html-report\",\n67:        metavar=\"FILENAME\",\n68:        type=str,\n(194 more lines below)\n-------------------------------------------------\nYour changes have NOT been applied. Please fix your edit command and try again.\nYou either need to 1) Specify the correct start/end line arguments or 2) Correct your edit code.\nDO NOT re-run the same failed edit command. Running it again will lead to the same error.", "thought": "The edit command failed because the `output_format` variable is still being used in the code after it has been commented out. We need to remove the `output_format` variable completely to avoid the syntax error. Let's update the code to use the `parser` object directly instead of the `output_format` group.", "action": "edit 63:91\n    # output_format = parser.add_mutually_exclusive_group()\n\n    parser.add_argument(\n        \"--html-report\",\n        metavar=\"FILENAME\",\n        type=str,\n        default=None,\n        help=HTML_REPORT_HELP,\n    )\n\n    parser.add_argument(\n        \"--json-report\",\n        metavar=\"FILENAME\",\n        type=str,\n        default=None,\n        help=JSON_REPORT_HELP,\n    )\n\n    parser.add_argument(\n        \"--markdown-report\",\n        metavar=\"FILENAME\",\n        type=str,\n        default=None,\n        help=MARKDOWN_REPORT_HELP,\n    )\n\n    parser.add_argument(\n        \"--show-uncovered\", action=\"store_true\", default=False, help=SHOW_UNCOVERED\n    )\nend_of_edit", "quotes": [{"quote": "The edit command failed", "target": "thought", "grp": "Reflection", "sub": "Reflect on errors and failures", "leaf": "Detect failed action"}, {"quote": "the `output_format` variable is still being used in the code", "target": "thought", "grp": "Reasoning", "sub": "Inferring", "leaf": "Diagnose Error Cause"}, {"quote": "remove the `output_format` variable completely to avoid the syntax error", "target": "thought", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Formulate a high-level plan"}, {"quote": "use the `parser` object directly instead of the `output_format` group", "target": "thought", "grp": "Deciding", "sub": "Make a decision", "leaf": "Pick alternative strategy"}, {"quote": "edit 63:91", "target": "action", "grp": "Executing", "sub": "Executing plan", "leaf": "Apply patch via edit"}], "insight": ""}, {"n": 5, "phase": "verify", "phaseLabel": "Build verification harness", "headline": "Agent creates `test_reports.py` to exercise both report formats.", "obs": "[File: /diff_cover/diff_cover/diff_cover_tool.py (262 lines total)]\n(12 more lines above)\n13:    HtmlReportGenerator,\n14:    JsonReportGenerator,\n15:    MarkdownReportGenerator,\n16:    StringReportGenerator,\n17:)\n18:from diff_cover.violationsreporters.violations_reporter import XmlCoverageReporter\n19:\n20:HTML_REPORT_HELP = \"Diff coverage HTML output\"\n21:JSON_REPORT_HELP = \"Diff coverage JSON output\"\n22:MARKDOWN_REPORT_HELP = \"Diff coverage Markdown output\"\n23:COMPARE_BRANCH_HELP = \"Branch to compare\"\n24:CSS_FILE_HELP = \"Write CSS into an external file\"\n25:FAIL_UNDER_HELP = (\n26:    \"Returns an error code if coverage or quality score is below this value\"\n27:)\n28:IGNORE_STAGED_HELP = \"Ignores staged changes\"\n29:IGNORE_UNSTAGED_HELP = \"Ignores unstaged changes\"\n30:IGNORE_WHITESPACE = \"When getting a diff ignore any and all whitespace\"\n31:EXCLUDE_HELP = \"Exclude files, more patterns supported\"\n32:SRC_ROOTS_HELP = \"List of source directories (only for jacoco coverage reports)\"\n33:COVERAGE_XML_HELP = \"XML coverage report\"\n34:DIFF_RANGE_NOTATION_HELP = (\n35:    \"Git diff range notation to use when comparing branches, defaults to '...'\"\n36:)\n37:QUIET_HELP = \"Only print errors and failures\"\n38:SHOW_UNCOVERED = \"Show uncovered lines on the console\"\n39:\n40:LOGGER = logging.getLogger(__name__)\n41:\n42:\n43:def parse_coverage_args(argv):\n44:    \"\"\"\n45:    Parse command line arguments, returning a dict of\n46:    valid options:\n47:\n48:        {\n49:            'coverage_xml': COVERAGE_XML,\n50:            'html_report': None | HTML_REPORT,\n51:            'json_report': None | JSON_REPORT,\n52:            'external_css_file': None | CSS_FILE,\n53:        }\n54:\n55:    where `COVERAGE_XML`, `HTML_REPORT`, `JSON_REPORT`, and `CSS_FILE` are paths.\n56:\n57:    The path strings may or may not exist.\n58:    \"\"\"\n59:    parser = argparse.ArgumentParser(description=DESCRIPTION)\n60:\n61:    parser.add_argument(\"coverage_xml\", type=str, help=COVERAGE_XML_HELP, nargs=\"+\")\n62:\n63:    # output_format = parser.add_mutually_exclusive_group()\n64:\n65:    parser.add_argument(\n66:        \"--html-report\",\n67:        metavar=\"FILENAME\",\n68:        type=str,\n69:        default=None,\n70:        help=HTML_REPORT_HELP,\n71:    )\n72:\n73:    parser.add_argument(\n74:        \"--json-report\",\n75:        metavar=\"FILENAME\",\n76:        type=str,\n77:        default=None,\n78:        help=JSON_REPORT_HELP,\n79:    )\n80:\n81:    parser.add_argument(\n82:        \"--markdown-report\",\n83:        metavar=\"FILENAME\",\n84:        type=str,\n85:        default=None,\n86:        help=MARKDOWN_REPORT_HELP,\n87:    )\n88:\n89:    parser.add_argument(\n90:        \"--show-uncovered\", action=\"store_true\", default=False, help=SHOW_UNCOVERED\n91:    )\n92:\n93:    parser.add_argument(\n94:        \"--external-css-file\",\n95:        metavar=\"FILENAME\",\n96:        type=str,\n97:        default=None,\n98:        help=CSS_FILE_HELP,\n99:    )\n100:\n101:    parser.add_argument(\n102:        \"--compare-branch\",\n103:        metavar=\"BRANCH\",\n104:        type=str,\n105:        default=\"origin/master\",\n106:        help=COMPARE_BRANCH_HELP,\n107:    )\n108:\n109:    parser.add_argument(\n110:        \"--fail-under\", metavar=\"SCORE\", type=float, default=\"0\", help=FAIL_UNDER_HELP\n111:    )\n112:\n(150 more lines below)\nFile updated. Please review the changes and make sure they are correct (correct indentation, no duplicate lines, etc). Edit the file again if necessary.", "thought": "The code has been updated to remove the mutually exclusive group for the `output_format`. This should allow HTML and JSON reports to be generated simultaneously. To verify that the changes work as expected, we should create a test script to generate both HTML and JSON reports and ensure they are created correctly.\n\nLet's create a test script named `test_reports.py` to generate HTML and JSON reports using the `diff_cover` tool.", "action": "create test_reports.py", "quotes": [{"quote": "The code has been updated to remove the mutually exclusive group", "target": "thought", "grp": "Evaluating", "sub": "Evaluating with goals/requirements/constraints", "leaf": "Goal-completion check"}, {"quote": "This should allow HTML and JSON reports to be generated simultaneously", "target": "thought", "grp": "Reasoning", "sub": "Inferring", "leaf": "Predict patch effect"}, {"quote": "To verify that the changes work as expected", "target": "thought", "grp": "Evaluating", "sub": "Evaluating with gold", "leaf": "Plan verification step"}, {"quote": "create a test script named `test_reports.py` to generate HTML and JSON reports", "target": "thought", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Plan function or tool use"}, {"quote": "create test_reports.py", "target": "action", "grp": "Executing", "sub": "Executing plan", "leaf": "Initiate planned action"}], "insight": ""}, {"n": 6, "phase": "verify", "phaseLabel": "Write harness body", "headline": "Agent writes a subprocess script that shells out twice.", "obs": "[File: /diff_cover/test_reports.py (1 lines total)]\n1:", "thought": "Now let's add the code to `test_reports.py` to generate both HTML and JSON reports using the `diff_cover` tool. This will help us verify that the changes work as expected.", "action": "edit 1:1\nimport os\nimport subprocess\n\n# Generate HTML report\nhtml_report = subprocess.run(\n    [\"diff_cover\", \"coverage.xml\", \"--html-report=html_report.html\"],\n    check=True,\n    text=True,\n    capture_output=True,\n)\n\n# Generate JSON report\njson_report = subprocess.run(\n    [\"diff_cover\", \"coverage.xml\", \"--json-report=json_report.json\"],\n    check=True,\n    text=True,\n    capture_output=True,\n)\n\n# Print stdout and stderr for each report\nprint(\"HTML Report:\", html_report.stdout, html_report.stderr)\nprint(\"JSON Report:\", json_report.stdout, json_report.stderr)\nend_of_edit", "quotes": [{"quote": "add the code to `test_reports.py` to generate both HTML and JSON reports", "target": "thought", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Plan code or artifact structure"}, {"quote": "This will help us verify that the changes work as expected", "target": "thought", "grp": "Evaluating", "sub": "Evaluating with gold", "leaf": "Plan verification step"}, {"quote": "edit 1:1", "target": "action", "grp": "Executing", "sub": "Executing plan", "leaf": "Apply patch via edit"}, {"quote": "[\"diff_cover\", \"coverage.xml\", \"--html-report=html_report.html\"],", "target": "action", "grp": "Reasoning", "sub": "Generating", "leaf": "Generate initial codes"}], "insight": "The harness runs the two report formats in two <em>separate</em> invocations, so even on a working environment it would never have tested the property under repair &mdash; both flags in one command."}, {"n": 7, "phase": "verify", "phaseLabel": "First verification run", "headline": "Agent runs the harness to check both reports generate.", "obs": "[File: /diff_cover/test_reports.py (22 lines total)]\n1:import os\n2:import subprocess\n3:\n4:# Generate HTML report\n5:html_report = subprocess.run(\n6:    [\"diff_cover\", \"coverage.xml\", \"--html-report=html_report.html\"],\n7:    check=True,\n8:    text=True,\n9:    capture_output=True,\n10:)\n11:\n12:# Generate JSON report\n13:json_report = subprocess.run(\n14:    [\"diff_cover\", \"coverage.xml\", \"--json-report=json_report.json\"],\n15:    check=True,\n16:    text=True,\n17:    capture_output=True,\n18:)\n19:\n20:# Print stdout and stderr for each report\n21:print(\"HTML Report:\", html_report.stdout, html_report.stderr)\n22:print(\"JSON Report:\", json_report.stdout, json_report.stderr)\nFile updated. Please review the changes and make sure they are correct (correct indentation, no duplicate lines, etc). Edit the file again if necessary.", "thought": "The test script has been created successfully. Now let's run `test_reports.py` to verify that both HTML and JSON reports are generated correctly.", "action": "python test_reports.py", "quotes": [{"quote": "The test script has been created successfully", "target": "thought", "grp": "Evaluating", "sub": "Evaluating with goals/requirements/constraints", "leaf": "Goal-completion check"}, {"quote": "run `test_reports.py` to verify that both HTML and JSON reports are generated correctly", "target": "thought", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Plan function or tool use"}, {"quote": "python test_reports.py", "target": "action", "grp": "Executing", "sub": "Executing plan", "leaf": "Run verification command"}], "insight": ""}, {"n": 8, "phase": "recover", "phaseLabel": "Probe for the command", "headline": "Agent probes whether `diff_cover` exists on the PATH.", "obs": "Traceback (most recent call last):\n  File \"/diff_cover/test_reports.py\", line 5, in <module>\n    html_report = subprocess.run(\n  File \"/opt/conda/envs/diff_cover/lib/python3.9/subprocess.py\", line 505, in run\n    with Popen(*popenargs, **kwargs) as process:\n  File \"/opt/conda/envs/diff_cover/lib/python3.9/subprocess.py\", line 951, in __init__\n    self._execute_child(args, executable, preexec_fn, close_fds,\n  File \"/opt/conda/envs/diff_cover/lib/python3.9/subprocess.py\", line 1837, in _execute_child\n    raise child_exception_type(errno_num, err_msg, err_filename)\nFileNotFoundError: [Errno 2] No such file or directory: 'diff_cover'", "thought": "The error indicates that the `diff_cover` command is not found. This suggests that the `diff_cover` tool is not installed in the environment or it is not in the PATH. To resolve this, we should first check if `diff_cover` is installed and, if not, install it.\n\nLet's check if `diff_cover` is installed by trying to run the `diff_cover` command directly.", "action": "diff_cover", "quotes": [{"quote": "The error indicates that the `diff_cover` command is not found", "target": "thought", "grp": "Reflection", "sub": "Reflect on errors and failures", "leaf": "Detect failed action"}, {"quote": "the `diff_cover` tool is not installed in the environment", "target": "thought", "grp": "Reasoning", "sub": "Inferring", "leaf": "Diagnose Error Cause"}, {"quote": "check if `diff_cover` is installed by trying to run the `diff_cover` command directly", "target": "thought", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Plan function or tool use"}, {"quote": "diff_cover", "target": "action", "grp": "Grounding", "sub": "Augment with external computation", "leaf": "Execute code"}], "insight": ""}, {"n": 9, "phase": "recover", "phaseLabel": "Attempt install", "headline": "Agent pip-installs `diff_cover` to make the binary available.", "obs": "/bin/bash: line 405: diff_cover: command not found", "thought": "It appears that `diff_cover` is not installed in the environment. Let's install `diff_cover` using `pip` to make it available for use in the `test_reports.py` script.", "action": "pip install diff_cover", "quotes": [{"quote": "`diff_cover` is not installed in the environment", "target": "thought", "grp": "Reasoning", "sub": "Inferring", "leaf": "Diagnose Error Cause"}, {"quote": "install `diff_cover` using `pip` to make it available", "target": "thought", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Plan function or tool use"}, {"quote": "pip install diff_cover", "target": "action", "grp": "Executing", "sub": "Executing plan", "leaf": "Initiate planned action"}], "insight": ""}, {"n": 10, "phase": "recover", "phaseLabel": "Retry after install", "headline": "Agent re-runs the harness after learning the package is present.", "obs": "Requirement already satisfied: diff_cover in /opt/conda/envs/diff_cover/lib/python3.9/site-packages (5.4.0)\nRequirement already satisfied: pygments in /opt/conda/envs/diff_cover/lib/python3.9/site-packages (from diff_cover) (2.18.0)\nRequirement already satisfied: Jinja2>=2.7.1 in /opt/conda/envs/diff_cover/lib/python3.9/site-packages (from diff_cover) (3.1.4)\nRequirement already satisfied: jinja2-pluralize in /opt/conda/envs/diff_cover/lib/python3.9/site-packages (from diff_cover) (0.3.0)\nRequirement already satisfied: pluggy in /opt/conda/envs/diff_cover/lib/python3.9/site-packages (from diff_cover) (1.5.0)\nRequirement already satisfied: chardet>=3.0.0 in /opt/conda/envs/diff_cover/lib/python3.9/site-packages (from diff_cover) (5.2.0)\nRequirement already satisfied: MarkupSafe>=2.0 in /opt/conda/envs/diff_cover/lib/python3.9/site-packages (from Jinja2>=2.7.1->diff_cover) (2.1.5)\nRequirement already satisfied: inflect>=0.2.4 in /opt/conda/envs/diff_cover/lib/python3.9/site-packages (from jinja2-pluralize->diff_cover) (7.3.1)\nRequirement already satisfied: more-itertools>=8.5.0 in /opt/conda/envs/diff_cover/lib/python3.9/site-packages (from inflect>=0.2.4->jinja2-pluralize->diff_cover) (10.4.0)\nRequirement already satisfied: typeguard>=4.0.1 in /opt/conda/envs/diff_cover/lib/python3.9/site-packages (from inflect>=0.2.4->jinja2-pluralize->diff_cover) (4.3.0)\nRequirement already satisfied: typing-extensions>=4.10.0 in /opt/conda/envs/diff_cover/lib/python3.9/site-packages (from typeguard>=4.0.1->inflect>=0.2.4->jinja2-pluralize->diff_cover) (4.12.2)\nRequirement already satisfied: importlib-metadata>=3.6 in /opt/conda/envs/diff_cover/lib/python3.9/site-packages (from typeguard>=4.0.1->inflect>=0.2.4->jinja2-pluralize->diff_cover) (8.2.0)\nRequirement already satisfied: zipp>=0.5 in /opt/conda/envs/diff_cover/lib/python3.9/site-packages (from importlib-metadata>=3.6->typeguard>=4.0.1->inflect>=0.2.4->jinja2-pluralize->diff_cover) (3.20.0)\nWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable.It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.", "thought": "It seems that `diff_cover` is already installed in the environment. The error might be related to the PATH not being set correctly or the `diff_cover` command not being in the PATH. To resolve this, we can try to run the `test_reports.py` script again with the full path to the `diff_cover` command.\n\nLet's run the `test_reports.py` script with the full path to the `diff_cover` command.", "action": "python test_reports.py", "quotes": [{"quote": "`diff_cover` is already installed in the environment", "target": "thought", "grp": "Reasoning", "sub": "Analysing", "leaf": "Interpret meaning of artifacts"}, {"quote": "The error might be related to the PATH not being set correctly", "target": "thought", "grp": "Reasoning", "sub": "Inferring", "leaf": "Form precursor hypothesis about cause"}, {"quote": "run the `test_reports.py` script again with the full path", "target": "thought", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Plan function or tool use"}, {"quote": "python test_reports.py", "target": "action", "grp": "Executing", "sub": "Executing plan", "leaf": "Run verification command"}], "insight": ""}, {"n": 11, "phase": "recover", "phaseLabel": "Hunt for the executable", "headline": "Agent searches the conda env for a `diff_cover` executable.", "obs": "Traceback (most recent call last):\n  File \"/diff_cover/test_reports.py\", line 5, in <module>\n    html_report = subprocess.run(\n  File \"/opt/conda/envs/diff_cover/lib/python3.9/subprocess.py\", line 505, in run\n    with Popen(*popenargs, **kwargs) as process:\n  File \"/opt/conda/envs/diff_cover/lib/python3.9/subprocess.py\", line 951, in __init__\n    self._execute_child(args, executable, preexec_fn, close_fds,\n  File \"/opt/conda/envs/diff_cover/lib/python3.9/subprocess.py\", line 1837, in _execute_child\n    raise child_exception_type(errno_num, err_msg, err_filename)\nFileNotFoundError: [Errno 2] No such file or directory: 'diff_cover'", "thought": "The error persists, indicating that the `diff_cover` command is not being found. Let's try to locate the `diff_cover` command in the environment to see if it is in a different directory.", "action": "find /opt/conda/envs/diff_cover/ -name \"diff_cover\"", "quotes": [{"quote": "The error persists", "target": "thought", "grp": "Reflection", "sub": "Reflect on errors and failures", "leaf": "Detect failed action"}, {"quote": "the `diff_cover` command is not being found", "target": "thought", "grp": "Reasoning", "sub": "Inferring", "leaf": "Diagnose Error Cause"}, {"quote": "locate the `diff_cover` command in the environment", "target": "thought", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus"}, {"quote": "find /opt/conda/envs/diff_cover/ -name \"diff_cover\"", "target": "action", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus"}], "insight": ""}, {"n": 12, "phase": "recover", "phaseLabel": "List env root", "headline": "Agent lists the conda env root after `find` returns nothing useful.", "obs": "/opt/conda/envs/diff_cover/", "thought": "It seems that the `find` command is not locating the `diff_cover` executable. Let's list the contents of the `/opt/conda/envs/diff_cover/` directory to see if we can find the `diff_cover` executable manually.", "action": "ls /opt/conda/envs/diff_cover/", "quotes": [{"quote": "the `find` command is not locating the `diff_cover` executable", "target": "thought", "grp": "Reasoning", "sub": "Inferring", "leaf": "Diagnose Error Cause"}, {"quote": "list the contents of the `/opt/conda/envs/diff_cover/` directory", "target": "thought", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus"}, {"quote": "ls /opt/conda/envs/diff_cover/", "target": "action", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus"}], "insight": ""}, {"n": 13, "phase": "recover", "phaseLabel": "Inspect bin/", "headline": "Agent infers the binary lives in `bin` and lists it.", "obs": "bin\ncompiler_compat\nconda-meta\netc\ninclude\nlib\nshare\nssl\nx86_64-conda-linux-gnu\nx86_64-conda_cos7-linux-gnu", "thought": "The `diff_cover` executable is likely to be in the `bin` directory. Let's list the contents of the `bin` directory to confirm.", "action": "ls /opt/conda/envs/diff_cover/bin", "quotes": [{"quote": "The `diff_cover` executable is likely to be in the `bin` directory", "target": "thought", "grp": "Reasoning", "sub": "Inferring", "leaf": "Infer structure from indirect evidence"}, {"quote": "list the contents of the `bin` directory to confirm", "target": "thought", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus"}, {"quote": "ls /opt/conda/envs/diff_cover/bin", "target": "action", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus"}], "insight": ""}, {"n": 14, "phase": "recover", "phaseLabel": "Retry unchanged script", "headline": "Agent finds `diff-cover` but re-runs the unedited script anyway.", "obs": "2to3\n2to3-3.9\nc_rehash\ncaptoinfo\nchardetect\nclear\ncoverage\ncoverage-3.9\ncoverage3\ncpuinfo\ncygdb\ncython\ncythonize\ndiff-cover\ndiff-quality\ndistro\nhypothesis\nidle3\nidle3.9\ninfocmp\ninfotocap\nlzcat\nlzcmp\nlzdiff\nlzegrep\nlzfgrep\nlzgrep\nlzless\nlzma\nlzmadec\nlzmainfo\nlzmore\nmako-render\nncursesw6-config\nnormalizer\nopenssl\npip\npip3\npy.test\npy.test-benchmark\npydoc\npydoc3\npydoc3.9\npygmentize\npytest\npytest-bdd\npytest-benchmark\npython\npython3\npython3-config\npython3.9\npython3.9-config\nreset\nsqlite3\nsqlite3_analyzer\ntabs\ntclsh\ntclsh8.6\ntic\ntoe\ntput\ntset\nunlzma\nunxz\nwheel\nwish\nwish8.6\nx86_64-conda-linux-gnu-ld\nx86_64-conda_cos7-linux-gnu-ld\nxz\nxzcat\nxzcmp\nxzdec\nxzdiff\nxzegrep\nxzfgrep\nxzgrep\nxzless\nxzmore", "thought": "It looks like the `diff-cover` command is present in the `bin` directory. Let's run the `test_reports.py` script with the full path to the `diff-cover` command.", "action": "python test_reports.py", "quotes": [{"quote": "the `diff-cover` command is present in the `bin` directory", "target": "thought", "grp": "Reasoning", "sub": "Analysing", "leaf": "Interpret meaning of artifacts"}, {"quote": "run the `test_reports.py` script with the full path to the `diff-cover` command", "target": "thought", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Plan function or tool use"}, {"quote": "python test_reports.py", "target": "action", "grp": "Executing", "sub": "Executing plan", "leaf": "Run verification command"}], "insight": "The thought promises to run \"with the full path to the `diff-cover` command\", but the action is byte-identical to T7 and T10 and `test_reports.py` still spawns the underscore-named `diff_cover`. Nothing about the run changed, which is why T15 sees the same traceback."}, {"n": 15, "phase": "verify", "phaseLabel": "Direct both-flag run", "headline": "Agent bypasses the harness and runs `diff-cover` with both flags.", "obs": "Traceback (most recent call last):\n  File \"/diff_cover/test_reports.py\", line 5, in <module>\n    html_report = subprocess.run(\n  File \"/opt/conda/envs/diff_cover/lib/python3.9/subprocess.py\", line 505, in run\n    with Popen(*popenargs, **kwargs) as process:\n  File \"/opt/conda/envs/diff_cover/lib/python3.9/subprocess.py\", line 951, in __init__\n    self._execute_child(args, executable, preexec_fn, close_fds,\n  File \"/opt/conda/envs/diff_cover/lib/python3.9/subprocess.py\", line 1837, in _execute_child\n    raise child_exception_type(errno_num, err_msg, err_filename)\nFileNotFoundError: [Errno 2] No such file or directory: 'diff_cover'", "thought": "The error persists even with the full path to the `diff-cover` command. This suggests that the issue might be with the `test_reports.py` script or the environment itself. To isolate the problem, let's try to run the `diff-cover` command directly with the necessary arguments to generate HTML and JSON reports.", "action": "diff-cover coverage.xml --html-report=html_report.html --json-report=json_report.json", "quotes": [{"quote": "The error persists even with the full path", "target": "thought", "grp": "Reflection", "sub": "Reflect on errors and failures", "leaf": "Detect failed action"}, {"quote": "the issue might be with the `test_reports.py` script or the environment itself", "target": "thought", "grp": "Reasoning", "sub": "Inferring", "leaf": "Form precursor hypothesis about cause"}, {"quote": "run the `diff-cover` command directly with the necessary arguments", "target": "thought", "grp": "Planning", "sub": "Select Strategy", "leaf": "Select among candidate strategies"}, {"quote": "diff-cover coverage.xml --html-report=html_report.html --json-report=json_report.json", "target": "action", "grp": "Executing", "sub": "Executing plan", "leaf": "Run verification command"}], "insight": "This is the only command in the run that actually tests the patch. Argparse accepts <code>--html-report</code> and <code>--json-report</code> together and execution proceeds all the way into <code>generate_coverage_report</code> &mdash; a clean pass that the agent reads only as a new failure."}, {"n": 16, "phase": "recover", "phaseLabel": "Check for the fixture", "headline": "Agent lists the working directory looking for `coverage.xml`.", "obs": "Traceback (most recent call last):\n  File \"/opt/conda/envs/diff_cover/bin/diff-cover\", line 8, in <module>\n    sys.exit(main())\n  File \"/diff_cover/diff_cover/diff_cover_tool.py\", line 238, in main\n    percent_covered = generate_coverage_report(\n  File \"/diff_cover/diff_cover/diff_cover_tool.py\", line 187, in generate_coverage_report\n    xml_roots = [etree.parse(xml_root) for xml_root in coverage_xml]\n  File \"/diff_cover/diff_cover/diff_cover_tool.py\", line 187, in <listcomp>\n    xml_roots = [etree.parse(xml_root) for xml_root in coverage_xml]\n  File \"/opt/conda/envs/diff_cover/lib/python3.9/xml/etree/ElementTree.py\", line 1222, in parse\n    tree.parse(source, parser)\n  File \"/opt/conda/envs/diff_cover/lib/python3.9/xml/etree/ElementTree.py\", line 569, in parse\n    source = open(source, \"rb\")\nFileNotFoundError: [Errno 2] No such file or directory: 'coverage.xml'", "thought": "The error indicates that the `coverage.xml` file is not found. This suggests that the `coverage.xml` file is not present in the current directory or it is not being referenced correctly. Let's list the contents of the current directory to see if the `coverage.xml` file is present.", "action": "ls", "quotes": [{"quote": "The error indicates that the `coverage.xml` file is not found", "target": "thought", "grp": "Reflection", "sub": "Reflect on errors and failures", "leaf": "Detect failed action"}, {"quote": "the `coverage.xml` file is not present in the current directory", "target": "thought", "grp": "Reasoning", "sub": "Inferring", "leaf": "Diagnose Error Cause"}, {"quote": "list the contents of the current directory", "target": "thought", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus"}, {"quote": "ls", "target": "action", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus"}], "insight": ""}, {"n": 17, "phase": "recover", "phaseLabel": "Create fixture", "headline": "Agent creates a dummy `coverage.xml` to feed the tool.", "obs": "CHANGELOG\nLICENSE\nMANIFEST.in\nNOTICE\nREADME.rst\ndiff_cover\ndiff_cover.egg-info\npylintrc\npyproject.toml\nrequirements.txt\nsetup.py\ntest-requirements.txt\ntest_reports.py\ntox.ini", "thought": "It looks like the `coverage.xml` file is not present in the current directory. The `diff-cover` tool requires the `coverage.xml` file to generate reports. Let's create a dummy `coverage.xml` file to test the report generation.", "action": "create coverage.xml", "quotes": [{"quote": "the `coverage.xml` file is not present in the current directory", "target": "thought", "grp": "Reasoning", "sub": "Analysing", "leaf": "Interpret meaning of artifacts"}, {"quote": "The `diff-cover` tool requires the `coverage.xml` file to generate reports", "target": "thought", "grp": "Reasoning", "sub": "Inferring", "leaf": "Diagnose Error Cause"}, {"quote": "create a dummy `coverage.xml` file to test the report generation", "target": "thought", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Plan function or tool use"}, {"quote": "create coverage.xml", "target": "action", "grp": "Executing", "sub": "Executing plan", "leaf": "Initiate planned action"}], "insight": ""}, {"n": 18, "phase": "recover", "phaseLabel": "Fill fixture", "headline": "Agent writes invented XML that no coverage tool would emit.", "obs": "[File: /diff_cover/coverage.xml (1 lines total)]\n1:", "thought": "Let's add some dummy content to the `coverage.xml` file to mimic a real coverage report.", "action": "edit 1:1\n<?xml version=\"1.0\" ?>\n<data>\n\t<line num=\"1\" count=\"1\" type=\"stmt\"/>\n\t<line num=\"2\" count=\"0\" type=\"stmt\"/>\n\t<line num=\"3\" count=\"1\" type=\"stmt\"/>\n</data>\n\nend_of_edit", "quotes": [{"quote": "add some dummy content to the `coverage.xml` file to mimic a real coverage report", "target": "thought", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Plan code or artifact structure"}, {"quote": "edit 1:1", "target": "action", "grp": "Executing", "sub": "Executing plan", "leaf": "Apply patch via edit"}, {"quote": "<line num=\"2\" count=\"0\" type=\"stmt\"/>", "target": "action", "grp": "Reasoning", "sub": "Generating", "leaf": "Generate initial codes"}], "insight": ""}, {"n": 19, "phase": "verify", "phaseLabel": "Re-run both-flag command", "headline": "Agent re-runs `diff-cover` with both report flags and the fixture.", "obs": "[File: /diff_cover/coverage.xml (7 lines total)]\n1:<?xml version=\"1.0\" ?>\n2:<data>\n3:\t<line num=\"1\" count=\"1\" type=\"stmt\"/>\n4:\t<line num=\"2\" count=\"0\" type=\"stmt\"/>\n5:\t<line num=\"3\" count=\"1\" type=\"stmt\"/>\n6:</data>\n7:\nFile updated. Please review the changes and make sure they are correct (correct indentation, no duplicate lines, etc). Edit the file again if necessary.", "thought": "The `coverage.xml` file has been created with dummy content. Now, let's run the `diff-cover` command again with the `coverage.xml` file to generate HTML and JSON reports.", "action": "diff-cover coverage.xml --html-report=html_report.html --json-report=json_report.json", "quotes": [{"quote": "The `coverage.xml` file has been created with dummy content", "target": "thought", "grp": "Evaluating", "sub": "Evaluating with goals/requirements/constraints", "leaf": "Goal-completion check"}, {"quote": "run the `diff-cover` command again with the `coverage.xml` file", "target": "thought", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Plan function or tool use"}, {"quote": "diff-cover coverage.xml --html-report=html_report.html --json-report=json_report.json", "target": "action", "grp": "Executing", "sub": "Executing plan", "leaf": "Run verification command"}], "insight": ""}, {"n": 20, "phase": "recover", "phaseLabel": "Work around git failure", "headline": "Agent retries with `--compare-branch=master` to dodge the git range error.", "obs": "Traceback (most recent call last):\n  File \"/opt/conda/envs/diff_cover/bin/diff-cover\", line 8, in <module>\n    sys.exit(main())\n  File \"/diff_cover/diff_cover/diff_cover_tool.py\", line 238, in main\n    percent_covered = generate_coverage_report(\n  File \"/diff_cover/diff_cover/diff_cover_tool.py\", line 197, in generate_coverage_report\n    reporter.generate_report(output_file)\n  File \"/diff_cover/diff_cover/report_generator.py\", line 257, in generate_report\n    report = template.render(self._context())\n  File \"/diff_cover/diff_cover/report_generator.py\", line 306, in _context\n    context = super().report_dict()\n  File \"/diff_cover/diff_cover/report_generator.py\", line 188, in report_dict\n    src_stats = {src: self._src_path_stats(src) for src in self.src_paths()}\n  File \"/diff_cover/diff_cover/report_generator.py\", line 85, in src_paths\n    for src, summary in self._diff_violations().items()\n  File \"/diff_cover/diff_cover/report_generator.py\", line 183, in _diff_violations\n    for src_path in self._diff.src_paths_changed()\n  File \"/diff_cover/diff_cover/diff_reporter.py\", line 164, in src_paths_changed\n    diff_dict = self._git_diff()\n  File \"/diff_cover/diff_cover/diff_reporter.py\", line 213, in _git_diff\n    for diff_str in self._get_included_diff_results():\n  File \"/diff_cover/diff_cover/diff_reporter.py\", line 186, in _get_included_diff_results\n    included = [self._git_diff_tool.diff_committed(self._compare_branch)]\n  File \"/diff_cover/diff_cover/git_diff.py\", line 67, in diff_committed\n    return execute(self._default_git_args + self._default_diff_args + [diff_range])[\n  File \"/diff_cover/diff_cover/command_runner.py\", line 42, in execute\n    raise CommandError(stderr)\ndiff_cover.command_runner.CommandError: fatal: ambiguous argument 'origin/master...HEAD': unknown revision or path not in the working tree.\nUse '--' to separate paths from revisions, like this:\n'git <command> [<revision>...] -- [<file>...]'", "thought": "It seems that the `git diff` command is not supported in this environment. This makes it difficult to troubleshoot the issue with the `diff-cover` command. However, we can try to run the `diff-cover` command with a different set of arguments to avoid the git diff issue.", "action": "diff-cover coverage.xml --html-report=html_report.html --json-report=json_report.json --compare-branch=master", "quotes": [{"quote": "the `git diff` command is not supported in this environment", "target": "thought", "grp": "Reasoning", "sub": "Inferring", "leaf": "Diagnose Error Cause"}, {"quote": "run the `diff-cover` command with a different set of arguments", "target": "thought", "grp": "Planning", "sub": "Select Strategy", "leaf": "Select among candidate strategies"}, {"quote": "diff-cover coverage.xml --html-report=html_report.html --json-report=json_report.json --compare-branch=master", "target": "action", "grp": "Executing", "sub": "Executing plan", "leaf": "Run verification command"}], "insight": ""}, {"n": 21, "phase": "other", "phaseLabel": "Abandon verification", "headline": "Agent drops testing, asserts the fix, and deletes the fixtures.", "obs": "Traceback (most recent call last):\n  File \"/opt/conda/envs/diff_cover/bin/diff-cover\", line 8, in <module>\n    sys.exit(main())\n  File \"/diff_cover/diff_cover/diff_cover_tool.py\", line 238, in main\n    percent_covered = generate_coverage_report(\n  File \"/diff_cover/diff_cover/diff_cover_tool.py\", line 197, in generate_coverage_report\n    reporter.generate_report(output_file)\n  File \"/diff_cover/diff_cover/report_generator.py\", line 257, in generate_report\n    report = template.render(self._context())\n  File \"/diff_cover/diff_cover/report_generator.py\", line 306, in _context\n    context = super().report_dict()\n  File \"/diff_cover/diff_cover/report_generator.py\", line 188, in report_dict\n    src_stats = {src: self._src_path_stats(src) for src in self.src_paths()}\n  File \"/diff_cover/diff_cover/report_generator.py\", line 85, in src_paths\n    for src, summary in self._diff_violations().items()\n  File \"/diff_cover/diff_cover/report_generator.py\", line 183, in _diff_violations\n    for src_path in self._diff.src_paths_changed()\n  File \"/diff_cover/diff_cover/diff_reporter.py\", line 164, in src_paths_changed\n    diff_dict = self._git_diff()\n  File \"/diff_cover/diff_cover/diff_reporter.py\", line 213, in _git_diff\n    for diff_str in self._get_included_diff_results():\n  File \"/diff_cover/diff_cover/diff_reporter.py\", line 186, in _get_included_diff_results\n    included = [self._git_diff_tool.diff_committed(self._compare_branch)]\n  File \"/diff_cover/diff_cover/git_diff.py\", line 67, in diff_committed\n    return execute(self._default_git_args + self._default_diff_args + [diff_range])[\n  File \"/diff_cover/diff_cover/command_runner.py\", line 42, in execute\n    raise CommandError(stderr)\ndiff_cover.command_runner.CommandError: fatal: ambiguous argument 'master...HEAD': unknown revision or path not in the working tree.\nUse '--' to separate paths from revisions, like this:\n'git <command> [<revision>...] -- [<file>...]'", "thought": "The error persists even with the `--compare-branch=master` argument. It seems that the `diff-cover` command is not compatible with the current environment due to the lack of git support. \n\nSince we are unable to run the `diff-cover` command successfully, we have to proceed without being able to test the HTML and JSON report generation simultaneously. However, we have made the necessary changes to the code to allow both reports to be generated at the same time.\n\nLet's remove the `test_reports.py` script and the `coverage.xml` file since they are no longer needed.", "action": "rm test_reports.py coverage.xml", "quotes": [{"quote": "The error persists even with the `--compare-branch=master` argument", "target": "thought", "grp": "Reflection", "sub": "Reflect on errors and failures", "leaf": "Detect failed action"}, {"quote": "not compatible with the current environment due to the lack of git support", "target": "thought", "grp": "Reasoning", "sub": "Inferring", "leaf": "Diagnose Error Cause"}, {"quote": "we have to proceed without being able to test the HTML and JSON report generation", "target": "thought", "grp": "Planning", "sub": "Modify Plan", "leaf": "Replan dynamically based on feedback"}, {"quote": "we have made the necessary changes to the code", "target": "thought", "grp": "Evaluating", "sub": "Evaluating with goals/requirements/constraints", "leaf": "Goal-completion check"}, {"quote": "remove the `test_reports.py` script and the `coverage.xml` file since they are no longer needed", "target": "thought", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Formulate a high-level plan"}, {"quote": "rm test_reports.py coverage.xml", "target": "action", "grp": "Executing", "sub": "Executing plan", "leaf": "Initiate planned action"}], "insight": "The densest turn of the run: failure recognition, causal diagnosis, workflow revision, a completion claim grounded only in having made the edit, and a cleanup plan &mdash; five distinct moves in one thought."}, {"n": 22, "phase": "submit", "phaseLabel": "Submit", "headline": "Agent submits the parser change after cleanup.", "obs": "Your command ran successfully and did not produce any output.", "thought": "The `test_reports.py` script and the `coverage.xml` file have been removed successfully. Now that we have made the necessary changes and cleaned up the test files, we can submit our changes to the code base.", "action": "submit", "quotes": [{"quote": "The `test_reports.py` script and the `coverage.xml` file have been removed successfully", "target": "thought", "grp": "Evaluating", "sub": "Evaluating with goals/requirements/constraints", "leaf": "Goal-completion check"}, {"quote": "we can submit our changes to the code base", "target": "thought", "grp": "Deciding", "sub": "Decide accept or not", "leaf": "Decide accept"}], "insight": ""}];
+const segments = [{"start": 1, "end": 2, "title": "Agent localizes the argparse group", "summary": "Two turns: <code>search_dir</code> for <code>output_format</code>, then open <code>diff_cover_tool.py</code>. The mutually exclusive group is in hand by T2."}, {"start": 3, "end": 4, "title": "Agent patches the parser · lint failure forces a rewrite", "summary": "T3 comments out line 63 alone and is rejected with four <code>F821</code> errors; T4 diagnoses the dangling <code>output_format</code> references and rewrites <code>63:91</code> onto <code>parser</code>. This is the whole fix."}, {"start": 5, "end": 7, "title": "Agent builds a subprocess verification harness", "summary": "Creates and fills <code>test_reports.py</code>, which shells out to a <code>diff_cover</code> executable that does not exist under that name, then runs it."}, {"start": 8, "end": 14, "title": "Agent chases a missing executable", "summary": "Seven turns of PATH archaeology: probe, <code>pip install</code>, retry, <code>find</code>, <code>ls</code>, <code>ls bin</code>, retry. T14 locates <code>diff-cover</code> and then re-issues the identical unedited command."}, {"start": 15, "end": 20, "title": "Agent bypasses the harness and hits fixture then git failures", "summary": "Runs <code>diff-cover</code> directly with both report flags &mdash; argparse accepts them &mdash; then loses the thread to a missing <code>coverage.xml</code> and an unusable <code>git diff</code> range."}, {"start": 21, "end": 22, "title": "Agent abandons verification, cleans up, submits", "summary": "T21 is the densest turn of the run: it recognizes the repeated failure, revises the workflow to drop verification, asserts completion from the edit alone, and plans the cleanup. T22 submits."}];
+const QUOTE_TARGET = "both"; // "thought" | "action"
+
+// Actor icons — Google Material Design icons (Apache 2.0):
+// "person" (social) for human turns, "smart_toy" (hardware) for agent turns.
+const ICON_HUMAN = '<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24" fill="currentColor"><path d="M0 0h24v24H0z" fill="none"/><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>';
+const ICON_AGENT = '<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24" fill="currentColor"><g><rect fill="none" height="24" width="24" y="0"/></g><g><path d="M20,9V7c0-1.1-0.9-2-2-2h-3c0-1.66-1.34-3-3-3S9,3.34,9,5H6C4.9,5,4,5.9,4,7v2c-1.66,0-3,1.34-3,3c0,1.66,1.34,3,3,3v4 c0,1.1,0.9,2,2,2h12c1.1,0,2-0.9,2-2v-4c1.66,0,3-1.34,3-3C23,10.34,21.66,9,20,9z M7.5,11.5C7.5,10.67,8.17,10,9,10 s1.5,0.67,1.5,1.5S9.83,13,9,13S7.5,12.33,7.5,11.5z M16,17H8v-2h8V17z M15,13c-0.83,0-1.5-0.67-1.5-1.5S14.17,10,15,10 s1.5,0.67,1.5,1.5S15.83,13,15,13z"/></g></svg>';
+
+function buildCodebook() {
+  const cb = {};
+  turns.forEach(t => {
+    t.quotes.forEach(q => {
+      if (!cb[q.grp]) cb[q.grp] = { items: {}, total: 0 };
+      const key = q.sub + ' › ' + q.leaf;
+      if (!cb[q.grp].items[key]) cb[q.grp].items[key] = { sub: q.sub, leaf: q.leaf, turns: [] };
+      cb[q.grp].items[key].turns.push(t.n);
+      cb[q.grp].total += 1;
+    });
+  });
+  return cb;
+}
+
+const codebook = buildCodebook();
+// Optional behavior-pattern layer: key = "`${sub} › ${leaf}`", value = {t, status, cause, advice}.
+// Injected from the annotated JSON's `patterns` field; {} when absent (nothing highlights).
+const PATTERNS = {};
+const ANOM_MARK = {lo:'⚠', hi:'▲', mid:'◆', ok:'✓'};
+
+const grpDisplayName = {};
+function displayGrp(g) { return grpDisplayName[g] || g; }
+
+function escapeHTML(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function highlightAction(s) {
+  let out = escapeHTML(s);
+  out = out.replace(/^(edit|create|open|search_dir|search_file|find_file|goto|scroll_down|scroll_up|submit|rm|pylint|python|pytest|cat|ls|cd|grep|sed|find|end_of_edit)(\b)/gm, '<span class="kw">$1</span>$2');
+  out = out.replace(/(#[^\n]*)/g, '<span class="cmt">$1</span>');
+  return out;
+}
+
+function renderThoughtWithQuotes(thought, quotes, turnNum, allQuotes = quotes) {
+  const positioned = quotes.map((q, idx) => {
+    const pos = thought.indexOf(q.quote);
+    return { ...q, idx: allQuotes.indexOf(q), pos };
+  }).filter(q => q.pos !== -1).sort((a, b) => a.pos - b.pos);
+
+  const filtered = [];
+  let lastEnd = -1;
+  for (const q of positioned) {
+    if (q.pos >= lastEnd) {
+      filtered.push(q);
+      lastEnd = q.pos + q.quote.length;
+    }
+  }
+
+  let out = '';
+  let cursor = 0;
+  for (const q of filtered) {
+    out += escapeHTML(thought.slice(cursor, q.pos));
+    out += `<span class="qmark" data-turn="${turnNum}" data-qidx="${q.idx}" data-grp="${q.grp}" data-key="${q.sub} › ${q.leaf}" style="--qcolor: var(--grp-${q.grp}); --qbg: var(--grp-${q.grp}-bg);">${escapeHTML(q.quote)}<sup>${q.idx + 1}</sup></span>`;
+    cursor = q.pos + q.quote.length;
+  }
+  out += escapeHTML(thought.slice(cursor));
+  return out;
+}
+
+function renderTurns() {
+  const container = document.getElementById('turns-container');
+  container.innerHTML = turns.map(t => {
+    // Human interaction events render as distinct verbatim-prompt cards.
+    if (t.kind === 'interaction') {
+      const intHeadline = t.headline || `${t.actor === 'human' ? 'Human' : escapeHTML(t.actor)} prompt`;
+      return `
+      <div class="turn interaction" data-turn="${t.id}">
+        <div class="interaction-header">
+          <span class="actor-icon actor-human" title="Human">${ICON_HUMAN}</span>
+          <div class="int-num"><small>prompt</small>${t.id}</div>
+          <div class="int-title">${escapeHTML(intHeadline)}</div>
+          ${t.label ? `<span class="int-label">${escapeHTML(t.label)}</span>` : ''}
+          <span class="turn-chevron">▶</span>
+        </div>
+        <div class="turn-body">
+          <div class="interaction-text">${escapeHTML(t.text)}</div>
+        </div>
+      </div>`;
+    }
+    const annotCount = t.quotes.length;
+    const annotRows = t.quotes.map((q, idx) => `
+      <div class="annot-row" data-turn="${t.n}" data-qidx="${idx}" data-grp="${q.grp}" data-key="${q.sub} › ${q.leaf}" style="--qcolor: var(--grp-${q.grp}); --qbg: var(--grp-${q.grp}-bg);">
+        <div class="annot-quote"><span class="qnum">${idx + 1}</span>${escapeHTML(q.quote)}</div>
+        <div class="annot-arrow">→</div>
+        <div class="annot-tag"><span class="annot-grp">${displayGrp(q.grp)}</span><span class="annot-sep">›</span>${q.sub}<span class="annot-sep">›</span><span class="annot-leaf">${q.leaf}</span></div>
+      </div>
+    `).join('');
+
+    let thoughtBlock, actionBlock, thoughtAnnotBlock = '', actionAnnotBlock = '', annotBlock = '';
+    if (QUOTE_TARGET === "action") {
+      // Action surface is the host: quote highlights live in the <code> action block.
+      // Thought becomes plain context.
+      const actionHTML = renderThoughtWithQuotes(t.action, t.quotes, t.n);
+      thoughtBlock = `
+        <div class="oat-block oat-thought">
+          <span class="lbl">Thought <span class="small">context · not annotated</span></span>
+          <div class="thought-text">${escapeHTML(t.thought)}</div>
+        </div>`;
+      actionBlock = `
+        <div class="oat-block oat-action">
+          <span class="lbl">Action <span class="small">verbatim · ${annotCount} annotation${annotCount === 1 ? '' : 's'}</span></span>
+          <code class="content">${actionHTML}</code>
+        </div>`;
+      annotBlock = annotCount > 0 ? `
+        <div class="annotations">
+          <div class="annotations-header">Quote-grounded annotations</div>
+          ${annotRows}
+        </div>` : '';
+    } else if (QUOTE_TARGET === "both") {
+      // Dual annotation: each quote carries its own target ("thought" | "action").
+      // Render both surfaces with their respective highlights, and put a small
+      // annotation table under each surface (so the reader can scan the surface,
+      // then immediately see what was tagged on it).
+      const thoughtQuotes = t.quotes.filter(q => (q.target || 'action') === 'thought');
+      const actionQuotes = t.quotes.filter(q => (q.target || 'action') === 'action');
+      const thoughtHTML = renderThoughtWithQuotes(t.thought, thoughtQuotes, t.n, t.quotes);
+      const actionHTML = renderThoughtWithQuotes(t.action, actionQuotes, t.n, t.quotes);
+      const tCount = thoughtQuotes.length;
+      const aCount = actionQuotes.length;
+      thoughtBlock = `
+        <div class="oat-block oat-thought">
+          <span class="lbl">Thought <span class="small">verbatim · ${tCount} meta annotation${tCount === 1 ? '' : 's'}</span></span>
+          <div class="thought-text">${thoughtHTML}</div>
+        </div>`;
+      actionBlock = `
+        <div class="oat-block oat-action">
+          <span class="lbl">Action <span class="small">verbatim · ${aCount} surface annotation${aCount === 1 ? '' : 's'}</span></span>
+          <code class="content">${actionHTML}</code>
+        </div>`;
+      // Two sub-tables, each grouping the rows for its host surface.
+      const buildRows = (quotes) => quotes.map((q) => {
+        const idx = t.quotes.indexOf(q);
+        return `
+          <div class="annot-row" data-turn="${t.n}" data-qidx="${idx}" data-grp="${q.grp}" data-key="${q.sub} › ${q.leaf}" style="--qcolor: var(--grp-${q.grp}); --qbg: var(--grp-${q.grp}-bg);">
+            <div class="annot-quote"><span class="qnum">${idx + 1}</span>${escapeHTML(q.quote)}</div>
+            <div class="annot-arrow">→</div>
+            <div class="annot-tag"><span class="annot-grp">${displayGrp(q.grp)}</span><span class="annot-sep">›</span>${q.sub}<span class="annot-sep">›</span><span class="annot-leaf">${q.leaf}</span></div>
+          </div>`;
+      }).join('');
+      thoughtAnnotBlock = tCount > 0 ? `
+        <div class="annotations">
+          <div class="annotations-header">Thought · meta-move annotations</div>
+          ${buildRows(thoughtQuotes)}
+        </div>` : '';
+      actionAnnotBlock = aCount > 0 ? `
+        <div class="annotations">
+          <div class="annotations-header">Action · surface annotations</div>
+          ${buildRows(actionQuotes)}
+        </div>` : '';
+    } else {
+      // Default: thought is the host (SWE-agent style).
+      const thoughtHTML = renderThoughtWithQuotes(t.thought, t.quotes, t.n);
+      thoughtBlock = `
+        <div class="oat-block oat-thought">
+          <span class="lbl">Thought <span class="small">verbatim · ${annotCount} annotation${annotCount === 1 ? '' : 's'}</span></span>
+          <div class="thought-text">${thoughtHTML}</div>
+        </div>`;
+      actionBlock = `
+        <div class="oat-block oat-action">
+          <span class="lbl">Action</span>
+          <code class="content">${highlightAction(t.action)}</code>
+        </div>`;
+      annotBlock = annotCount > 0 ? `
+        <div class="annotations">
+          <div class="annotations-header">Quote-grounded annotations</div>
+          ${annotRows}
+        </div>` : '';
+    }
+
+    // Layout per mode:
+    //   action mode  : Thought (context) → Action (highlighted) → annot table
+    //   both mode    : Thought (highlighted) → thought-table → Action (highlighted) → action-table
+    //   thought mode : Thought (highlighted) → annot table → Action (plain code)
+    let body;
+    if (QUOTE_TARGET === "action") {
+      body = `${thoughtBlock}${actionBlock}${annotBlock}`;
+    } else if (QUOTE_TARGET === "both") {
+      body = `${thoughtBlock}${thoughtAnnotBlock}${actionBlock}${actionAnnotBlock}`;
+    } else {
+      body = `${thoughtBlock}${annotBlock}${actionBlock}`;
+    }
+
+    const obsBlock = t.obs ? `
+        <div class="oat-block oat-obs">
+          <span class="lbl">Observation</span>
+          <div class="content">${escapeHTML(t.obs)}</div>
+        </div>` : '';
+    return `
+      <div class="turn" data-turn="${t.n}">
+        <div class="turn-header">
+          <span class="actor-icon actor-agent" title="Agent">${ICON_AGENT}</span>
+          <div class="turn-num"><small>turn</small>${String(t.n).padStart(2,'0')}</div>
+          <div class="turn-tag-line">${escapeHTML(t.headline || '')}</div>
+          <div class="turn-phase phase-${t.phase || 'other'}">${t.phaseLabel || 'Step'}</div>
+          <span class="turn-chevron">▶</span>
+        </div>
+        <div class="turn-body">
+          ${obsBlock}
+          ${body}
+          ${t.insight ? `<div class="insight">${t.insight}</div>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderSignature() {
+  // Build the codebook-group signature for the right panel.
+  // For each turn, list the groups of its quotes in firing order; show both a
+  // copy-pasteable flat block and a clickable per-turn row list. Sessions
+  // restarts are auto-detected as turns whose verbatim thought equals an
+  // earlier turn's thought, and shown as a `↺` divider.
+  const container = document.getElementById('signature-container');
+  if (!container) return;
+
+  // Detect restart points: turn n is a restart if t.thought has appeared earlier.
+  const seenThoughts = new Map(); // thought-text -> first turn index
+  const restartAtTurnN = new Set();
+  turns.forEach((t, i) => {
+    if (t.kind === 'interaction') return;
+    if (t.thought && seenThoughts.has(t.thought)) {
+      restartAtTurnN.add(t.n);
+    } else if (t.thought) {
+      seenThoughts.set(t.thought, i);
+    }
+  });
+
+  const pad2 = (n) => String(n).padStart(2, '0');
+
+  // Index segments by their `start` turn so we can interleave segment
+  // summaries both into the flat copy-paste block (as plain-text headers)
+  // and above the first row of each segment in the clickable list.
+  const segByStart = new Map();
+  (segments || []).forEach((s, i) => {
+    segByStart.set(s.start, { ...s, _idx: i + 1 });
+  });
+
+  // Strip inline HTML so segment summaries render cleanly inside the
+  // <pre> copy-paste block.  We unescape a small set of named entities
+  // (mdash/ndash/strong tags etc.) and drop everything else.
+  const stripHTML = (s) => {
+    if (!s) return '';
+    return s
+      .replace(/<[^>]+>/g, '')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&mdash;/g, '—')
+      .replace(/&ndash;/g, '–')
+      .replace(/&rarr;/g, '→')
+      .replace(/&middot;/g, '·')
+      .replace(/&nbsp;/g, ' ');
+  };
+
+  // Word-wrap a paragraph to ~78 cols so it copy-pastes cleanly into
+  // notebooks / chat panes without horizontal scrolling.
+  const wrap = (text, width = 78) => {
+    const words = text.split(/\s+/);
+    const out = [];
+    let line = '';
+    for (const w of words) {
+      if (line.length === 0) { line = w; continue; }
+      if (line.length + 1 + w.length > width) { out.push(line); line = w; }
+      else line += ' ' + w;
+    }
+    if (line) out.push(line);
+    return out.join('\n');
+  };
+
+  // Flat copy-pasteable signature block. Each segment gets a plain-text
+  // header ("=== SEQ 01 · T01–T05 · Title ===" + wrapped summary), then
+  // its turns are listed `T01 = [Group › Sub › Leaf, ...]` so the full
+  // codebook triple plus narrative context survive a copy/paste.
+  // A segment whose start turn directly follows an interaction should open
+  // BEFORE that interaction (the human prompt is what opens the cycle), so
+  // look ahead from interaction entries and mark consumed segments.
+  const segEmitted = new Set();
+  const emitSegFlat = (seg, i) => {
+    if (segEmitted.has(seg._idx)) return;
+    segEmitted.add(seg._idx);
+    if (i > 0) flatLines.push('');  // blank line before each segment except the first
+    const titleStr = stripHTML(seg.title || '');
+    flatLines.push(`=== SEQ ${String(seg._idx).padStart(2,'0')} · T${pad2(seg.start)}–T${pad2(seg.end)}${titleStr ? ' · ' + titleStr : ''} ===`);
+    if (seg.summary) {
+      flatLines.push(wrap(stripHTML(seg.summary)));
+    }
+    flatLines.push('');  // blank line between header and first turn
+  };
+  const flatLines = [];
+  turns.forEach((t, i) => {
+    if (t.kind === 'interaction') {
+      const nxt = turns[i + 1];
+      const nxtSeg = nxt && nxt.kind !== 'interaction' ? segByStart.get(nxt.n) : null;
+      if (nxtSeg) emitSegFlat(nxtSeg, i);
+      const txt = t.text.replace(/\s+/g, ' ');
+      flatLines.push(`${t.id} ▸ HUMAN${t.label ? ' (' + t.label + ')' : ''}: ${txt.length > 64 ? txt.slice(0, 64) + '…' : txt}`);
+      return;
+    }
+    const seg = segByStart.get(t.n);
+    if (seg) emitSegFlat(seg, i);
+    if (restartAtTurnN.has(t.n)) flatLines.push('↺');
+    const tags = t.quotes.map(q => `${displayGrp(q.grp)} › ${q.sub} › ${q.leaf}`);
+    flatLines.push(`T${pad2(t.n)} = [${tags.join(', ')}]`);
+  });
+  const flatStr = flatLines.join('\n');
+
+  // Per-turn rows.
+  // Chips show the full Group › Sub › Leaf triple, colored by group. Group
+  // is a small uppercase tag; sub is the dominant text; leaf trails in a
+  // muted italic. Full triple is also in the tooltip for hover affordance.
+  const segRowEmitted = new Set();
+  const segCardHTML = (seg) => {
+    if (!seg || segRowEmitted.has(seg._idx)) return '';
+    segRowEmitted.add(seg._idx);
+    return `
+      <div class="sig-segment">
+        <div class="sig-segment-tag">SEQ ${String(seg._idx).padStart(2,'0')} · T${pad2(seg.start)}–T${pad2(seg.end)}</div>
+        ${seg.title ? `<div class="sig-segment-title">${seg.title}</div>` : ''}
+        ${seg.summary ? `<div class="sig-segment-body">${seg.summary}</div>` : ''}
+      </div>
+    `;
+  };
+  const rowsHTML = turns.map((t, i) => {
+    if (t.kind === 'interaction') {
+      const nxt = turns[i + 1];
+      const nxtSeg = nxt && nxt.kind !== 'interaction' ? segByStart.get(nxt.n) : null;
+      const txt = t.text.replace(/\s+/g, ' ');
+      const short = txt.length > 56 ? txt.slice(0, 56) + '…' : txt;
+      const tipI = `${t.id} · human prompt${t.label ? ' · ' + t.label : ''}`;
+      return segCardHTML(nxtSeg) + `
+      <button class="sig-row sig-interaction" data-turn="${t.id}" title="${escapeHTML(tipI)}">
+        <span class="sig-num sig-num-h">${t.id}</span>
+        <span class="sig-int-text">${ICON_HUMAN}${escapeHTML(short)}</span>
+      </button>
+    `;
+    }
+    const segHTML = segCardHTML(segByStart.get(t.n));
+    const restartHTML = restartAtTurnN.has(t.n)
+      ? '<div class="sig-restart-row" title="Session restart — Planner thought matches an earlier turn verbatim"><span class="sig-restart-glyph">↺</span><span class="sig-restart-text">session restart · thought matches an earlier turn verbatim</span></div>'
+      : '';
+    const chipsHTML = t.quotes.length === 0
+      ? '<span class="sig-chip-empty">∅</span>'
+      : t.quotes.map(q => {
+          const _p = PATTERNS[q.sub + ' › ' + q.leaf];
+          const baseTip = `${displayGrp(q.grp)} › ${q.sub} › ${q.leaf}`;
+          const _cls = _p ? ` sig-chip-anom sig-chip-anom-${_p.t}` : '';
+          const _flag = _p ? `<span class="sig-chip-flag sig-chip-flag-${_p.t}">${ANOM_MARK[_p.t]}</span>` : '';
+          const _attr = _p ? `data-anom-key="${escapeHTML(q.sub + ' › ' + q.leaf)}"` : `title="${escapeHTML(baseTip)}"`;
+          return `<span class="sig-chip grp-${q.grp}${_cls}" ${_attr}><span class="sig-chip-grp">${displayGrp(q.grp)}</span><span class="sig-chip-sub">${escapeHTML(q.sub)}</span><span class="sig-chip-sep">›</span><span class="sig-chip-leaf">${escapeHTML(q.leaf)}</span>${_flag}</span>`;
+        }).join('');
+    const flag = (t.phase === 'submit') ? '<span class="sig-flag">‡</span>' : '';
+    const headline = (t.headline || '').replace(/"/g, '&quot;');
+    const tip = `T${pad2(t.n)} · ${t.phaseLabel} · ${headline}`;
+    return segHTML + restartHTML + `
+      <button class="sig-row" data-turn="${t.n}" title="${tip}">
+        <span class="sig-num">T${pad2(t.n)}${flag}</span>
+        <span class="sig-chips">${chipsHTML}</span>
+      </button>
+    `;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="signature-section">
+      <div class="sig-section-title">Trajectory signature</div>
+      <div class="sig-section-sub">One row per step, listing its tags in the order they appear. Amber rows are the human speaking. Click any row to jump to that step.</div>
+      <pre class="sig-flat" title="copy-paste signature">${escapeHTML(flatStr)}</pre>
+      <div class="sig-rows">${rowsHTML}</div>
+    </div>
+  `;
+}
+
+function renderCodebook() {
+  const container = document.getElementById('codebook-container');
+  const sorted = Object.entries(codebook).sort((a,b) => b[1].total - a[1].total);
+  if (sorted.length === 0) { container.innerHTML = '<em style="color: var(--ink-mute)">No annotations.</em>'; return; }
+  const maxCount = Math.max(...sorted.map(([,g]) => g.total));
+
+  const legend = Object.keys(PATTERNS).length
+    ? '<div class="cb-anom-legend"><strong>标注旗标:</strong> <span style="color:#16a34a">✓ 成功模式(做得好)</span> · ⚠ 缺失 · ▲ 冗余 · ◆ 时序/触发/沉淀错位 — 悬浮任意旗标 leaf 查看「模式类型 / 诊断原因 / 建议」</div>'
+    : '';
+  container.innerHTML = legend + sorted.map(([grpName, grp]) => {
+    const pct = (grp.total / maxCount) * 100;
+    const items = Object.values(grp.items).sort((a,b) => b.turns.length - a.turns.length);
+    return `
+      <div class="cb-group" data-group="${grpName}" style="--qcolor: var(--grp-${grpName}); --qbg: var(--grp-${grpName}-bg);">
+        <div class="cb-group-header">
+          <div class="cb-group-name">${displayGrp(grpName)}</div>
+          <div class="cb-count">${grp.total}</div>
+        </div>
+        <div class="cb-bar"><div class="cb-bar-fill" style="width: ${pct}%; background: var(--grp-${grpName});"></div></div>
+        <div class="cb-items">
+          ${items.map(item => {
+            const _p = PATTERNS[item.sub + ' › ' + item.leaf];
+            const _cls = _p ? ' cb-anom cb-anom-' + _p.t : '';
+            const _attr = _p ? ` data-anom-key="${item.sub} › ${item.leaf}"` : '';
+            const _badge = _p ? ` <span class="cb-anom-badge cb-anom-b-${_p.t}">${ANOM_MARK[_p.t]}</span>` : '';
+            return `
+            <div class="cb-item${_cls}" data-grp="${grpName}" data-key="${item.sub} › ${item.leaf}" data-turns="${item.turns.join(',')}" style="--qcolor: var(--grp-${grpName}); --qbg: var(--grp-${grpName}-bg);"${_attr}>
+              <span class="cb-item-text">${item.sub} <span style="opacity:0.5">›</span> ${item.leaf}${_badge}</span>
+              <span class="turn-refs">[${item.turns.map(n => 'T'+n).join(',')}]</span>
+            </div>
+          `;}).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function markPieAnomalies() {
+  const svgns = 'http://www.w3.org/2000/svg';
+  const byGrp = {};
+  Object.entries(codebook).forEach(([g, gd]) => {
+    Object.values(gd.items).forEach(it => {
+      const p = PATTERNS[it.sub + ' › ' + it.leaf];
+      if (p && p.t !== 'ok') (byGrp[g] = byGrp[g] || []).push(p);
+    });
+  });
+  Object.entries(byGrp).forEach(([g, list]) => {
+    const node = document.querySelector('.pie-slice[data-grp="' + g + '"]');
+    if (!node) return;
+    const label = node.querySelector('text');
+    if (!label) return;
+    const name = label.textContent;
+    label.textContent = '';
+    const ts = document.createElementNS(svgns, 'tspan');
+    ts.setAttribute('fill', '#e11d48'); ts.setAttribute('font-weight', '700');
+    ts.textContent = '⚠' + list.length + ' ';
+    const ts2 = document.createElementNS(svgns, 'tspan');
+    ts2.textContent = name;
+    label.appendChild(ts); label.appendChild(ts2);
+    const tt = document.createElementNS(svgns, 'title');
+    tt.textContent = g + ' — ' + list.length + ' 个待改进:\n' + list.map(a => '• [' + a.status + '] ' + a.advice).join('\n');
+    label.appendChild(tt);
+  });
+}
+
+function setupAnomalyTip() {
+  const tip = document.createElement('div');
+  tip.id = 'anom-tip';
+  document.body.appendChild(tip);
+  const place = (x, y) => {
+    const r = tip.getBoundingClientRect();
+    let nx = x + 16, ny = y + 16;
+    if (nx + r.width > window.innerWidth - 10) nx = x - r.width - 16;
+    if (ny + r.height > window.innerHeight - 10) ny = y - r.height - 16;
+    tip.style.left = Math.max(10, nx) + 'px';
+    tip.style.top = Math.max(10, ny) + 'px';
+  };
+  const show = (key, x, y) => {
+    const a = PATTERNS[key];
+    if (!a) return;
+    const ok = a.status === '成功';
+    tip.innerHTML =
+      '<span class="at-type ' + (ok ? 'at-ok' : 'at-bad') + '">模式类型:' + escapeHTML(a.status) + '</span>' +
+      '<div class="at-row"><span class="at-label">诊断原因</span><span class="at-val">' + escapeHTML(a.cause || '') + '</span></div>' +
+      '<div class="at-row"><span class="at-label">给用户 / agent 的建议</span><span class="at-val">' + escapeHTML(a.advice || '') + '</span></div>';
+    tip.classList.add('show');
+    place(x, y);
+  };
+  const hide = () => tip.classList.remove('show');
+  let suppressedEl = null, suppressedTitle = null;
+  const restoreTitle = () => {
+    if (suppressedEl) { suppressedEl.setAttribute('title', suppressedTitle); suppressedEl = null; suppressedTitle = null; }
+  };
+  document.addEventListener('mouseover', e => {
+    const el = e.target.closest && e.target.closest('[data-anom-key]');
+    if (!el) return;
+    show(el.getAttribute('data-anom-key'), e.clientX, e.clientY);
+    const titled = el.closest('[title]');
+    if (titled && titled !== suppressedEl) {
+      restoreTitle();
+      suppressedEl = titled; suppressedTitle = titled.getAttribute('title');
+      titled.removeAttribute('title');
+    }
+  });
+  document.addEventListener('mousemove', e => {
+    if (tip.classList.contains('show')) place(e.clientX, e.clientY);
+  });
+  document.addEventListener('mouseout', e => {
+    const el = e.target.closest && e.target.closest('[data-anom-key]');
+    if (!el) return;
+    if (e.relatedTarget && el.contains(e.relatedTarget)) return;
+    hide();
+    restoreTitle();
+  });
+}
+
+function renderPatternsSummary() {
+  const el = document.getElementById('patterns-summary');
+  if (!el) return;
+  const entries = Object.entries(PATTERNS);
+  if (entries.length === 0) return;
+  const order = {ok:0, lo:1, hi:2, mid:3};
+  entries.sort((a,b) => (order[a[1].t] ?? 9) - (order[b[1].t] ?? 9));
+  const rows = entries.map(([key, p]) => {
+    const ok = p.status === '成功';
+    const leaf = key.split(' › ').pop();
+    return `<tr>
+      <td><span class="ps-pill ${ok ? 'ps-ok' : 'ps-bad'}">${ANOM_MARK[p.t] || ''} ${escapeHTML(p.status)}</span></td>
+      <td><span class="ps-leaf">${escapeHTML(leaf)}</span><br><span class="ps-key">${escapeHTML(key)}</span></td>
+      <td>${escapeHTML(p.cause || '')}</td>
+      <td>${escapeHTML(p.advice || '')}</td>
+    </tr>`;
+  }).join('');
+  const nOk = entries.filter(([, p]) => p.status === '成功').length;
+  const nBad = entries.length - nOk;
+  el.innerHTML =
+    '<div class="section-label">behavior patterns · ' + nOk + ' 成功 / ' + nBad + ' 待改进</div>' +
+    '<div class="ps-table-wrap"><table class="ps-table">' +
+    '<thead><tr><th>模式类型</th><th>Act-onomy leaf</th><th>诊断原因</th><th>建议</th></tr></thead>' +
+    '<tbody>' + rows + '</tbody></table></div>';
+}
+
+function clearActive() {
+  document.querySelectorAll('.turn.active').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.cb-item.fired').forEach(el => el.classList.remove('fired', 'flash'));
+  document.querySelectorAll('.qmark.flash-pulse').forEach(el => el.classList.remove('flash-pulse'));
+  document.querySelectorAll('.annot-row.flash').forEach(el => el.classList.remove('flash'));
+  document.querySelectorAll('.pie-slice.dimmed').forEach(el => el.classList.remove('dimmed'));
+}
+
+function flashAnnotationLink(turnN, qidx, grp, key) {
+  document.querySelectorAll('.qmark.flash-pulse').forEach(el => el.classList.remove('flash-pulse'));
+  document.querySelectorAll('.annot-row.flash').forEach(el => el.classList.remove('flash'));
+  document.querySelectorAll('.cb-item.fired').forEach(el => el.classList.remove('fired', 'flash'));
+
+  const qm = document.querySelector(`.qmark[data-turn="${turnN}"][data-qidx="${qidx}"]`);
+  const row = document.querySelector(`.annot-row[data-turn="${turnN}"][data-qidx="${qidx}"]`);
+  const item = document.querySelector(`.cb-item[data-grp="${grp}"][data-key="${key}"]`);
+  if (qm) qm.classList.add('flash-pulse');
+  if (row) row.classList.add('flash');
+  if (item) item.classList.add('fired', 'flash');
+}
+
+function scrollToTurn(turnEl) {
+  if (!turnEl) return;
+  // Programmatic navigation always expands the target so highlights are visible.
+  turnEl.classList.add('expanded');
+  // Snapshot the right-side panel's internal scroll position BEFORE we touch
+  // the main page scroll. Some browsers will auto-scroll the focused element
+  // into view, which can cause the codebook panel to drift. We restore the
+  // exact position right after.
+  const panel = document.querySelector('aside.codebook-panel');
+  const panelScrollTop = panel ? panel.scrollTop : 0;
+
+  const rect = turnEl.getBoundingClientRect();
+  const targetY = window.scrollY + rect.top - 24;
+  window.scrollTo({ top: targetY, behavior: 'smooth' });
+
+  // Restore panel scroll on the next animation frame, and again after the
+  // smooth-scroll likely finishes. Both are cheap and cover edge cases.
+  if (panel) {
+    requestAnimationFrame(() => { panel.scrollTop = panelScrollTop; });
+    setTimeout(() => { panel.scrollTop = panelScrollTop; }, 50);
+    setTimeout(() => { panel.scrollTop = panelScrollTop; }, 500);
+  }
+}
+
+function activateCodebookItem(grp, key) {
+  clearActive();
+  const item = codebook[grp] && codebook[grp].items[key];
+  if (!item) return;
+  const itemEl = document.querySelector(`.cb-item[data-grp="${grp}"][data-key="${key}"]`);
+  if (itemEl) itemEl.classList.add('fired', 'flash');
+  item.turns.forEach(n => {
+    const turnEl = document.querySelector(`.turn[data-turn="${n}"]`);
+    if (turnEl) turnEl.classList.add('active', 'expanded');
+    document.querySelectorAll(`.qmark[data-turn="${n}"][data-grp="${grp}"][data-key="${key}"]`).forEach(qm => qm.classList.add('flash-pulse'));
+    document.querySelectorAll(`.annot-row[data-turn="${n}"][data-grp="${grp}"][data-key="${key}"]`).forEach(r => r.classList.add('flash'));
+  });
+  if (item.turns.length > 0) {
+    scrollToTurn(document.querySelector(`.turn[data-turn="${item.turns[0]}"]`));
+  }
+}
+
+function activateGroup(grp) {
+  clearActive();
+  document.querySelectorAll(`.cb-item[data-grp="${grp}"]`).forEach(el => el.classList.add('fired'));
+  document.querySelectorAll(`.qmark[data-grp="${grp}"]`).forEach(qm => qm.classList.add('flash-pulse'));
+  document.querySelectorAll(`.annot-row[data-grp="${grp}"]`).forEach(r => r.classList.add('flash'));
+  const turnsHit = new Set();
+  document.querySelectorAll(`.qmark[data-grp="${grp}"]`).forEach(qm => turnsHit.add(parseInt(qm.dataset.turn)));
+  turnsHit.forEach(n => {
+    const turnEl = document.querySelector(`.turn[data-turn="${n}"]`);
+    if (turnEl) turnEl.classList.add('active', 'expanded');
+  });
+  if (turnsHit.size > 0) {
+    const firstTurn = Math.min(...turnsHit);
+    scrollToTurn(document.querySelector(`.turn[data-turn="${firstTurn}"]`));
+  }
+}
+
+function setupInteractions() {
+  // Collapsible turns: header click toggles; expand/collapse-all controls.
+  document.querySelectorAll('.turn-header, .interaction-header').forEach(h => {
+    h.addEventListener('click', () => h.closest('.turn').classList.toggle('expanded'));
+  });
+  const exAll = document.getElementById('expand-all');
+  const coAll = document.getElementById('collapse-all');
+  if (exAll) exAll.addEventListener('click', () =>
+    document.querySelectorAll('.turn').forEach(el => el.classList.add('expanded')));
+  if (coAll) coAll.addEventListener('click', () =>
+    document.querySelectorAll('.turn').forEach(el => el.classList.remove('expanded')));
+
+  document.querySelectorAll('.qmark').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      flashAnnotationLink(parseInt(el.dataset.turn), parseInt(el.dataset.qidx), el.dataset.grp, el.dataset.key);
+    });
+  });
+  document.querySelectorAll('.annot-row').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      flashAnnotationLink(parseInt(el.dataset.turn), parseInt(el.dataset.qidx), el.dataset.grp, el.dataset.key);
+    });
+  });
+  document.querySelectorAll('.cb-item').forEach(el => {
+    el.addEventListener('click', () => {
+      activateCodebookItem(el.dataset.grp, el.dataset.key);
+    });
+  });
+  document.querySelectorAll('.pie-slice').forEach(el => {
+    el.addEventListener('click', () => {
+      activateGroup(el.dataset.grp);
+    });
+  });
+  document.querySelectorAll('.pie-legend-row').forEach(el => {
+    el.addEventListener('click', () => {
+      activateGroup(el.dataset.grp);
+    });
+  });
+  document.querySelectorAll('.sig-row').forEach(el => {
+    el.addEventListener('click', () => {
+      const n = el.dataset.turn; // agent turns are numeric, interactions are "H<k>"
+      const turnEl = document.querySelector(`.turn[data-turn="${n}"]`);
+      if (!turnEl) return;
+      document.querySelectorAll('.turn.active').forEach(x => x.classList.remove('active'));
+      turnEl.classList.add('active');
+      scrollToTurn(turnEl);
+    });
+  });
+}
+
+// Drag-to-resize handle on the left edge of the codebook panel.
+// The panel is `position: fixed; right: 0; width: 360px;` and the main has a
+// matching `margin-right: 360px`. We drive both off a single CSS variable
+// `--panel-w` so they stay in sync, and persist the user's last width in
+// localStorage so it sticks across reloads.
+function setupPanelResize() {
+  const panel = document.querySelector('aside.codebook-panel');
+  const main  = document.querySelector('main.trajectory');
+  const handle = document.getElementById('panel-resize-handle');
+  if (!panel || !main || !handle) return;
+
+  const MIN = 280;
+  const MAX_FRAC = 0.7;  // never let the panel eat more than 70% of the viewport
+  const STORAGE_KEY = 'tta.panel-width';
+
+  const apply = (w) => {
+    const cap = Math.max(MIN, Math.min(w, window.innerWidth * MAX_FRAC));
+    panel.style.width = cap + 'px';
+    main.style.marginRight = cap + 'px';
+  };
+
+  // Restore persisted width on load.
+  const saved = parseInt(localStorage.getItem(STORAGE_KEY) || '', 10);
+  if (!Number.isNaN(saved) && saved >= MIN) apply(saved);
+
+  let dragging = false;
+  let startX = 0;
+  let startW = 0;
+
+  handle.addEventListener('mousedown', (e) => {
+    dragging = true;
+    startX = e.clientX;
+    startW = panel.getBoundingClientRect().width;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    // Drag left = wider panel; drag right = narrower.
+    const w = startW + (startX - e.clientX);
+    apply(w);
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    localStorage.setItem(STORAGE_KEY, String(panel.getBoundingClientRect().width));
+  });
+
+  // Double-click the handle to reset to the default 360px.
+  handle.addEventListener('dblclick', () => {
+    apply(360);
+    localStorage.removeItem(STORAGE_KEY);
+  });
+}
+
+renderTurns();
+renderSignature();
+renderCodebook();
+markPieAnomalies();
+setupAnomalyTip();
+renderPatternsSummary();
+setupInteractions();
+setupPanelResize();
+
+</script>
+</body>
+</html>

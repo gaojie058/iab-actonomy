@@ -1,0 +1,1780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Trajectory & Behavior Profile · pydata/xarray-4687</title>
+<!-- Yuque-style restyle: system fonts only, no external font CDN -->
+<style>
+:root {
+  --bg: #f6f7f9;
+  --bg-panel: #ffffff;
+  --ink: #262626;
+  --ink-soft: #585d63;
+  --ink-mute: #8a8f8d;
+  --rule: #ebecef;
+  --rule-soft: #f2f3f5;
+  --accent: #00b96b;
+  --accent-soft: #b7e7d1;
+  --thought: #5a68c9;
+  --action: #0f9b8a;
+  --obs: #c77d1a;
+  --obs-soft: #f7edd6;
+  --highlight: #eafaf2;
+  --radius: 10px;
+
+  --grp-Retrieval: #0891b2;
+  --grp-Retrieval-bg: rgba(8, 145, 178, 0.10);
+  --grp-Memory: #d97706;
+  --grp-Memory-bg: rgba(217, 119, 6, 0.10);
+  --grp-Planning: #0284c7;
+  --grp-Planning-bg: rgba(2, 132, 199, 0.10);
+  --grp-Reasoning: #4f46e5;
+  --grp-Reasoning-bg: rgba(79, 70, 229, 0.10);
+  --grp-Evaluating: #0d9488;
+  --grp-Evaluating-bg: rgba(13, 148, 136, 0.10);
+  --grp-Deciding: #7c3aed;
+  --grp-Deciding-bg: rgba(124, 58, 237, 0.10);
+  --grp-Grounding: #c026d3;
+  --grp-Grounding-bg: rgba(192, 38, 211, 0.10);
+  --grp-Executing: #059669;
+  --grp-Executing-bg: rgba(5, 150, 105, 0.10);
+  --grp-Learning: #db2777;
+  --grp-Learning-bg: rgba(219, 39, 119, 0.10);
+  --grp-Reflection: #e11d48;
+  --grp-Reflection-bg: rgba(225, 29, 72, 0.10);
+
+  --panel-w: 360px;
+}
+
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#1b1c1e; --bg-panel:#232427;
+    --ink:#e6e6e6; --ink-soft:#b3b7bb; --ink-mute:#8d9195;
+    --rule:#303236; --rule-soft:#2a2c30;
+    --accent:#33c98d; --accent-soft:#2b5f48;
+    --thought:#8f9cf0; --action:#34c9b3; --obs:#e0a955; --obs-soft:#382f18;
+    --highlight:#18271f;
+  }
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+body {
+  min-height: 100vh;
+}
+
+header.masthead {
+  border-bottom: 1px solid var(--rule);
+  padding: 28px calc(var(--panel-w) + 24px) 24px 40px;
+  background: var(--bg-panel);
+  position: relative;
+  z-index: 5;
+}
+
+.eyebrow {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin-bottom: 8px;
+}
+
+h1.title {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-weight: 600;
+  font-variation-settings: 'opsz' 144;
+  font-size: 38px;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+}
+
+h1.title em {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--accent);
+}
+
+.subtitle {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 15px;
+  color: var(--ink-soft);
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1.55;
+  max-width: 820px;
+}
+
+.meta-row {
+  display: flex;
+  gap: 24px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: var(--ink-mute);
+}
+
+.meta-row span strong {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.outcome-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 2px;
+  font-weight: 600;
+}
+.outcome-resolved { background: rgba(5, 150, 105, 0.13); color: var(--grp-Executing); }
+.outcome-unresolved { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
+
+.app {
+  position: relative;
+  min-height: calc(100vh - 140px);
+}
+
+@media (max-width: 1100px) {
+  header.masthead { padding-right: 40px; }
+  main.trajectory { margin-right: 0 !important; max-width: 100% !important; }
+  aside.codebook-panel {
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    border-left: none !important;
+    border-top: 1px solid var(--rule);
+  }
+}
+
+main.trajectory {
+  padding: 32px 40px 80px;
+  max-width: 900px;
+  margin-right: var(--panel-w);
+}
+
+.section-label {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--rule); }
+
+.issue-block {
+  background: var(--bg-panel);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--accent);
+  padding: 18px 22px;
+  margin-bottom: 28px;
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  color: var(--ink-soft);
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+.issue-block strong { font-weight: 600; color: var(--ink); }
+.issue-block code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; background: var(--rule-soft); padding: 1px 5px; border-radius: 2px; }
+
+.summary-block {
+  background: var(--bg-panel);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--thought);
+  padding: 20px 24px 22px;
+  margin-bottom: 32px;
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: var(--ink);
+  position: relative;
+}
+.summary-block .summary-eyebrow {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--thought);
+  font-weight: 600;
+  margin-bottom: 10px;
+  display: block;
+}
+.summary-block .summary-text {
+  font-style: normal;
+  color: var(--ink);
+  letter-spacing: 0;
+}
+.summary-block .summary-text strong { font-style: normal; font-weight: 600; color: var(--ink); }
+.summary-block .summary-text em { font-style: normal; color: var(--accent); }
+.summary-block .summary-text code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-style: normal; font-size: 13px; background: var(--rule-soft); padding: 1px 5px; border-radius: 2px; color: var(--ink); }
+.summary-block .summary-text ul { margin: 10px 0; padding-left: 22px; }
+.summary-block .summary-text li { margin-bottom: 8px; line-height: 1.6; }
+.summary-block .summary-text p { margin: 0 0 10px 0; }
+.method-note ul { margin: 8px 0 4px 0; padding-left: 20px; }
+.method-note li { margin-bottom: 5px; line-height: 1.55; }
+
+.method-note {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-style: normal;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  margin-bottom: 24px;
+  padding: 12px 16px;
+  background: var(--highlight);
+  border-left: 2px solid var(--accent);
+  border-radius: 0 2px 2px 0;
+  line-height: 1.6;
+}
+.method-note strong { font-style: normal; font-weight: 600; color: var(--ink); }
+.method-note code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; background: rgba(0,0,0,0.06); padding: 1px 5px; border-radius: 2px; font-style: normal; }
+
+.turn {
+  position: relative;
+  margin-bottom: 28px;
+  padding: 22px 24px 20px 28px;
+  background: var(--bg-panel);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  transition: all 0.25s ease;
+}
+.turn::before { content: ''; position: absolute; left: -1px; top: -1px; bottom: -1px; width: 4px; background: var(--rule); transition: background 0.25s ease; }
+.turn.active { border-color: var(--ink); box-shadow: 0 1px 8px rgba(0,0,0,0.05); }
+.turn.active::before { background: var(--accent); width: 4px; }
+
+.turn-header {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--rule);
+}
+
+.turn-num {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-weight: 600;
+  font-size: 28px;
+  font-variation-settings: 'opsz' 144;
+  color: var(--accent);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.turn-num small { font-size: 11px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink-mute); font-weight: 400; display: block; letter-spacing: 0.1em; margin-bottom: 2px; }
+
+.turn-tag-line { font-family: -apple-system, "PingFang SC", "Helvetica Neue", "Segoe UI", sans-serif; font-style: normal; font-size: 15px; color: var(--ink); font-weight: 500; flex: 1; line-height: 1.45; }
+
+/* ===== Collapsible turns =====
+   Turns render collapsed by default: only the header row (icon, number,
+   headline, phase pill) is visible. Clicking the header toggles the body.
+   Programmatic activation (codebook / signature clicks) auto-expands. */
+.turn-header, .interaction-header { cursor: pointer; user-select: none; }
+.turn-body { display: none; }
+.turn.expanded > .turn-body { display: block; }
+.turn:not(.expanded) .turn-header,
+.turn:not(.expanded) .interaction-header {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+.turn:not(.expanded) { padding-top: 16px; padding-bottom: 16px; }
+.turn-chevron {
+  flex-shrink: 0;
+  align-self: center;
+  color: var(--ink-mute);
+  font-size: 11px;
+  transition: transform 0.2s ease;
+}
+.turn.expanded .turn-chevron { transform: rotate(90deg); }
+
+.turns-controls {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-bottom: 14px;
+}
+.turns-controls button {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: var(--bg-panel);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.turns-controls button:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ===== Actor icons (Google Material Design icons: person / smart_toy) ===== */
+.actor-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  align-self: center;
+}
+.actor-icon svg { width: 20px; height: 20px; }
+.actor-agent { color: var(--accent); background: var(--highlight); border: 1px solid var(--accent-soft); }
+.actor-human { color: #b45309; background: var(--obs-soft); border: 1px solid rgba(217, 119, 6, 0.35); }
+
+/* ===== Human interaction cards =====
+   First-class human turns interleaved with agent (obs, thought, action)
+   turns. Verbatim prompt, amber palette, person icon — visually distinct
+   from agent turn cards. */
+.turn.interaction {
+  background: #fffbeb;
+  border: 1px solid rgba(217, 119, 6, 0.35);
+  border-left: 3px solid var(--obs);
+}
+.interaction-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed rgba(217, 119, 6, 0.35);
+}
+.int-num {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-weight: 600;
+  font-size: 28px;
+  color: #b45309;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.int-num small { font-size: 11px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink-mute); font-weight: 400; display: block; letter-spacing: 0.1em; margin-bottom: 2px; }
+.int-title { font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; font-size: 15px; color: var(--ink); font-weight: 500; flex: 1; }
+.int-title .small { font-size: 10px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink-mute); font-weight: 400; margin-left: 6px; }
+.int-label {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border: 1px solid rgba(217, 119, 6, 0.4);
+  border-radius: 2px;
+  color: #b45309;
+  background: rgba(217, 119, 6, 0.08);
+}
+.interaction-text {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ink);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Interaction rows in the right-panel trajectory signature */
+.sig-row.sig-interaction {
+  background: #fffbeb;
+  border: 1px solid rgba(217, 119, 6, 0.3);
+  border-radius: 3px;
+}
+.sig-row.sig-interaction:hover { background: var(--obs-soft); }
+.sig-num-h { color: #b45309 !important; }
+.sig-int-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  color: #92400e;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sig-int-text svg { width: 12px; height: 12px; flex-shrink: 0; color: #b45309; }
+
+.turn-phase {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  color: var(--ink-soft);
+  background: var(--bg);
+}
+.phase-reproduce { color: var(--obs); border-color: var(--obs-soft); background: var(--obs-soft); }
+.phase-localize { color: var(--thought); border-color: rgba(91,74,138,0.2); background: rgba(91,74,138,0.08); }
+.phase-edit { color: var(--action); border-color: rgba(5, 150, 105, 0.2); background: rgba(5, 150, 105, 0.08); }
+.phase-recover { color: var(--accent); border-color: var(--accent-soft); background: var(--accent-soft); }
+.phase-verify { color: var(--grp-Evaluating); border-color: rgba(26,88,120,0.2); background: rgba(26,88,120,0.08); }
+.phase-submit { color: var(--ink); border-color: var(--rule); background: var(--rule-soft); }
+.phase-other { color: var(--ink-soft); border-color: var(--rule); background: var(--bg); }
+
+.oat-block { margin: 12px 0; padding-left: 14px; border-left: 2px solid; font-size: 14px; line-height: 1.55; }
+.oat-block .lbl { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 600; margin-bottom: 6px; display: block; }
+
+.oat-obs { border-color: var(--obs); }
+.oat-obs .lbl { color: var(--obs); }
+
+.oat-thought { border-color: var(--thought); background: rgba(91, 74, 138, 0.025); padding: 8px 14px 10px; border-radius: 0 2px 2px 0; }
+.oat-thought .lbl { color: var(--thought); }
+.oat-thought .lbl .small { opacity: 0.5; font-weight: 400; text-transform: none; letter-spacing: 0.05em; font-style: italic; }
+.thought-text { font-family: -apple-system, "PingFang SC", "Helvetica Neue", "Segoe UI", sans-serif; font-style: normal; font-size: 14px; color: var(--ink); line-height: 1.65; letter-spacing: 0; }
+
+.oat-action { border-color: var(--action); }
+.oat-action .lbl { color: var(--action); }
+.oat-action .content {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+  background: #1f1f1f;
+  color: #eaeaea;
+  padding: 8px 12px;
+  border-radius: 2px;
+  display: block;
+  margin-top: 4px;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+.oat-action .content .cmt { color: #888888; }
+.oat-action .content .kw { color: #d4a574; }
+
+.content { color: var(--ink); }
+.content code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; background: var(--rule-soft); padding: 1px 5px; border-radius: 2px; }
+
+.qmark {
+  font-style: italic;
+  background: var(--qbg, var(--rule-soft));
+  border-bottom: 1.5px solid var(--qcolor, var(--ink-mute));
+  padding: 0 2px;
+  margin: 0 1px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  border-radius: 1px;
+  position: relative;
+}
+.qmark:hover { background: var(--qcolor, var(--ink-mute)); color: var(--bg); }
+.qmark sup { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-style: normal; font-size: 9px; font-weight: 600; color: var(--qcolor, var(--ink-mute)); margin-left: 2px; letter-spacing: 0; vertical-align: super; line-height: 0; }
+.qmark:hover sup { color: var(--bg); }
+
+.annotations {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.annotations-header { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-mute); font-weight: 600; margin-bottom: 4px; }
+
+.annot-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1.1fr);
+  gap: 10px;
+  align-items: baseline;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 5px 6px;
+  border-radius: 2px;
+  transition: background 0.18s ease;
+}
+.annot-row:hover { background: var(--rule-soft); }
+.annot-row.flash { background: var(--qbg, var(--rule-soft)); }
+
+.annot-quote {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-style: italic;
+  color: var(--qcolor, var(--ink));
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.annot-quote::before { content: '"'; opacity: 0.5; }
+.annot-quote::after { content: '"'; opacity: 0.5; }
+.annot-quote .qnum { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-style: normal; font-size: 9px; font-weight: 600; margin-right: 4px; opacity: 0.7; vertical-align: super; }
+
+.annot-arrow { color: var(--ink-mute); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
+
+.annot-tag { font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; font-size: 11.5px; color: var(--ink-soft); letter-spacing: 0.005em; }
+.annot-tag .annot-grp { font-weight: 600; color: var(--qcolor, var(--ink)); }
+.annot-tag .annot-sep { margin: 0 4px; opacity: 0.4; }
+.annot-tag .annot-leaf { color: var(--ink); }
+
+.insight {
+  margin-top: 12px;
+  padding: 10px 12px 10px 14px;
+  background: var(--highlight);
+  border-radius: 2px;
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 13px;
+  font-style: normal;
+  color: var(--ink-soft);
+  position: relative;
+  line-height: 1.6;
+}
+.insight::before { content: '※'; position: absolute; left: -22px; top: 8px; font-size: 14px; color: var(--accent); font-style: normal; }
+.insight strong { font-style: normal; font-weight: 600; color: var(--ink); }
+
+/* Segment summary card inside the right-panel trajectory signature.
+   Sits above the first row of each `segments[]` entry — a compact "what
+   the agent is doing in this stretch" preface for the row block below. */
+.sig-segment {
+  margin: 14px 0 6px;
+  padding: 8px 10px;
+  background: var(--highlight);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 2px 2px 0;
+}
+.sig-segment:first-child { margin-top: 4px; }
+.sig-segment-tag {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 8.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+.sig-segment-title {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-weight: 600;
+  font-size: 12.5px;
+  font-style: italic;
+  color: var(--ink);
+  line-height: 1.3;
+  margin-bottom: 3px;
+}
+.sig-segment-body {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 12px;
+  color: var(--ink-soft);
+  line-height: 1.55;
+}
+.sig-segment-body code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+  background: rgba(79, 70, 229, 0.08);
+  padding: 0 3px;
+  border-radius: 2px;
+}
+
+aside.codebook-panel {
+  background: var(--bg-panel);
+  border-left: 1px solid var(--rule);
+  padding: 32px 24px 60px;
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: var(--panel-w);
+  height: 100vh;
+  overflow-y: auto;
+  z-index: 10;
+}
+aside.codebook-panel::-webkit-scrollbar { width: 6px; }
+aside.codebook-panel::-webkit-scrollbar-track { background: transparent; }
+aside.codebook-panel::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 3px; }
+
+/* Drag handle on the panel's left edge — sits over the border, 6px hit area,
+   shows a thin colored stripe on hover/drag. Double-click resets width. */
+#panel-resize-handle {
+  position: absolute;
+  top: 0;
+  left: -3px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 20;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+#panel-resize-handle:hover,
+#panel-resize-handle:active {
+  background: linear-gradient(to right, transparent 0%, transparent 40%, var(--accent) 40%, var(--accent) 60%, transparent 60%);
+}
+
+.panel-title { font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; font-weight: 600; font-size: 22px; font-variation-settings: 'opsz' 144; margin-bottom: 4px; letter-spacing: -0.01em; }
+.panel-sub { font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; font-style: normal; font-size: 12.5px; color: var(--ink-soft); line-height: 1.5; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--rule); }
+
+/* Pie chart section */
+.pie-section {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--rule);
+}
+.pie-svg-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+.pie-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 11px;
+}
+.pie-legend-row {
+  display: grid;
+  grid-template-columns: 12px 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  color: var(--ink-soft);
+}
+.pie-legend-swatch { width: 10px; height: 10px; border-radius: 1px; }
+.pie-legend-name { font-weight: 500; color: var(--ink); }
+.pie-legend-pct { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; color: var(--ink-mute); }
+.pie-legend-count { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; color: var(--ink-mute); }
+
+.pie-slice { transition: opacity 0.2s ease; cursor: pointer; }
+.pie-slice:hover { opacity: 0.8; }
+
+.cb-group { margin-bottom: 18px; }
+.cb-group-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+.cb-group-name { font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; font-weight: 600; font-size: 14px; font-style: italic; color: var(--qcolor, var(--ink)); }
+.cb-count { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; color: var(--ink-mute); background: var(--bg); padding: 1px 6px; border-radius: 8px; border: 1px solid var(--rule); }
+.cb-bar { height: 4px; background: var(--rule-soft); border-radius: 2px; margin-bottom: 8px; overflow: hidden; }
+.cb-bar-fill { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
+.cb-items { display: flex; flex-direction: column; gap: 2px; margin-left: 4px; }
+.cb-item {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  padding: 4px 8px 4px 12px;
+  border-left: 2px solid var(--rule);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 0 2px 2px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+}
+.cb-item:hover { background: var(--bg); border-left-color: var(--ink-soft); color: var(--ink); }
+.cb-item.fired { border-left-color: var(--qcolor, var(--accent)); color: var(--ink); background: var(--qbg, var(--accent-soft)); font-weight: 500; }
+.cb-item-text { flex: 1; }
+.cb-item .turn-refs { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; color: var(--ink-mute); flex-shrink: 0; }
+.cb-item.fired .turn-refs { color: var(--qcolor, var(--accent)); font-weight: 600; }
+
+.summary-footer {
+  margin-top: 60px;
+  padding: 28px;
+  background: var(--bg-panel);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+.summary-footer h2 { font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; font-weight: 600; font-size: 22px; margin-bottom: 4px; letter-spacing: -0.01em; }
+.summary-footer .sub { font-style: italic; color: var(--ink-soft); font-size: 14px; margin-bottom: 20px; }
+.findings { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+.finding { padding: 14px 16px; border-left: 2px solid var(--accent); background: var(--bg); font-size: 13px; line-height: 1.55; }
+.finding strong { font-weight: 600; display: block; margin-bottom: 4px; color: var(--ink); }
+.finding span { color: var(--ink-soft); }
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 40%, transparent); }
+  100% { box-shadow: 0 0 0 8px transparent; }
+}
+.cb-item.fired.flash, .annot-row.flash, .qmark.flash-pulse { animation: pulse-ring 0.6s ease-out; }
+
+.legend {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 24px;
+  padding: 10px 14px;
+  background: var(--bg-panel);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  color: var(--ink-soft);
+  flex-wrap: wrap;
+  align-items: center;
+}
+.legend-item { display: flex; align-items: center; gap: 6px; }
+.legend-dot { width: 8px; height: 8px; border-radius: 1px; }
+.legend-dot.obs { background: var(--obs); }
+.legend-dot.thought { background: var(--thought); }
+.legend-dot.action { background: var(--action); }
+.legend small { margin-left: auto; color: var(--ink-mute); font-style: italic; }
+
+/* ===== Trajectory signature (right panel, above the bar chart) =====
+   Auto-built in JS from the same turns/quotes data. No extra schema fields. */
+.signature-section {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--rule);
+}
+.sig-section-title {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+.sig-section-sub {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-style: italic;
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+.sig-flat {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  white-space: pre-wrap;
+  word-break: normal;
+  overflow-wrap: anywhere;
+  user-select: all;
+  cursor: text;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.sig-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+.sig-row {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 6px;
+  align-items: start;
+  padding: 5px 6px 5px 4px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 2px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  transition: background 0.15s ease;
+}
+.sig-row:hover { background: var(--bg); }
+.sig-row:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.sig-num {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  color: var(--ink-mute);
+  font-weight: 600;
+  text-align: right;
+  padding-right: 4px;
+  padding-top: 2px;
+}
+.sig-num .sig-flag {
+  display: inline;
+  margin-left: 2px;
+  color: var(--accent);
+  font-weight: 700;
+}
+.sig-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  align-items: center;
+}
+.sig-chip {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 1px 6px 2px;
+  border-radius: 2px;
+  border: 1px solid;
+  line-height: 1.35;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.sig-chip-grp {
+  text-transform: uppercase;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+}
+.sig-chip-sub {
+  font-size: 10px;
+  font-weight: 600;
+}
+.sig-chip-sep {
+  font-size: 10px;
+  opacity: 0.45;
+  margin: 0 1px;
+}
+.sig-chip-leaf {
+  font-size: 9.5px;
+  font-weight: 500;
+  font-style: italic;
+  opacity: 0.78;
+}
+.sig-chip-empty {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: var(--ink-mute);
+  padding: 0 4px;
+}
+.sig-chip.grp-Retrieval  { color: var(--grp-Retrieval);  background: var(--grp-Retrieval-bg);  border-color: var(--grp-Retrieval); }
+.sig-chip.grp-Memory     { color: var(--grp-Memory);     background: var(--grp-Memory-bg);     border-color: var(--grp-Memory); }
+.sig-chip.grp-Planning   { color: var(--grp-Planning);   background: var(--grp-Planning-bg);   border-color: var(--grp-Planning); }
+.sig-chip.grp-Reasoning  { color: var(--grp-Reasoning);  background: var(--grp-Reasoning-bg);  border-color: var(--grp-Reasoning); }
+.sig-chip.grp-Evaluating   { color: var(--grp-Evaluating);   background: var(--grp-Evaluating-bg);   border-color: var(--grp-Evaluating); }
+.sig-chip.grp-Deciding   { color: var(--grp-Deciding);   background: var(--grp-Deciding-bg);   border-color: var(--grp-Deciding); }
+.sig-chip.grp-Grounding  { color: var(--grp-Grounding);  background: var(--grp-Grounding-bg);  border-color: var(--grp-Grounding); }
+.sig-chip.grp-Executing  { color: var(--grp-Executing);  background: var(--grp-Executing-bg);  border-color: var(--grp-Executing); }
+.sig-chip.grp-Learning   { color: var(--grp-Learning);   background: var(--grp-Learning-bg);   border-color: var(--grp-Learning); }
+.sig-chip.grp-Reflection { color: var(--grp-Reflection); background: var(--grp-Reflection-bg); border-color: var(--grp-Reflection); }
+
+.sig-restart-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  margin: 4px 0;
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  border-left: 2px solid var(--accent);
+  border-radius: 0 2px 2px 0;
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-style: italic;
+  font-size: 11px;
+  color: var(--accent);
+  cursor: help;
+}
+.sig-restart-glyph { font-size: 16px; line-height: 1; }
+.sig-restart-text { color: var(--ink-soft); }
+
+/* ============ behavior-pattern (success / failure) layer ============ */
+/* driven by the optional `patterns` field in the annotated JSON; absent -> nothing renders */
+/* signature chip highlight */
+.sig-chip-anom { outline: 1.5px solid; outline-offset: 1px; border-radius: 3px; }
+.sig-chip-anom-lo { outline-color: #e11d48; }
+.sig-chip-anom-hi { outline-color: #d97706; }
+.sig-chip-anom-mid { outline-color: #2563eb; }
+.sig-chip-anom-ok { outline-color: #16a34a; }
+.sig-chip-flag { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8px; font-weight: 700; margin-left: 3px; padding: 0 3px; border-radius: var(--radius); vertical-align: middle; }
+.sig-chip-flag-lo { color: #be123c; background: rgba(225,29,72,0.18); }
+.sig-chip-flag-hi { color: #b45309; background: rgba(217,119,6,0.18); }
+.sig-chip-flag-mid { color: #1d4ed8; background: rgba(37,99,235,0.18); }
+.sig-chip-flag-ok { color: #15803d; background: rgba(34,197,94,0.18); }
+/* codebook-panel leaf highlight */
+.cb-anom-legend { font-size: 10px; color: var(--ink-soft); margin-bottom: 10px; padding: 6px 8px; background: var(--rule-soft); border-radius: 3px; line-height: 1.6; }
+.cb-item.cb-anom:not(.fired) { border-left-width: 3px; }
+.cb-item.cb-anom-lo:not(.fired) { border-left-color: #e11d48; background: rgba(225,29,72,0.07); }
+.cb-item.cb-anom-hi:not(.fired) { border-left-color: #d97706; background: rgba(217,119,6,0.07); }
+.cb-item.cb-anom-mid:not(.fired) { border-left-color: #2563eb; background: rgba(37,99,235,0.07); }
+.cb-item.cb-anom-ok:not(.fired) { border-left-color: #16a34a; background: rgba(34,197,94,0.07); }
+.cb-anom-badge { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; font-weight: 700; padding: 0 4px; border-radius: 6px; margin-left: 4px; }
+.cb-anom-b-lo { color: #be123c; background: rgba(225,29,72,0.16); }
+.cb-anom-b-hi { color: #b45309; background: rgba(217,119,6,0.16); }
+.cb-anom-b-mid { color: #1d4ed8; background: rgba(37,99,235,0.16); }
+.cb-anom-b-ok { color: #15803d; background: rgba(34,197,94,0.16); }
+/* custom hover card (模式类型 / 诊断原因 / 建议) */
+#anom-tip { position: fixed; z-index: 99999; max-width: 340px; background: #0f172a; color: #f8fafc; border-radius: 9px; padding: 12px 14px; font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; font-size: 12.5px; line-height: 1.55; box-shadow: 0 10px 34px rgba(0,0,0,0.32); pointer-events: none; opacity: 0; display: none; }
+#anom-tip.show { opacity: 1; display: block; }
+#anom-tip .at-type { font-weight: 700; font-size: 11px; letter-spacing: 0.03em; padding: 2px 9px; border-radius: 11px; }
+#anom-tip .at-ok { color: #86efac; background: rgba(34,197,94,0.20); }
+#anom-tip .at-bad { color: #fca5a5; background: rgba(239,68,68,0.20); }
+#anom-tip .at-row { margin-top: 9px; }
+#anom-tip .at-label { color: #94a3b8; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-bottom: 2px; }
+#anom-tip .at-val { color: #f1f5f9; }
+/* auto pattern-summary table (main column) */
+#patterns-summary { margin-top: 30px; }
+.ps-table-wrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--bg-panel); }
+table.ps-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 640px; }
+table.ps-table th { text-align: left; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-mute); font-weight: 600; padding: 10px 12px; border-bottom: 1px solid var(--rule); background: var(--rule-soft); }
+table.ps-table td { padding: 9px 12px; border-bottom: 1px solid var(--rule-soft); color: var(--ink-soft); vertical-align: top; line-height: 1.45; }
+table.ps-table tr:last-child td { border-bottom: none; }
+.ps-leaf { font-weight: 600; color: var(--ink); }
+.ps-key { font-size: 10px; color: var(--ink-mute); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.ps-pill { display: inline-block; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; letter-spacing: 0.03em; font-weight: 700; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+.ps-ok { color: #15803d; background: rgba(34,197,94,0.14); }
+.ps-bad { color: #be123c; background: rgba(225,29,72,0.13); }
+
+
+:root { --grp-Evaluate: var(--grp-Evaluating); --grp-Evaluate-bg: var(--grp-Evaluating-bg); }
+.sig-chip.grp-Evaluate {color:var(--grp-Evaluate);background:var(--grp-Evaluate-bg);border-color:var(--grp-Evaluate);}
+.sig-chip {display:inline-block;max-width:100%;white-space:normal;overflow-wrap:anywhere;}
+.sig-chip > span + span {margin-left:4px;}
+.archive-nav {font: 12px/1.7 Inter, sans-serif; margin-bottom:12px; overflow-wrap:anywhere; color:var(--ink-soft);}
+.archive-nav a {color:var(--accent);}
+.archive-notes {font: 13px/1.6 Inter, sans-serif; color:var(--ink-soft); margin: 14px 0;}
+.archive-notes summary {cursor:pointer; font-weight:600;}
+.archive-notes ul {padding-left:1.5rem;}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+<nav class="archive-nav"><a href="../index.html">Report index</a> &nbsp;›&nbsp; SWE-bench-Verified &nbsp;·&nbsp; <a href="pydata__xarray-4687__case2-replication__sample-32.annotated.json">Annotation JSON</a></nav>
+  <div class="eyebrow">Quote-grounded annotation</div>
+  <h1 class="title">Agent Trajectory <em>&</em> Behavior Profile</h1>
+  <div class="subtitle">This report walks through one agent session step by step. Every label is tied to the exact quoted words that justify it — so you can see what was asked, what the agent did, and why.</div>
+  <div class="meta-row">
+    <span><strong>Instance</strong> pydata/xarray-4687</span>
+    <span><strong>Model</strong> SWE-agent + Claude 3.5 Sonnet</span>
+    <span><strong>Turns</strong> 49</span>
+    
+    <span><strong>Outcome</strong> <span class="outcome-pill outcome-resolved">RESOLVED ✓</span></span>
+    <span><strong>Annotations</strong> 116</span>
+  </div>
+</header>
+
+<div class="app">
+
+<main class="trajectory">
+
+<div class="section-label">the task</div>
+<div class="issue-block">xr.where not preserving attributes
+&lt;!-- Please include a self-contained copy-pastable example that generates the issue if possible.
+
+Please be concise with code posted. See guidelines below on how to provide a good bug report:
+
+- Craft Minimal Bug Reports: http://matthewrocklin.com/blog/work/2018/02/28/minimal-bug-reports
+- Minimal Complete Verifiable Examples: https://stackoverflow.com/help/mcve
+
+Bug reports that follow these guidelines are easier to diagnose, and so are often handled much more quickly.
+--&gt;
+
+**What happened**:
+Using `xr.where` on a DataArray with attributes results in a new DataArray without attributes.
+
+**What you expected to happen**:
+Attributes should be preserved or at least there should be a choice (e.g. pass kwargs to `apply_ufunc` so `keep_attrs=True` can be passed).
+
+**Minimal Complete Verifiable Example**:
+
+```python
+import numpy as np
+import xarray as xr
+
+data = xr.DataArray(np.ones([10,10], dtype=np.int8))
+data.attrs[&quot;attr_1&quot;] = &quot;test1&quot;
+data.attrs[&quot;attr_2&quot;] = &quot;test2&quot;
+
+data2 = xr.where(data == 1, 5, 0)
+```
+
+**Anything else we need to know?**:
+Apart from loosing attributes the dtype is not conserved. In the example the resulting DataArray has dtype np.int64 instead of np.int8. As far as I can see this might not be an xarray but a numpy problem.
+
+
+**Environment**:
+
+&lt;details&gt;&lt;summary&gt;Output of &lt;tt&gt;xr.show_versions()&lt;/tt&gt;&lt;/summary&gt;
+
+&lt;!-- Paste the output here xr.show_versions() here --&gt;
+INSTALLED VERSIONS
+------------------
+commit: None
+python: 3.7.8 | packaged by conda-forge | (default, Jul 31 2020, 02:25:08)</div>
+
+<div class="section-label">trajectory summary</div>
+<div class="summary-block">
+  <span class="summary-eyebrow">What happened in this run</span>
+  <div class="summary-text">The agent fixes <code>xr.where</code> dropping attributes by adding a <code>keep_attrs</code> parameter to <code>where()</code>. The arc is <strong>reproduce</strong> (T0–T2, a self-authored <code>reproduce_bug.py</code> confirms attrs are lost), <strong>localize</strong> (T3–T8, trace <code>where</code> → <code>apply_ufunc</code>), and then <em>three</em> fix attempts. Attempt 1 (T9–T13) adds the parameter but forgets to use it — repro still shows empty attrs. A long dataflow hunt (T14–T37) chases <code>apply_ufunc</code> → <code>apply_variable_ufunc</code> → <code>merge_attrs</code>; attempt 2 (T38) patches the <code>Variable</code> constructor and still fails (T40). Attempt 3 (T44–T45) manually copies attrs inside <code>where()</code> after the <code>apply_ufunc</code> call, and the repro finally passes (T47). The crux for this control: the ONLY verification anywhere in the run is the agent's own <code>reproduce_bug.py</code> print-output — it <strong>never once runs xarray's real test suite</strong> (no <code>pytest</code>, no <code>test_computation.py</code>). At T48 the agent "verified it with our test script" and submits. This is a <strong>lucky success</strong> (flavor A): the answer happens to be correct, but the trustworthy-looking tail rests on a self-script gut-check, not a gold check.</div>
+</div>
+
+<details class="archive-notes"><summary>Archive notes</summary><ul><li>The archived turns start at T0. The timeline and summary retain that numbering.</li><li>The archived text contains truncation markers (T3, T5, T7, T8, T9, T10, T11, T12, T14, T15, T16, T18, T19, T20, T22, T23, T25, T26, T28, T29, T30, T31, T33, T34, T35, T37, T38, T39, T41, T43, T44, T45, T46, T48).</li></ul></details>
+<div class="method-note">
+  <strong>How to read this.</strong> Each turn shows the verbatim <em>thought</em> from the trajectory. Inside, underlined phrases are <em>linguistic evidence</em> for a codebook label — the colour matches the codebook group on the right. Below each thought, the annotation table reads <code>"quote" → Group › Subgroup › Action</code>, one row per phrase. Click any phrase, any row, or any codebook entry — they highlight bidirectionally without scrolling.
+</div>
+
+<div class="legend">
+  <div class="legend-item"><span class="legend-dot obs"></span> Observation</div>
+  <div class="legend-item"><span class="legend-dot thought"></span> Thought</div>
+  <div class="legend-item"><span class="legend-dot action"></span> Action</div>
+  <small>click anything underlined to light up its tag — and the other way around</small>
+</div>
+
+<div class="section-label">trajectory · 49 turns</div>
+
+<div class="turns-controls">
+  <button id="expand-all" type="button">expand all</button>
+  <button id="collapse-all" type="button">collapse all</button>
+</div>
+
+<div id="turns-container"></div>
+
+<div class="summary-footer">
+  <h2>Summary findings</h2>
+  <div class="sub">Patterns that only become visible when every tag points at an exact quote</div>
+  <div class="findings"><div class="finding"><strong>A RESOLVED run that never fires Evaluating-with-gold</strong><span>Across all 49 turns, every verification tag is <code>Evaluating › Evaluating without ground truth</code> (Evaluate visual/behavioral correctness on <code>reproduce_bug.py</code> output). There is no <code>Evaluating with gold</code> anywhere — the agent runs <code>python reproduce_bug.py</code> five times and xarray's actual suite zero times. A syntactic "did it run something before submit?" detector fires TRUE, but the codebook shows the run leaned entirely on a self-authored repro. This is the mirror of the django-13741 control, which fired real <code>runtests.py</code> passes; here the identical-looking submit is backed only by print statements the agent wrote itself.</span></div><div class="finding"><strong>Two wrong root-cause hypotheses precede the lucky fix</strong><span>The agent's dataflow trace (T14–T38) confidently pinpoints the <code>Variable(dims, data, fastpath=True)</code> constructor as the mechanism (<code>Pinpoint root cause mechanism</code>, T38) and patches it — but T40's repro still shows empty attrs, so that diagnosis was wrong. Only the third attempt (T44), which abandons parameter-propagation for a blunt <code>result.attrs.update(x.attrs)</code> after the call, works. The self-repro was genuinely useful here: it caught two ineffective fixes (<code>Detect prior fix did not work</code> at T14 and T41) before the agent stumbled onto a passing edit.</span></div><div class="finding"><strong>The verification stance is localizable to one clause</strong><span>The entire trust basis of the submit lives in six words at T48: "verified it with our test script." That clause tags as <code>Evaluating without ground truth</code>, not <code>Evaluating with gold</code> — and that single distinction is what separates this lucky success from a verified one. Raw outcome metrics (both say RESOLVED) cannot see it; the quote-level tag can.</span></div></div>
+</div>
+
+<div id="patterns-summary"></div>
+
+</main>
+
+<aside class="codebook-panel">
+  <div id="panel-resize-handle" title="Drag to resize · double-click to reset"></div>
+  <div class="panel-title">What the agent did, by category</div>
+  <div class="panel-sub">Counted from the tagged quotes across all 49 agent steps</div>
+
+  <div class="pie-section">
+    <div class="pie-legend"><div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ink-mute); letter-spacing: 0.08em; text-transform: uppercase; text-align: center; margin-bottom: 10px;">116 tags across 8 groups</div></div>
+    <div class="pie-svg-wrap"><svg width="300" height="184" viewBox="0 0 300 184" xmlns="http://www.w3.org/2000/svg" style="display: block; margin: 0 auto;"><g class="pie-slice" data-grp="Reasoning" style="cursor: pointer;"><title>Reasoning: 47 (41%)</title><rect x="0" y="4" width="300" height="22" fill="transparent"/><text x="96" y="18.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Reasoning</text><rect x="102" y="9" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="9" width="164.0" height="12" fill="#4f46e5" rx="2"/><text x="298" y="18.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">47</text></g><g class="pie-slice" data-grp="Retrieval" style="cursor: pointer;"><title>Retrieval: 18 (16%)</title><rect x="0" y="26" width="300" height="22" fill="transparent"/><text x="96" y="40.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Retrieval</text><rect x="102" y="31" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="31" width="62.8" height="12" fill="#0891b2" rx="2"/><text x="298" y="40.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">18</text></g><g class="pie-slice" data-grp="Evaluating" style="cursor: pointer;"><title>Evaluating: 14 (12%)</title><rect x="0" y="48" width="300" height="22" fill="transparent"/><text x="96" y="62.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Evaluating</text><rect x="102" y="53" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="53" width="48.9" height="12" fill="#0d9488" rx="2"/><text x="298" y="62.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">14</text></g><g class="pie-slice" data-grp="Executing" style="cursor: pointer;"><title>Executing: 11 (9%)</title><rect x="0" y="70" width="300" height="22" fill="transparent"/><text x="96" y="84.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Executing</text><rect x="102" y="75" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="75" width="38.4" height="12" fill="#059669" rx="2"/><text x="298" y="84.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">11</text></g><g class="pie-slice" data-grp="Planning" style="cursor: pointer;"><title>Planning: 9 (8%)</title><rect x="0" y="92" width="300" height="22" fill="transparent"/><text x="96" y="106.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Planning</text><rect x="102" y="97" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="97" width="31.4" height="12" fill="#0284c7" rx="2"/><text x="298" y="106.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">9</text></g><g class="pie-slice" data-grp="Grounding" style="cursor: pointer;"><title>Grounding: 8 (7%)</title><rect x="0" y="114" width="300" height="22" fill="transparent"/><text x="96" y="128.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Grounding</text><rect x="102" y="119" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="119" width="27.9" height="12" fill="#c026d3" rx="2"/><text x="298" y="128.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">8</text></g><g class="pie-slice" data-grp="Reflection" style="cursor: pointer;"><title>Reflection: 8 (7%)</title><rect x="0" y="136" width="300" height="22" fill="transparent"/><text x="96" y="150.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Reflection</text><rect x="102" y="141" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="141" width="27.9" height="12" fill="#e11d48" rx="2"/><text x="298" y="150.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">8</text></g><g class="pie-slice" data-grp="Memory" style="cursor: pointer;"><title>Memory: 1 (1%)</title><rect x="0" y="158" width="300" height="22" fill="transparent"/><text x="96" y="172.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Memory</text><rect x="102" y="163" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="163" width="3.5" height="12" fill="#d97706" rx="2"/><text x="298" y="172.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">1</text></g></svg></div>
+  </div>
+
+  <div id="signature-container"></div>
+
+  <div id="codebook-container"></div>
+</aside>
+
+</div>
+
+<script>
+const turns = [{"n": 0, "phase": "reproduce", "phaseLabel": "Create repro script", "headline": "Agent creates a Python script to reproduce the bug.", "obs": "[File: /pydata__xarray/reproduce_bug.py (1 lines total)]\n1:", "thought": "Let's start by creating a Python script to reproduce the issue described in the bug report. We'll call this script `reproduce_bug.py`.", "action": "create reproduce_bug.py", "quotes": [{"quote": "creating a Python script to reproduce the issue", "grp": "Reasoning", "sub": "Generating", "leaf": "Generate initial codes"}, {"quote": "We'll call this script `reproduce_bug.py`", "grp": "Executing", "sub": "Executing plan", "leaf": "Initiate planned action"}], "insight": ""}, {"n": 1, "phase": "reproduce", "phaseLabel": "Add repro code", "headline": "Agent fills the script with the issue's minimal example.", "obs": "[File: /pydata__xarray/reproduce_bug.py (9 lines total)]\n1:import xarray as xr\n2:\n3:da = xr.DataArray(1)\n4:da.attrs['foo'] = 'bar'\n5:result = xr.where(da==0, -1, da)\n6:print(\"Original DataArray attributes:\", da.attrs)\n7:print(\"Result DataArray attributes:\", result.attrs)\n8:\n9:print(\"Script completed successfully, no errors.\")\nFile updated. Please review the changes and make sure they are correct (correct indentation, no duplicate lines, etc). Edit the file again if necessary.", "thought": "Now, let's add the code to reproduce the bug in our `reproduce_bug.py` file. We'll use the minimal example provided in the issue description.", "action": "edit 1:1\nimport xarray as xr\n\nda = xr.DataArray(1)\nda.attrs['foo'] = 'bar'\nresult = xr.where(da==0, -1, da)\nprint(\"Original DataArray attributes:\", da.attrs)\nprint(\"Result DataArray attributes:\", result.attrs)\n\nprint(\"Script completed successfully, no errors.\")\nend_of_edit", "quotes": [{"quote": "add the code to reproduce the bug", "grp": "Reasoning", "sub": "Generating", "leaf": "Generate initial codes"}, {"quote": "use the minimal example provided in the issue description", "grp": "Memory", "sub": "Read memory", "leaf": "Read from working memory"}], "insight": ""}, {"n": 2, "phase": "reproduce", "phaseLabel": "Run repro", "headline": "Agent runs the script to confirm the bug reproduces.", "obs": "Original DataArray attributes: {'foo': 'bar'}\nResult DataArray attributes: {}\nScript completed successfully, no errors.", "thought": "The script looks good. Now let's run it to confirm that we can reproduce the bug.", "action": "python reproduce_bug.py", "quotes": [{"quote": "The script looks good", "grp": "Evaluating", "sub": "Evaluating without ground truth", "leaf": "Provide qualitative judgement"}, {"quote": "run it to confirm that we can reproduce the bug", "grp": "Executing", "sub": "Executing plan", "leaf": "Run verification command"}], "insight": ""}, {"n": 3, "phase": "localize", "phaseLabel": "Confirm bug, open source", "headline": "Agent confirms the bug and opens computation.py.", "obs": "[File: /pydata__xarray/xarray/core/computation.py (1973 lines total)]\n1:\"\"\"\n2:Functions for applying functions that act on arrays to xarray's labeled data.\n3:\"\"\"\n... [truncated]", "thought": "The bug has been successfully reproduced. We can see that the attributes are lost in the result of `xr.where()`.\n\nNow, let's look at the implementation of `xr.where()` to see if we can find where the attributes are being dropped. It's likely in the `xarray/core/computation.py` file.", "action": "open xarray/core/computation.py", "quotes": [{"quote": "The bug has been successfully reproduced", "grp": "Evaluating", "sub": "Evaluating without ground truth", "leaf": "Evaluate intermediate results"}, {"quote": "look at the implementation of `xr.where()`", "grp": "Planning", "sub": "Decompose task", "leaf": "Phase transition: reproduce → localize"}, {"quote": "It's likely in the `xarray/core/computation.py` file", "grp": "Reasoning", "sub": "Inferring", "leaf": "Infer structure from indirect evidence"}], "insight": "The repro confirmation here is <code>Evaluating without ground truth</code>, not <code>Evaluating with gold</code>: \"successfully reproduced\" is read off the agent's own <code>reproduce_bug.py</code> print output, not any project test. This same self-repro will be the ONLY evidence backing the eventual submit — the whole run never escalates to a gold check."}, {"n": 4, "phase": "localize", "phaseLabel": "Search for where()", "headline": "Agent searches the file for the where function.", "obs": "Found 1 matches for \"def where\" in /pydata__xarray/xarray/core/computation.py:\nLine 1730:def where(cond, x, y):\nEnd of matches for \"def where\" in /pydata__xarray/xarray/core/computation.py", "thought": "Let's search for the `where` function in this file. We can use the `search_file` command to do this.", "action": "search_file \"def where\" xarray/core/computation.py", "quotes": [{"quote": "search for the `where` function in this file", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus"}, {"quote": "use the `search_file` command", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Plan function or tool use"}], "insight": ""}, {"n": 5, "phase": "localize", "phaseLabel": "Navigate to where()", "headline": "Agent navigates to the where function body.", "obs": "[File: /pydata__xarray/xarray/core/computation.py (1973 lines total)]\n(1714 more lines above)\n1730:def where(cond, x, y):\n... [truncated]", "thought": "Great, we've found the `where` function. Let's take a look at its implementation. We'll use the `goto` command to navigate to line 1730.", "action": "goto 1730", "quotes": [{"quote": "we've found the `where` function", "grp": "Evaluating", "sub": "Evaluating without ground truth", "leaf": "Evaluate intermediate results"}, {"quote": "take a look at its implementation", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Read code semantics from open file"}, {"quote": "use the `goto` command to navigate to line 1730", "grp": "Grounding", "sub": "Interact with digital environments", "leaf": "Navigate digital interfaces"}], "insight": ""}, {"n": 6, "phase": "localize", "phaseLabel": "Trace to apply_ufunc", "headline": "Agent sees where() calls apply_ufunc and hypothesizes the drop.", "obs": "Found 1 matches for \"def apply_ufunc\" in /pydata__xarray/xarray/core/computation.py:\nLine 809:def apply_ufunc(\nEnd of matches for \"def apply_ufunc\" in /pydata__xarray/xarray/core/computation.py", "thought": "Looking at the implementation of the `where` function, we can see that it's using `apply_ufunc` to apply the `duck_array_ops.where` function. The `apply_ufunc` function is likely where the attributes are being dropped.\n\nLet's search for the `apply_ufunc` function to see if there's an option to preserve attributes.", "action": "search_file \"def apply_ufunc\" xarray/core/computation.py", "quotes": [{"quote": "it's using `apply_ufunc` to apply the `duck_array_ops.where` function", "grp": "Reasoning", "sub": "Analysing", "leaf": "Analyse source code"}, {"quote": "The `apply_ufunc` function is likely where the attributes are being dropped", "grp": "Reasoning", "sub": "Inferring", "leaf": "Form precursor hypothesis about cause"}, {"quote": "search for the `apply_ufunc` function to see if there's an option to preserve attributes", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus"}], "insight": ""}, {"n": 7, "phase": "localize", "phaseLabel": "Read apply_ufunc", "headline": "Agent navigates to the apply_ufunc definition.", "obs": "[File: /pydata__xarray/xarray/core/computation.py (1973 lines total)]\n(793 more lines above)\n809:def apply_ufunc(\n... [truncated]", "thought": "Let's take a look at the `apply_ufunc` function to see if there's an option to preserve attributes. We'll use the `goto` command to navigate to line 809.", "action": "goto 809", "quotes": [{"quote": "take a look at the `apply_ufunc` function to see if there's an option to preserve attributes", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Read code semantics from open file"}, {"quote": "use the `goto` command to navigate to line 809", "grp": "Grounding", "sub": "Interact with digital environments", "leaf": "Navigate digital interfaces"}], "insight": ""}, {"n": 8, "phase": "localize", "phaseLabel": "Find keep_attrs param", "headline": "Agent finds apply_ufunc's keep_attrs and plans to wire it in.", "obs": "[File: /pydata__xarray/xarray/core/computation.py (1973 lines total)]\n(1714 more lines above)\n1730:def where(cond, x, y):\n... [truncated]", "thought": "I can see that the `apply_ufunc` function has a `keep_attrs` parameter on line 819. This parameter is likely what we need to modify in the `where` function to preserve attributes.\n\nLet's go back to the `where` function and add the `keep_attrs` parameter. We'll modify the `where` function to pass `keep_attrs=True` to `apply_ufunc`.", "action": "goto 1730", "quotes": [{"quote": "the `apply_ufunc` function has a `keep_attrs` parameter", "grp": "Reasoning", "sub": "Analysing", "leaf": "Analyse source code"}, {"quote": "likely what we need to modify in the `where` function to preserve attributes", "grp": "Reasoning", "sub": "Inferring", "leaf": "Diagnose Error Cause"}, {"quote": "modify the `where` function to pass `keep_attrs=True` to `apply_ufunc`", "grp": "Reasoning", "sub": "Generating", "leaf": "Generate initial fix candidate"}], "insight": ""}, {"n": 9, "phase": "edit", "phaseLabel": "Add keep_attrs param", "headline": "Agent edits where() to add the keep_attrs parameter.", "obs": "Your proposed edit has introduced new syntax error(s). Please read this error message carefully and then retry editing the file.\n\nERRORS:\n- E999 IndentationError: unexpected indent\n... [truncated]", "thought": "Now, let's modify the `where` function to include the `keep_attrs` parameter and pass it to `apply_ufunc`. We'll edit the function to add this parameter.", "action": "edit 1730:1815\ndef where(cond, x, y, keep_attrs=True):\n...\nend_of_edit", "quotes": [{"quote": "modify the `where` function to include the `keep_attrs` parameter", "grp": "Reasoning", "sub": "Generating", "leaf": "Generate initial fix candidate"}, {"quote": "edit the function to add this parameter", "grp": "Executing", "sub": "Executing plan", "leaf": "Apply patch via edit"}], "insight": ""}, {"n": 10, "phase": "edit", "phaseLabel": "Retry edit", "headline": "Agent retries the edit after an indentation error.", "obs": "[File: /pydata__xarray/xarray/core/computation.py (1978 lines total)]\n(1679 more lines above)\n... [truncated]", "thought": "I apologize for the mistake. Let's try to edit the function again with the correct indentation and line numbers.", "action": "edit 1730:1820\ndef where(cond, x, y, keep_attrs=True):\n...\nend_of_edit", "quotes": [{"quote": "I apologize for the mistake", "grp": "Reflection", "sub": "Reflect on errors and failures", "leaf": "Detect failed action"}, {"quote": "edit the function again with the correct indentation", "grp": "Executing", "sub": "Executing plan", "leaf": "Apply patch via edit"}], "insight": ""}, {"n": 11, "phase": "verify", "phaseLabel": "Plan test update", "headline": "Agent opens the repro to add keep_attrs test cases.", "obs": "[File: /pydata__xarray/reproduce_bug.py (9 lines total)]\n1:import xarray as xr\n... [truncated]", "thought": "The changes look good. We've successfully added the `keep_attrs` parameter to the `where` function and passed it to `apply_ufunc`. Now let's update our `reproduce_bug.py` script to test if the attributes are preserved with our new implementation.", "action": "open reproduce_bug.py", "quotes": [{"quote": "The changes look good", "grp": "Evaluating", "sub": "Evaluating without ground truth", "leaf": "Provide qualitative judgement"}, {"quote": "update our `reproduce_bug.py` script to test if the attributes are preserved", "grp": "Reasoning", "sub": "Generating", "leaf": "Generate initial codes"}], "insight": ""}, {"n": 12, "phase": "verify", "phaseLabel": "Expand test cases", "headline": "Agent expands the repro to cover keep_attrs True/False.", "obs": "[File: /pydata__xarray/reproduce_bug.py (15 lines total)]\n... [truncated]", "thought": "The script looks good, but let's modify it slightly to make it more explicit about testing the new `keep_attrs` parameter. We'll add a test with `keep_attrs=True` and another with `keep_attrs=False` to ensure our changes are working as expected.", "action": "edit 1:9\nimport xarray as xr\n...\nend_of_edit", "quotes": [{"quote": "make it more explicit about testing the new `keep_attrs` parameter", "grp": "Reasoning", "sub": "Generating", "leaf": "Generate evaluations"}, {"quote": "add a test with `keep_attrs=True` and another with `keep_attrs=False`", "grp": "Reasoning", "sub": "Generating", "leaf": "Generate initial codes"}, {"quote": "to ensure our changes are working as expected", "grp": "Evaluating", "sub": "Evaluating without ground truth", "leaf": "Evaluate visual/behavioral correctness"}], "insight": ""}, {"n": 13, "phase": "verify", "phaseLabel": "Run repro (fails)", "headline": "Agent runs the expanded repro against attempt 1.", "obs": "Original DataArray attributes: {'foo': 'bar'}\nResult DataArray attributes (default): {}\nResult DataArray attributes (keep_attrs=True): {}\nResult DataArray attributes (keep_attrs=False): {}\nScript completed successfully, no errors.", "thought": "The changes look good. The script now tests the `where` function with different `keep_attrs` settings. Let's run this updated script to see if our changes to the `where` function are working as expected.", "action": "python reproduce_bug.py", "quotes": [{"quote": "The script now tests the `where` function with different `keep_attrs` settings", "grp": "Reasoning", "sub": "Analysing", "leaf": "Analyse source code"}, {"quote": "run this updated script to see if our changes to the `where` function are working", "grp": "Executing", "sub": "Executing plan", "leaf": "Run verification command"}], "insight": "The verification medium is set here and never changes: <code>python reproduce_bug.py</code>, a self-authored script. It is <code>Run verification command</code> paired with <code>Evaluating without ground truth</code> — the run's ONLY check-loop. No <code>pytest</code> / xarray gold suite is ever invoked across all 49 turns."}, {"n": 14, "phase": "localize", "phaseLabel": "Fix ineffective, re-investigate", "headline": "Agent detects the fix didn't work and reopens where().", "obs": "[File: /pydata__xarray/xarray/core/computation.py (1978 lines total)]\n... [truncated]", "thought": "It looks like our changes to the `where` function didn't have the desired effect. The attributes are still being lost in all cases, even when we explicitly set `keep_attrs=True`. \n\nLet's go back to the `where` function in `computation.py` and see if we can identify why the attributes aren't being preserved.", "action": "open xarray/core/computation.py", "quotes": [{"quote": "our changes to the `where` function didn't have the desired effect", "grp": "Reflection", "sub": "Reflect on errors and failures", "leaf": "Detect prior fix did not work"}, {"quote": "The attributes are still being lost in all cases", "grp": "Reflection", "sub": "Reflect on errors and failures", "leaf": "Detect failed action"}, {"quote": "identify why the attributes aren't being preserved", "grp": "Planning", "sub": "Modify Plan", "leaf": "Replan dynamically based on feedback"}], "insight": ""}, {"n": 15, "phase": "localize", "phaseLabel": "Navigate to where()", "headline": "Agent navigates back to the where function.", "obs": "[File: /pydata__xarray/xarray/core/computation.py (1978 lines total)]\n(1714 more lines above)\n1730:def where(cond, x, y, keep_attrs=True):\n... [truncated]", "thought": "Let's navigate to the `where` function in this file.", "action": "goto 1730", "quotes": [{"quote": "navigate to the `where` function", "grp": "Grounding", "sub": "Interact with digital environments", "leaf": "Navigate digital interfaces"}], "insight": ""}, {"n": 16, "phase": "localize", "phaseLabel": "Diagnose unused param", "headline": "Agent concludes the param isn't passed to apply_ufunc.", "obs": "Your proposed edit has introduced new syntax error(s). Please read this error message carefully and then retry editing the file.\n\nERRORS:\n- E999 IndentationError: unexpected indent\n... [truncated]", "thought": "I see the issue now. Although we've added the `keep_attrs` parameter to the `where` function, we're not actually using it in the `apply_ufunc` call. Let's modify the function to use the `keep_attrs` parameter.", "action": "edit 1815:1820\n...\nend_of_edit", "quotes": [{"quote": "I see the issue now", "grp": "Reasoning", "sub": "Inferring", "leaf": "Diagnose Error Cause"}, {"quote": "we're not actually using it in the `apply_ufunc` call", "grp": "Reasoning", "sub": "Inferring", "leaf": "Pinpoint root cause mechanism"}, {"quote": "modify the function to use the `keep_attrs` parameter", "grp": "Executing", "sub": "Executing plan", "leaf": "Apply patch via edit"}], "insight": ""}, {"n": 17, "phase": "localize", "phaseLabel": "Param already passed", "headline": "Agent realizes the param is already passed, re-checks apply_ufunc.", "obs": "Found 1 matches for \"def apply_ufunc\" in /pydata__xarray/xarray/core/computation.py:\nLine 809:def apply_ufunc(\nEnd of matches for \"def apply_ufunc\" in /pydata__xarray/xarray/core/computation.py", "thought": "I apologize for the mistake. It seems the `keep_attrs` parameter is already included in the `apply_ufunc` call. Let's double-check the implementation of `apply_ufunc` to see if it's correctly handling the `keep_attrs` parameter. We'll search for the `apply_ufunc` function in the same file.", "action": "search_file \"def apply_ufunc\" xarray/core/computation.py", "quotes": [{"quote": "I apologize for the mistake", "grp": "Reflection", "sub": "Reflect on errors and failures", "leaf": "Detect failed action"}, {"quote": "the `keep_attrs` parameter is already included in the `apply_ufunc` call", "grp": "Reasoning", "sub": "Analysing", "leaf": "Analyse source code"}, {"quote": "double-check the implementation of `apply_ufunc` to see if it's correctly handling the `keep_attrs` parameter", "grp": "Planning", "sub": "Modify Plan", "leaf": "Replan dynamically based on feedback"}], "insight": ""}, {"n": 18, "phase": "localize", "phaseLabel": "Read apply_ufunc", "headline": "Agent navigates into apply_ufunc to inspect keep_attrs handling.", "obs": "[File: /pydata__xarray/xarray/core/computation.py (1978 lines total)]\n(793 more lines above)\n809:def apply_ufunc(\n... [truncated]", "thought": "Let's take a look at the `apply_ufunc` function to see how it handles the `keep_attrs` parameter.", "action": "goto 809", "quotes": [{"quote": "take a look at the `apply_ufunc` function to see how it handles the `keep_attrs` parameter", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Read code semantics from open file"}], "insight": ""}, {"n": 19, "phase": "localize", "phaseLabel": "Hypothesize inner handling", "headline": "Agent hypothesizes the bug is inside apply_ufunc's handling.", "obs": "Found 25 matches for \"keep_attrs\" in /pydata__xarray/xarray/core/computation.py:\n... [truncated]", "thought": "After reviewing the `apply_ufunc` function, I can see that it does accept a `keep_attrs` parameter. However, the issue might be in how this parameter is being handled within the function. Let's search for where `keep_attrs` is being used within `apply_ufunc`.", "action": "search_file \"keep_attrs\" xarray/core/computation.py", "quotes": [{"quote": "it does accept a `keep_attrs` parameter", "grp": "Reasoning", "sub": "Analysing", "leaf": "Analyse source code"}, {"quote": "the issue might be in how this parameter is being handled within the function", "grp": "Reasoning", "sub": "Inferring", "leaf": "Form precursor hypothesis about cause"}, {"quote": "search for where `keep_attrs` is being used", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus"}], "insight": ""}, {"n": 20, "phase": "localize", "phaseLabel": "Navigate to logic", "headline": "Agent navigates to the keep_attrs logic block.", "obs": "[File: /pydata__xarray/xarray/core/computation.py (1978 lines total)]\n(1100 more lines above)\n1116:    if keep_attrs is None:\n... [truncated]", "thought": "From the search results, we can see that `keep_attrs` is being handled in the `apply_ufunc` function. Let's take a closer look at how it's being processed. We'll go to line 1116 where the `keep_attrs` logic starts.", "action": "goto 1116", "quotes": [{"quote": "`keep_attrs` is being handled in the `apply_ufunc` function", "grp": "Reasoning", "sub": "Analysing", "leaf": "Analyse source code"}, {"quote": "go to line 1116 where the `keep_attrs` logic starts", "grp": "Grounding", "sub": "Interact with digital environments", "leaf": "Navigate digital interfaces"}], "insight": ""}, {"n": 21, "phase": "localize", "phaseLabel": "Descend to variable ufunc", "headline": "Agent judges the logic correct and descends to apply_variable_ufunc.", "obs": "Found 1 matches for \"def apply_variable_ufunc\" in /pydata__xarray/xarray/core/computation.py:\nLine 624:def apply_variable_ufunc(\nEnd of matches for \"def apply_variable_ufunc\" in /pydata__xarray/xarray/core/computation.py", "thought": "After reviewing the `keep_attrs` handling in the `apply_ufunc` function, it appears that the logic is correct. The `keep_attrs` parameter is being processed and passed down to the appropriate functions.\n\nThe issue might be in how the attributes are being handled in the lower-level functions. Let's check the `apply_variable_ufunc` function, which is called by `apply_ufunc`. We'll search for this function in the same file.", "action": "search_file \"def apply_variable_ufunc\" xarray/core/computation.py", "quotes": [{"quote": "it appears that the logic is correct", "grp": "Evaluating", "sub": "Evaluating without ground truth", "leaf": "Evaluate internal consistency"}, {"quote": "The issue might be in how the attributes are being handled in the lower-level functions", "grp": "Reasoning", "sub": "Inferring", "leaf": "Form precursor hypothesis about cause"}, {"quote": "check the `apply_variable_ufunc` function, which is called by `apply_ufunc`", "grp": "Reasoning", "sub": "Inferring", "leaf": "Infer dataflow / control flow"}], "insight": ""}, {"n": 22, "phase": "localize", "phaseLabel": "Read variable ufunc", "headline": "Agent navigates into apply_variable_ufunc.", "obs": "[File: /pydata__xarray/xarray/core/computation.py (1978 lines total)]\n(608 more lines above)\n624:def apply_variable_ufunc(\n... [truncated]", "thought": "Let's take a look at the `apply_variable_ufunc` function to see how it handles attributes.", "action": "goto 624", "quotes": [{"quote": "take a look at the `apply_variable_ufunc` function to see how it handles attributes", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Read code semantics from open file"}], "insight": ""}, {"n": 23, "phase": "localize", "phaseLabel": "Search usage", "headline": "Agent searches for keep_attrs usage inside the function.", "obs": "Found 25 matches for \"keep_attrs\" in /pydata__xarray/xarray/core/computation.py:\n... [truncated]", "thought": "After reviewing the `apply_variable_ufunc` function, I can see that it accepts a `keep_attrs` parameter, but it's not immediately clear how it's being used. Let's search for where `keep_attrs` is being used within this function.", "action": "search_file \"keep_attrs\" xarray/core/computation.py", "quotes": [{"quote": "it accepts a `keep_attrs` parameter, but it's not immediately clear how it's being used", "grp": "Reasoning", "sub": "Analysing", "leaf": "Analyse source code"}, {"quote": "search for where `keep_attrs` is being used within this function", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus"}], "insight": ""}, {"n": 24, "phase": "localize", "phaseLabel": "Trace to merge_attrs", "headline": "Agent traces the param toward merge_attrs.", "obs": "No matches found for \"def merge_attrs\" in /pydata__xarray/xarray/core/computation.py", "thought": "It seems that the `keep_attrs` parameter is being passed down through several functions, but it's not clear where it's actually being applied. Let's check the `merge_attrs` function, which appears to be handling the attributes. We'll search for its definition.", "action": "search_file \"def merge_attrs\" xarray/core/computation.py", "quotes": [{"quote": "the `keep_attrs` parameter is being passed down through several functions", "grp": "Reasoning", "sub": "Inferring", "leaf": "Infer dataflow / control flow"}, {"quote": "check the `merge_attrs` function, which appears to be handling the attributes", "grp": "Reasoning", "sub": "Inferring", "leaf": "Form precursor hypothesis about cause"}], "insight": ""}, {"n": 25, "phase": "localize", "phaseLabel": "merge_attrs elsewhere", "headline": "Agent finds merge_attrs is defined in another module.", "obs": "Found 55 matches for \"from\" in /pydata__xarray/xarray/core/computation.py:\n... [truncated]", "thought": "I apologize for the confusion. It seems that the `merge_attrs` function is not defined in this file. It's likely defined in another file within the xarray package. Let's try to find where it's imported from.", "action": "search_file \"from\" xarray/core/computation.py", "quotes": [{"quote": "the `merge_attrs` function is not defined in this file", "grp": "Reflection", "sub": "Reflect on errors and failures", "leaf": "Detect failed action"}, {"quote": "It's likely defined in another file within the xarray package", "grp": "Reasoning", "sub": "Inferring", "leaf": "Infer structure from indirect evidence"}, {"quote": "find where it's imported from", "grp": "Planning", "sub": "Modify Plan", "leaf": "Replan dynamically based on feedback"}], "insight": ""}, {"n": 26, "phase": "localize", "phaseLabel": "Open merge.py", "headline": "Agent opens merge.py where merge_attrs is imported from.", "obs": "[File: /pydata__xarray/xarray/core/merge.py (1000 lines total)]\n... [truncated]", "thought": "I see that `merge_attrs` is imported from the `.merge` module. Let's check the `merge.py` file to see how `merge_attrs` is implemented.", "action": "open xarray/core/merge.py", "quotes": [{"quote": "`merge_attrs` is imported from the `.merge` module", "grp": "Reasoning", "sub": "Inferring", "leaf": "Infer structure from indirect evidence"}, {"quote": "check the `merge.py` file to see how `merge_attrs` is implemented", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus"}], "insight": ""}, {"n": 27, "phase": "localize", "phaseLabel": "Search merge_attrs", "headline": "Agent searches merge.py for the merge_attrs definition.", "obs": "Found 1 matches for \"def merge_attrs\" in /pydata__xarray/xarray/core/merge.py:\nLine 516:def merge_attrs(variable_attrs, combine_attrs, context=None):\nEnd of matches for \"def merge_attrs\" in /pydata__xarray/xarray/core/merge.py", "thought": "Now that we have the `merge.py` file open, let's search for the `merge_attrs` function within this file.", "action": "search_file \"def merge_attrs\" xarray/core/merge.py", "quotes": [{"quote": "search for the `merge_attrs` function within this file", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus"}], "insight": ""}, {"n": 28, "phase": "localize", "phaseLabel": "Read merge_attrs", "headline": "Agent navigates to the merge_attrs implementation.", "obs": "[File: /pydata__xarray/xarray/core/merge.py (1000 lines total)]\n(500 more lines above)\n516:def merge_attrs(variable_attrs, combine_attrs, context=None):\n... [truncated]", "thought": "Great, we've found the `merge_attrs` function. Let's take a closer look at its implementation. We'll navigate to line 516.", "action": "goto 516", "quotes": [{"quote": "we've found the `merge_attrs` function", "grp": "Evaluating", "sub": "Evaluating without ground truth", "leaf": "Evaluate intermediate results"}, {"quote": "take a closer look at its implementation", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Read code semantics from open file"}], "insight": ""}, {"n": 29, "phase": "localize", "phaseLabel": "Backtrack to apply_ufunc", "headline": "Agent judges merge_attrs fine and backtracks to apply_ufunc.", "obs": "[File: /pydata__xarray/xarray/core/computation.py (1978 lines total)]\n... [truncated]", "thought": "After reviewing the `merge_attrs` function, it appears that the function is correctly handling the `combine_attrs` parameter, which is likely related to the `keep_attrs` parameter we're interested in.\n\nThe issue might be in how the `keep_attrs` parameter is being translated to `combine_attrs` when calling `merge_attrs`. Let's go back to the `apply_ufunc` function in `computation.py` and see how it's handling `keep_attrs`.", "action": "open xarray/core/computation.py", "quotes": [{"quote": "the function is correctly handling the `combine_attrs` parameter", "grp": "Reasoning", "sub": "Analysing", "leaf": "Analyse source code"}, {"quote": "The issue might be in how the `keep_attrs` parameter is being translated to `combine_attrs`", "grp": "Reasoning", "sub": "Inferring", "leaf": "Form precursor hypothesis about cause"}, {"quote": "go back to the `apply_ufunc` function in `computation.py`", "grp": "Planning", "sub": "Modify Plan", "leaf": "Replan dynamically based on feedback"}], "insight": ""}, {"n": 30, "phase": "localize", "phaseLabel": "Re-search keep_attrs", "headline": "Agent re-searches keep_attrs usage in computation.py.", "obs": "Found 25 matches for \"keep_attrs\" in /pydata__xarray/xarray/core/computation.py:\n... [truncated]", "thought": "Now that we're back in the `computation.py` file, let's search for where `keep_attrs` is being used within the `apply_ufunc` function.", "action": "search_file \"keep_attrs\" xarray/core/computation.py", "quotes": [{"quote": "search for where `keep_attrs` is being used within the `apply_ufunc` function", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus"}], "insight": ""}, {"n": 31, "phase": "localize", "phaseLabel": "Navigate to logic", "headline": "Agent re-navigates to the keep_attrs logic block.", "obs": "[File: /pydata__xarray/xarray/core/computation.py (1978 lines total)]\n(1100 more lines above)\n1116:    if keep_attrs is None:\n... [truncated]", "thought": "From the search results, we can see that `keep_attrs` is being handled in the `apply_ufunc` function. Let's take a closer look at how it's being processed. We'll go to line 1116 where the `keep_attrs` logic starts.", "action": "goto 1116", "quotes": [{"quote": "`keep_attrs` is being handled in the `apply_ufunc` function", "grp": "Reasoning", "sub": "Analysing", "leaf": "Analyse source code"}, {"quote": "go to line 1116 where the `keep_attrs` logic starts", "grp": "Grounding", "sub": "Interact with digital environments", "leaf": "Navigate digital interfaces"}], "insight": ""}, {"n": 32, "phase": "localize", "phaseLabel": "Descend again", "headline": "Agent again judges the logic correct and descends further.", "obs": "Found 1 matches for \"def apply_variable_ufunc\" in /pydata__xarray/xarray/core/computation.py:\nLine 624:def apply_variable_ufunc(\nEnd of matches for \"def apply_variable_ufunc\" in /pydata__xarray/xarray/core/computation.py", "thought": "After reviewing the `keep_attrs` handling in the `apply_ufunc` function, it appears that the logic is correct. The `keep_attrs` parameter is being processed and passed down to the appropriate functions.\n\nThe issue might be in how the attributes are being handled in the lower-level functions. Let's check the `apply_variable_ufunc` function, which is called by `apply_ufunc`. We'll search for this function in the same file.", "action": "search_file \"def apply_variable_ufunc\" xarray/core/computation.py", "quotes": [{"quote": "it appears that the logic is correct", "grp": "Evaluating", "sub": "Evaluating without ground truth", "leaf": "Evaluate internal consistency"}, {"quote": "The issue might be in how the attributes are being handled in the lower-level functions", "grp": "Reasoning", "sub": "Inferring", "leaf": "Form precursor hypothesis about cause"}, {"quote": "check the `apply_variable_ufunc` function, which is called by `apply_ufunc`", "grp": "Reasoning", "sub": "Inferring", "leaf": "Infer dataflow / control flow"}], "insight": ""}, {"n": 33, "phase": "localize", "phaseLabel": "Read variable ufunc", "headline": "Agent navigates into apply_variable_ufunc again.", "obs": "[File: /pydata__xarray/xarray/core/computation.py (1978 lines total)]\n(608 more lines above)\n624:def apply_variable_ufunc(\n... [truncated]", "thought": "Let's take a look at the `apply_variable_ufunc` function to see how it handles attributes. We'll navigate to line 624.", "action": "goto 624", "quotes": [{"quote": "take a look at the `apply_variable_ufunc` function to see how it handles attributes", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Read code semantics from open file"}, {"quote": "navigate to line 624", "grp": "Grounding", "sub": "Interact with digital environments", "leaf": "Navigate digital interfaces"}], "insight": ""}, {"n": 34, "phase": "localize", "phaseLabel": "Search usage", "headline": "Agent searches keep_attrs usage inside the function again.", "obs": "Found 25 matches for \"keep_attrs\" in /pydata__xarray/xarray/core/computation.py:\n... [truncated]", "thought": "After reviewing the `apply_variable_ufunc` function, I can see that it accepts a `keep_attrs` parameter (line 632), but it's not immediately clear how it's being used within the function. Let's search for where `keep_attrs` is being used within this function.", "action": "search_file \"keep_attrs\" xarray/core/computation.py", "quotes": [{"quote": "it accepts a `keep_attrs` parameter (line 632), but it's not immediately clear how it's being used", "grp": "Reasoning", "sub": "Analysing", "leaf": "Analyse source code"}, {"quote": "search for where `keep_attrs` is being used", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus"}], "insight": ""}, {"n": 35, "phase": "localize", "phaseLabel": "Focus on Variable creation", "headline": "Agent narrows to where the new Variable is constructed.", "obs": "[File: /pydata__xarray/xarray/core/computation.py (1978 lines total)]\n(608 more lines above)\n624:def apply_variable_ufunc(\n... [truncated]", "thought": "From the search results, we can see that `keep_attrs` is being passed down through several functions, but it's not clear where it's actually being applied. The issue might be in how the attributes are being handled when creating the new Variable object.\n\nLet's check the part of the `apply_variable_ufunc` function where the new Variable is created. We'll go back to the start of the function and scroll down to find this part.", "action": "goto 624", "quotes": [{"quote": "`keep_attrs` is being passed down through several functions", "grp": "Reasoning", "sub": "Inferring", "leaf": "Infer dataflow / control flow"}, {"quote": "The issue might be in how the attributes are being handled when creating the new Variable object", "grp": "Reasoning", "sub": "Inferring", "leaf": "Form precursor hypothesis about cause"}, {"quote": "check the part of the `apply_variable_ufunc` function where the new Variable is created", "grp": "Planning", "sub": "Decompose task", "leaf": "Plan deeper inspection before edit"}], "insight": ""}, {"n": 36, "phase": "localize", "phaseLabel": "Search Variable(", "headline": "Agent searches for Variable() construction sites.", "obs": "Found 1 matches for \"Variable(\" in /pydata__xarray/xarray/core/computation.py:\nLine 765:        var = Variable(dims, data, fastpath=True)\nEnd of matches for \"Variable(\" in /pydata__xarray/xarray/core/computation.py", "thought": "After reviewing the `apply_variable_ufunc` function, I don't see where the new Variable is being created with the attributes. Let's search for \"Variable(\" in this file to find where new Variable objects are being created.", "action": "search_file \"Variable(\" xarray/core/computation.py", "quotes": [{"quote": "I don't see where the new Variable is being created with the attributes", "grp": "Reasoning", "sub": "Analysing", "leaf": "Analyse source code"}, {"quote": "search for \"Variable(\" in this file to find where new Variable objects are being created", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus"}], "insight": ""}, {"n": 37, "phase": "localize", "phaseLabel": "Read Variable creation", "headline": "Agent navigates to the Variable construction line.", "obs": "[File: /pydata__xarray/xarray/core/computation.py (1978 lines total)]\n(749 more lines above)\n765:        var = Variable(dims, data, fastpath=True)\n... [truncated]", "thought": "Let's take a look at the context around line 765 where the new Variable is being created. We'll navigate to that line and view the surrounding code.", "action": "goto 765", "quotes": [{"quote": "take a look at the context around line 765 where the new Variable is being created", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Read code semantics from open file"}, {"quote": "navigate to that line", "grp": "Grounding", "sub": "Interact with digital environments", "leaf": "Navigate digital interfaces"}], "insight": ""}, {"n": 38, "phase": "edit", "phaseLabel": "Fix attempt 2: Variable attrs", "headline": "Agent diagnoses the fastpath constructor and patches it.", "obs": "[File: /pydata__xarray/xarray/core/computation.py (1976 lines total)]\n(714 more lines above)\n749:    objs = _all_of_type(args, Variable)\n750:    attrs = merge_attrs(\n... [truncated]", "thought": "Now we can see where the new Variable is being created and how the attributes are being handled. The issue is in the following lines:\n\n```python\n750:    attrs = merge_attrs(\n751:        [obj.attrs for obj in objs],\n752:        combine_attrs=keep_attrs,\n753:    )\n\n...\n\n765:        var = Variable(dims, data, fastpath=True)\n...\n777:        var.attrs = attrs\n```\n\nThe `keep_attrs` parameter is being used correctly in the `merge_attrs` function call, but the resulting `attrs` are being assigned to the new Variable after it's created. This means that the `fastpath=True` argument in the Variable constructor is bypassing any attribute handling that might normally occur.\n\nTo fix this issue, we should modify the Variable creation to include the attributes. Let's edit these lines to create the Variable with the attributes in a single step.", "action": "edit 765:777\n        var = Variable(dims, data, attrs=attrs, fastpath=True)\n...\nend_of_edit", "quotes": [{"quote": "The `keep_attrs` parameter is being used correctly in the `merge_attrs` function call", "grp": "Reasoning", "sub": "Analysing", "leaf": "Analyse source code"}, {"quote": "the resulting `attrs` are being assigned to the new Variable after it's created", "grp": "Reasoning", "sub": "Inferring", "leaf": "Infer dataflow / control flow"}, {"quote": "the `fastpath=True` argument in the Variable constructor is bypassing any attribute handling", "grp": "Reasoning", "sub": "Inferring", "leaf": "Pinpoint root cause mechanism"}, {"quote": "modify the Variable creation to include the attributes", "grp": "Reasoning", "sub": "Generating", "leaf": "Generate initial fix candidate"}, {"quote": "edit these lines to create the Variable with the attributes in a single step", "grp": "Executing", "sub": "Executing plan", "leaf": "Apply patch via edit"}], "insight": "A confident but WRONG root-cause diagnosis: <code>Pinpoint root cause mechanism</code> fires on the <code>fastpath=True</code> constructor, yet T40's self-repro will still show empty attrs, proving the mechanism claim false. Because the only oracle is a self-authored script (not a gold suite pinpointing the real failing assertion), the agent's mechanism-level confidence is unchecked — the repro catches the failure but offers no guidance on where the real defect is."}, {"n": 39, "phase": "verify", "phaseLabel": "Predict fix, reopen repro", "headline": "Agent predicts the patch resolves it and reopens the repro.", "obs": "[File: /pydata__xarray/reproduce_bug.py (15 lines total)]\n... [truncated]", "thought": "The changes look good. We've modified the Variable creation to include the attributes in a single step, which should resolve the issue of attributes being lost.\n\nNow that we've made this change, let's update our `reproduce_bug.py` script to test if the attributes are now being preserved. We'll open the file and modify it to include a more comprehensive test.", "action": "open reproduce_bug.py", "quotes": [{"quote": "The changes look good", "grp": "Evaluating", "sub": "Evaluating without ground truth", "leaf": "Provide qualitative judgement"}, {"quote": "which should resolve the issue of attributes being lost", "grp": "Reasoning", "sub": "Inferring", "leaf": "Predict patch effect"}, {"quote": "test if the attributes are now being preserved", "grp": "Evaluating", "sub": "Evaluating without ground truth", "leaf": "Evaluate visual/behavioral correctness"}], "insight": ""}, {"n": 40, "phase": "verify", "phaseLabel": "Run repro (fails)", "headline": "Agent runs the repro against attempt 2.", "obs": "Original DataArray attributes: {'foo': 'bar'}\nResult DataArray attributes (default): {}\nResult DataArray attributes (keep_attrs=True): {}\nResult DataArray attributes (keep_attrs=False): {}\nScript completed successfully, no errors.", "thought": "The current script looks good for testing our changes. It covers the default behavior, explicit `keep_attrs=True`, and explicit `keep_attrs=False`. Let's run this script to see if our changes have resolved the issue.", "action": "python reproduce_bug.py", "quotes": [{"quote": "It covers the default behavior, explicit `keep_attrs=True`, and explicit `keep_attrs=False`", "grp": "Reasoning", "sub": "Analysing", "leaf": "Analyse source code"}, {"quote": "run this script to see if our changes have resolved the issue", "grp": "Executing", "sub": "Executing plan", "leaf": "Run verification command"}], "insight": ""}, {"n": 41, "phase": "localize", "phaseLabel": "Attempt 2 fails, replan", "headline": "Agent detects attempt 2 failed and reopens where().", "obs": "[File: /pydata__xarray/xarray/core/computation.py (1976 lines total)]\n... [truncated]", "thought": "It appears that our changes didn't fully resolve the issue. The attributes are still being lost in all cases. Let's investigate further by looking at the `where` function implementation again.", "action": "open xarray/core/computation.py", "quotes": [{"quote": "our changes didn't fully resolve the issue", "grp": "Reflection", "sub": "Reflect on errors and failures", "leaf": "Detect prior fix did not work"}, {"quote": "The attributes are still being lost in all cases", "grp": "Reflection", "sub": "Reflect on errors and failures", "leaf": "Detect failed action"}, {"quote": "investigate further by looking at the `where` function implementation again", "grp": "Planning", "sub": "Modify Plan", "leaf": "Replan dynamically based on feedback"}], "insight": ""}, {"n": 42, "phase": "localize", "phaseLabel": "Search where()", "headline": "Agent searches for the where function again.", "obs": "Found 1 matches for \"def where\" in /pydata__xarray/xarray/core/computation.py:\nLine 1728:def where(cond, x, y, keep_attrs=True):\nEnd of matches for \"def where\" in /pydata__xarray/xarray/core/computation.py", "thought": "Let's search for the `where` function in this file to review its implementation.", "action": "search_file \"def where\" xarray/core/computation.py", "quotes": [{"quote": "search for the `where` function in this file to review its implementation", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus"}], "insight": ""}, {"n": 43, "phase": "localize", "phaseLabel": "Navigate to where()", "headline": "Agent navigates to the where function body.", "obs": "[File: /pydata__xarray/xarray/core/computation.py (1976 lines total)]\n(1712 more lines above)\n1728:def where(cond, x, y, keep_attrs=True):\n... [truncated]", "thought": "Let's take a closer look at the `where` function implementation. We'll navigate to line 1728.", "action": "goto 1728", "quotes": [{"quote": "take a closer look at the `where` function implementation", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Read code semantics from open file"}, {"quote": "navigate to line 1728", "grp": "Grounding", "sub": "Interact with digital environments", "leaf": "Navigate digital interfaces"}], "insight": ""}, {"n": 44, "phase": "edit", "phaseLabel": "Fix attempt 3: manual attrs", "headline": "Agent switches to manually copying attrs inside where().", "obs": "[File: /pydata__xarray/xarray/core/computation.py (1983 lines total)]\n(1677 more lines above)\n... [truncated]", "thought": "Now that we can see the `where` function implementation, let's focus on how it's using `apply_ufunc`. The `keep_attrs` parameter is being passed to `apply_ufunc`, but it might not be propagating correctly. Let's modify the `where` function to explicitly handle the attributes.\n\nWe'll edit the function to manually handle the attributes based on the `keep_attrs` parameter.", "action": "edit 1728:1820\ndef where(cond, x, y, keep_attrs=True):\n...\n    if keep_attrs:\n        if hasattr(x, 'attrs'):\n            result.attrs.update(x.attrs)\n        elif hasattr(y, 'attrs'):\n            result.attrs.update(y.attrs)\n    \n    return result\nend_of_edit", "quotes": [{"quote": "The `keep_attrs` parameter is being passed to `apply_ufunc`, but it might not be propagating correctly", "grp": "Reasoning", "sub": "Inferring", "leaf": "Diagnose Error Cause"}, {"quote": "modify the `where` function to explicitly handle the attributes", "grp": "Reasoning", "sub": "Generating", "leaf": "Generate initial fix candidate"}, {"quote": "manually handle the attributes based on the `keep_attrs` parameter", "grp": "Planning", "sub": "Select Strategy", "leaf": "Switch to fallback strategy"}], "insight": ""}, {"n": 45, "phase": "edit", "phaseLabel": "Retry edit", "headline": "Agent retries the where() edit after an indentation error.", "obs": "[File: /pydata__xarray/xarray/core/computation.py (1983 lines total)]\n... [truncated]", "thought": "I apologize for the mistake in my previous edit. Let's try to edit the `where` function again with the correct indentation and line numbers.", "action": "edit 1728:1823\ndef where(cond, x, y, keep_attrs=True):\n...\nend_of_edit", "quotes": [{"quote": "I apologize for the mistake in my previous edit", "grp": "Reflection", "sub": "Reflect on errors and failures", "leaf": "Detect failed action"}, {"quote": "edit the `where` function again with the correct indentation", "grp": "Executing", "sub": "Executing plan", "leaf": "Apply patch via edit"}], "insight": ""}, {"n": 46, "phase": "verify", "phaseLabel": "Reopen repro", "headline": "Agent reopens the repro to test attempt 3.", "obs": "[File: /pydata__xarray/reproduce_bug.py (15 lines total)]\n... [truncated]", "thought": "The changes look good. We've successfully modified the `where` function to explicitly handle the attributes based on the `keep_attrs` parameter. Now let's update our `reproduce_bug.py` script to test if the attributes are now being preserved. We'll open the file and modify it to include a more comprehensive test.", "action": "open reproduce_bug.py", "quotes": [{"quote": "The changes look good", "grp": "Evaluating", "sub": "Evaluating without ground truth", "leaf": "Provide qualitative judgement"}, {"quote": "modified the `where` function to explicitly handle the attributes based on the `keep_attrs` parameter", "grp": "Reasoning", "sub": "Analysing", "leaf": "Analyse source code"}, {"quote": "test if the attributes are now being preserved", "grp": "Evaluating", "sub": "Evaluating without ground truth", "leaf": "Evaluate visual/behavioral correctness"}], "insight": ""}, {"n": 47, "phase": "verify", "phaseLabel": "Run repro (passes)", "headline": "Agent runs the repro; attributes are finally preserved.", "obs": "Original DataArray attributes: {'foo': 'bar'}\nResult DataArray attributes (default): {'foo': 'bar'}\nResult DataArray attributes (keep_attrs=True): {'foo': 'bar'}\nResult DataArray attributes (keep_attrs=False): {}\nScript completed successfully, no errors.", "thought": "The current script looks good for testing our changes. It covers the default behavior, explicit `keep_attrs=True`, and explicit `keep_attrs=False`. Let's run this script to see if our changes have resolved the issue.", "action": "python reproduce_bug.py", "quotes": [{"quote": "It covers the default behavior, explicit `keep_attrs=True`, and explicit `keep_attrs=False`", "grp": "Reasoning", "sub": "Analysing", "leaf": "Analyse source code"}, {"quote": "run this script to see if our changes have resolved the issue", "grp": "Executing", "sub": "Executing plan", "leaf": "Run verification command"}], "insight": "THE decisive verification of the run — and it is NOT a gold check. \"Run this script\" means <code>python reproduce_bug.py</code>, the agent's own file, and the pass is read off its print output (<code>Run verification command</code> + <code>Evaluating without ground truth</code>). The taxonomy separates this lucky success from a verified one precisely here: had this been xarray's <code>test_computation.py</code>, the tag would be <code>Evaluating with gold › Confirm actual == expected</code>; because it is a self-authored repro, it stays <code>without ground truth</code>. Same syntactic \"ran something and it passed,\" different semantic weight."}, {"n": 48, "phase": "submit", "phaseLabel": "Conclude success, submit", "headline": "Agent concludes success from the repro and submits.", "obs": "diff --git a/reproduce_bug.py b/reproduce_bug.py\nnew file mode 100644\n... [truncated]\ndiff --git a/xarray/core/computation.py b/xarray/core/computation.py\n@@ -762,7 +762,7 @@ def apply_variable_ufunc(\n-        var = Variable(dims, data, fastpath=True)\n+        var = Variable(dims, data, attrs=attrs, fastpath=True)\n... [truncated]", "thought": "Great news! Our changes have successfully resolved the issue. Let's break down the results:\n\n1. The original DataArray has the attribute `{'foo': 'bar'}` as expected.\n2. The default behavior (without specifying `keep_attrs`) now preserves the attributes.\n3. When `keep_attrs=True` is explicitly set, the attributes are preserved.\n4. When `keep_attrs=False` is explicitly set, the attributes are not preserved.\n\nThis behavior matches what we intended to achieve. The `where` function now correctly handles attributes based on the `keep_attrs` parameter.\n\nNow that we've fixed the issue and verified it with our test script, we can submit our changes. Let's use the `submit` command to do so.", "action": "submit", "quotes": [{"quote": "Our changes have successfully resolved the issue", "grp": "Evaluating", "sub": "Evaluating without ground truth", "leaf": "Evaluate visual/behavioral correctness"}, {"quote": "This behavior matches what we intended to achieve", "grp": "Reasoning", "sub": "Comparing & Ranking", "leaf": "Match observation against spec"}, {"quote": "verified it with our test script", "grp": "Evaluating", "sub": "Evaluating without ground truth", "leaf": "Evaluate visual/behavioral correctness"}, {"quote": "we can submit our changes", "grp": "Reasoning", "sub": "Inferring", "leaf": "Conclude success from evidence"}, {"quote": "use the `submit` command to do so", "grp": "Executing", "sub": "Terminating", "leaf": "Terminate rollout with submission"}], "insight": "SUBMIT-BACKED-BY-SELF-SCRIPT (flavor A): the concluding <code>Conclude success from evidence</code> → <code>Terminate rollout with submission</code> rests entirely on \"verified it with our test script\" — the agent's own <code>reproduce_bug.py</code>, never xarray's gold suite. The tag is <code>Evaluating without ground truth</code>, so this is a LUCKY success: the patch happens to be correct and passes the hidden tests, but the trustworthy-looking tail was built on a self-authored repro, not a real acceptance check. This is exactly the syntactic-vs-semantic gap — \"ran tests and they passed\" reads identically to the verified django control, yet the codebook marks it as unverified."}];
+const segments = [{"start": 0, "end": 2, "title": "Reproduce the bug", "summary": "Write and run a self-authored <code>reproduce_bug.py</code> (T0–T2); output confirms <code>xr.where</code> returns an empty <code>attrs</code> dict."}, {"start": 3, "end": 8, "title": "Localize where() and apply_ufunc", "summary": "Open <code>computation.py</code>, find <code>where()</code>, see it calls <code>apply_ufunc</code>, and discover <code>apply_ufunc</code> already exposes a <code>keep_attrs</code> parameter (T3–T8)."}, {"start": 9, "end": 13, "title": "Fix attempt 1: add keep_attrs param", "summary": "Add <code>keep_attrs=True</code> to <code>where()</code> and pass it through (T9–T10), expand the repro to test all three settings (T11–T12), and run it — attrs still lost in every case (T13)."}, {"start": 14, "end": 37, "title": "Deep dataflow trace to root cause", "summary": "A 24-turn hunt threading <code>where</code> → <code>apply_ufunc</code> → <code>apply_variable_ufunc</code> → <code>merge_attrs</code> (in <code>merge.py</code>) and back, chasing where <code>keep_attrs</code> stops being applied (T14–T37)."}, {"start": 38, "end": 40, "title": "Fix attempt 2: Variable constructor", "summary": "Diagnose the <code>fastpath=True</code> constructor as the culprit and pass <code>attrs=attrs</code> into <code>Variable(...)</code> (T38); repro still shows empty attrs (T40), so the diagnosis was wrong."}, {"start": 41, "end": 47, "title": "Fix attempt 3: manual attrs in where()", "summary": "Abandon parameter-propagation, re-open <code>where()</code> (T41–T43), and manually copy attrs with <code>result.attrs.update(x.attrs)</code> gated on <code>keep_attrs</code> (T44–T45); the repro finally passes (T47)."}, {"start": 48, "end": 48, "title": "Submit on self-repro", "summary": "Conclude success from the repro's print output — \"verified it with our test script\" — and submit. No gold test was ever run. Outcome: <strong>resolved</strong> (a lucky success)."}];
+const QUOTE_TARGET = "thought"; // "thought" | "action"
+
+// Actor icons — Google Material Design icons (Apache 2.0):
+// "person" (social) for human turns, "smart_toy" (hardware) for agent turns.
+const ICON_HUMAN = '<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24" fill="currentColor"><path d="M0 0h24v24H0z" fill="none"/><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>';
+const ICON_AGENT = '<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24" fill="currentColor"><g><rect fill="none" height="24" width="24" y="0"/></g><g><path d="M20,9V7c0-1.1-0.9-2-2-2h-3c0-1.66-1.34-3-3-3S9,3.34,9,5H6C4.9,5,4,5.9,4,7v2c-1.66,0-3,1.34-3,3c0,1.66,1.34,3,3,3v4 c0,1.1,0.9,2,2,2h12c1.1,0,2-0.9,2-2v-4c1.66,0,3-1.34,3-3C23,10.34,21.66,9,20,9z M7.5,11.5C7.5,10.67,8.17,10,9,10 s1.5,0.67,1.5,1.5S9.83,13,9,13S7.5,12.33,7.5,11.5z M16,17H8v-2h8V17z M15,13c-0.83,0-1.5-0.67-1.5-1.5S14.17,10,15,10 s1.5,0.67,1.5,1.5S15.83,13,15,13z"/></g></svg>';
+
+function buildCodebook() {
+  const cb = {};
+  turns.forEach(t => {
+    t.quotes.forEach(q => {
+      if (!cb[q.grp]) cb[q.grp] = { items: {}, total: 0 };
+      const key = q.sub + ' › ' + q.leaf;
+      if (!cb[q.grp].items[key]) cb[q.grp].items[key] = { sub: q.sub, leaf: q.leaf, turns: [] };
+      cb[q.grp].items[key].turns.push(t.n);
+      cb[q.grp].total += 1;
+    });
+  });
+  return cb;
+}
+
+const codebook = buildCodebook();
+// Optional behavior-pattern layer: key = "`${sub} › ${leaf}`", value = {t, status, cause, advice}.
+// Injected from the annotated JSON's `patterns` field; {} when absent (nothing highlights).
+const PATTERNS = {};
+const ANOM_MARK = {lo:'⚠', hi:'▲', mid:'◆', ok:'✓'};
+
+const grpDisplayName = {};
+function displayGrp(g) { return grpDisplayName[g] || g; }
+
+function escapeHTML(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function highlightAction(s) {
+  let out = escapeHTML(s);
+  out = out.replace(/^(edit|create|open|search_dir|search_file|find_file|goto|scroll_down|scroll_up|submit|rm|pylint|python|pytest|cat|ls|cd|grep|sed|find|end_of_edit)(\b)/gm, '<span class="kw">$1</span>$2');
+  out = out.replace(/(#[^\n]*)/g, '<span class="cmt">$1</span>');
+  return out;
+}
+
+function renderThoughtWithQuotes(thought, quotes, turnNum, allQuotes = quotes) {
+  const positioned = quotes.map((q, idx) => {
+    const pos = thought.indexOf(q.quote);
+    return { ...q, idx: allQuotes.indexOf(q), pos };
+  }).filter(q => q.pos !== -1).sort((a, b) => a.pos - b.pos);
+
+  const filtered = [];
+  let lastEnd = -1;
+  for (const q of positioned) {
+    if (q.pos >= lastEnd) {
+      filtered.push(q);
+      lastEnd = q.pos + q.quote.length;
+    }
+  }
+
+  let out = '';
+  let cursor = 0;
+  for (const q of filtered) {
+    out += escapeHTML(thought.slice(cursor, q.pos));
+    out += `<span class="qmark" data-turn="${turnNum}" data-qidx="${q.idx}" data-grp="${q.grp}" data-key="${q.sub} › ${q.leaf}" style="--qcolor: var(--grp-${q.grp}); --qbg: var(--grp-${q.grp}-bg);">${escapeHTML(q.quote)}<sup>${q.idx + 1}</sup></span>`;
+    cursor = q.pos + q.quote.length;
+  }
+  out += escapeHTML(thought.slice(cursor));
+  return out;
+}
+
+function renderTurns() {
+  const container = document.getElementById('turns-container');
+  container.innerHTML = turns.map(t => {
+    // Human interaction events render as distinct verbatim-prompt cards.
+    if (t.kind === 'interaction') {
+      const intHeadline = t.headline || `${t.actor === 'human' ? 'Human' : escapeHTML(t.actor)} prompt`;
+      return `
+      <div class="turn interaction" data-turn="${t.id}">
+        <div class="interaction-header">
+          <span class="actor-icon actor-human" title="Human">${ICON_HUMAN}</span>
+          <div class="int-num"><small>prompt</small>${t.id}</div>
+          <div class="int-title">${escapeHTML(intHeadline)}</div>
+          ${t.label ? `<span class="int-label">${escapeHTML(t.label)}</span>` : ''}
+          <span class="turn-chevron">▶</span>
+        </div>
+        <div class="turn-body">
+          <div class="interaction-text">${escapeHTML(t.text)}</div>
+        </div>
+      </div>`;
+    }
+    const annotCount = t.quotes.length;
+    const annotRows = t.quotes.map((q, idx) => `
+      <div class="annot-row" data-turn="${t.n}" data-qidx="${idx}" data-grp="${q.grp}" data-key="${q.sub} › ${q.leaf}" style="--qcolor: var(--grp-${q.grp}); --qbg: var(--grp-${q.grp}-bg);">
+        <div class="annot-quote"><span class="qnum">${idx + 1}</span>${escapeHTML(q.quote)}</div>
+        <div class="annot-arrow">→</div>
+        <div class="annot-tag"><span class="annot-grp">${displayGrp(q.grp)}</span><span class="annot-sep">›</span>${q.sub}<span class="annot-sep">›</span><span class="annot-leaf">${q.leaf}</span></div>
+      </div>
+    `).join('');
+
+    let thoughtBlock, actionBlock, thoughtAnnotBlock = '', actionAnnotBlock = '', annotBlock = '';
+    if (QUOTE_TARGET === "action") {
+      // Action surface is the host: quote highlights live in the <code> action block.
+      // Thought becomes plain context.
+      const actionHTML = renderThoughtWithQuotes(t.action, t.quotes, t.n);
+      thoughtBlock = `
+        <div class="oat-block oat-thought">
+          <span class="lbl">Thought <span class="small">context · not annotated</span></span>
+          <div class="thought-text">${escapeHTML(t.thought)}</div>
+        </div>`;
+      actionBlock = `
+        <div class="oat-block oat-action">
+          <span class="lbl">Action <span class="small">verbatim · ${annotCount} annotation${annotCount === 1 ? '' : 's'}</span></span>
+          <code class="content">${actionHTML}</code>
+        </div>`;
+      annotBlock = annotCount > 0 ? `
+        <div class="annotations">
+          <div class="annotations-header">Quote-grounded annotations</div>
+          ${annotRows}
+        </div>` : '';
+    } else if (QUOTE_TARGET === "both") {
+      // Dual annotation: each quote carries its own target ("thought" | "action").
+      // Render both surfaces with their respective highlights, and put a small
+      // annotation table under each surface (so the reader can scan the surface,
+      // then immediately see what was tagged on it).
+      const thoughtQuotes = t.quotes.filter(q => (q.target || 'action') === 'thought');
+      const actionQuotes = t.quotes.filter(q => (q.target || 'action') === 'action');
+      const thoughtHTML = renderThoughtWithQuotes(t.thought, thoughtQuotes, t.n, t.quotes);
+      const actionHTML = renderThoughtWithQuotes(t.action, actionQuotes, t.n, t.quotes);
+      const tCount = thoughtQuotes.length;
+      const aCount = actionQuotes.length;
+      thoughtBlock = `
+        <div class="oat-block oat-thought">
+          <span class="lbl">Thought <span class="small">verbatim · ${tCount} meta annotation${tCount === 1 ? '' : 's'}</span></span>
+          <div class="thought-text">${thoughtHTML}</div>
+        </div>`;
+      actionBlock = `
+        <div class="oat-block oat-action">
+          <span class="lbl">Action <span class="small">verbatim · ${aCount} surface annotation${aCount === 1 ? '' : 's'}</span></span>
+          <code class="content">${actionHTML}</code>
+        </div>`;
+      // Two sub-tables, each grouping the rows for its host surface.
+      const buildRows = (quotes) => quotes.map((q) => {
+        const idx = t.quotes.indexOf(q);
+        return `
+          <div class="annot-row" data-turn="${t.n}" data-qidx="${idx}" data-grp="${q.grp}" data-key="${q.sub} › ${q.leaf}" style="--qcolor: var(--grp-${q.grp}); --qbg: var(--grp-${q.grp}-bg);">
+            <div class="annot-quote"><span class="qnum">${idx + 1}</span>${escapeHTML(q.quote)}</div>
+            <div class="annot-arrow">→</div>
+            <div class="annot-tag"><span class="annot-grp">${displayGrp(q.grp)}</span><span class="annot-sep">›</span>${q.sub}<span class="annot-sep">›</span><span class="annot-leaf">${q.leaf}</span></div>
+          </div>`;
+      }).join('');
+      thoughtAnnotBlock = tCount > 0 ? `
+        <div class="annotations">
+          <div class="annotations-header">Thought · meta-move annotations</div>
+          ${buildRows(thoughtQuotes)}
+        </div>` : '';
+      actionAnnotBlock = aCount > 0 ? `
+        <div class="annotations">
+          <div class="annotations-header">Action · surface annotations</div>
+          ${buildRows(actionQuotes)}
+        </div>` : '';
+    } else {
+      // Default: thought is the host (SWE-agent style).
+      const thoughtHTML = renderThoughtWithQuotes(t.thought, t.quotes, t.n);
+      thoughtBlock = `
+        <div class="oat-block oat-thought">
+          <span class="lbl">Thought <span class="small">verbatim · ${annotCount} annotation${annotCount === 1 ? '' : 's'}</span></span>
+          <div class="thought-text">${thoughtHTML}</div>
+        </div>`;
+      actionBlock = `
+        <div class="oat-block oat-action">
+          <span class="lbl">Action</span>
+          <code class="content">${highlightAction(t.action)}</code>
+        </div>`;
+      annotBlock = annotCount > 0 ? `
+        <div class="annotations">
+          <div class="annotations-header">Quote-grounded annotations</div>
+          ${annotRows}
+        </div>` : '';
+    }
+
+    // Layout per mode:
+    //   action mode  : Thought (context) → Action (highlighted) → annot table
+    //   both mode    : Thought (highlighted) → thought-table → Action (highlighted) → action-table
+    //   thought mode : Thought (highlighted) → annot table → Action (plain code)
+    let body;
+    if (QUOTE_TARGET === "action") {
+      body = `${thoughtBlock}${actionBlock}${annotBlock}`;
+    } else if (QUOTE_TARGET === "both") {
+      body = `${thoughtBlock}${thoughtAnnotBlock}${actionBlock}${actionAnnotBlock}`;
+    } else {
+      body = `${thoughtBlock}${annotBlock}${actionBlock}`;
+    }
+
+    const obsBlock = t.obs ? `
+        <div class="oat-block oat-obs">
+          <span class="lbl">Observation</span>
+          <div class="content">${escapeHTML(t.obs)}</div>
+        </div>` : '';
+    return `
+      <div class="turn" data-turn="${t.n}">
+        <div class="turn-header">
+          <span class="actor-icon actor-agent" title="Agent">${ICON_AGENT}</span>
+          <div class="turn-num"><small>turn</small>${String(t.n).padStart(2,'0')}</div>
+          <div class="turn-tag-line">${escapeHTML(t.headline || '')}</div>
+          <div class="turn-phase phase-${t.phase || 'other'}">${t.phaseLabel || 'Step'}</div>
+          <span class="turn-chevron">▶</span>
+        </div>
+        <div class="turn-body">
+          ${obsBlock}
+          ${body}
+          ${t.insight ? `<div class="insight">${t.insight}</div>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderSignature() {
+  // Build the codebook-group signature for the right panel.
+  // For each turn, list the groups of its quotes in firing order; show both a
+  // copy-pasteable flat block and a clickable per-turn row list. Sessions
+  // restarts are auto-detected as turns whose verbatim thought equals an
+  // earlier turn's thought, and shown as a `↺` divider.
+  const container = document.getElementById('signature-container');
+  if (!container) return;
+
+  // Detect restart points: turn n is a restart if t.thought has appeared earlier.
+  const seenThoughts = new Map(); // thought-text -> first turn index
+  const restartAtTurnN = new Set();
+  turns.forEach((t, i) => {
+    if (t.kind === 'interaction') return;
+    if (t.thought && seenThoughts.has(t.thought)) {
+      restartAtTurnN.add(t.n);
+    } else if (t.thought) {
+      seenThoughts.set(t.thought, i);
+    }
+  });
+
+  const pad2 = (n) => String(n).padStart(2, '0');
+
+  // Index segments by their `start` turn so we can interleave segment
+  // summaries both into the flat copy-paste block (as plain-text headers)
+  // and above the first row of each segment in the clickable list.
+  const segByStart = new Map();
+  (segments || []).forEach((s, i) => {
+    segByStart.set(s.start, { ...s, _idx: i + 1 });
+  });
+
+  // Strip inline HTML so segment summaries render cleanly inside the
+  // <pre> copy-paste block.  We unescape a small set of named entities
+  // (mdash/ndash/strong tags etc.) and drop everything else.
+  const stripHTML = (s) => {
+    if (!s) return '';
+    return s
+      .replace(/<[^>]+>/g, '')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&mdash;/g, '—')
+      .replace(/&ndash;/g, '–')
+      .replace(/&rarr;/g, '→')
+      .replace(/&middot;/g, '·')
+      .replace(/&nbsp;/g, ' ');
+  };
+
+  // Word-wrap a paragraph to ~78 cols so it copy-pastes cleanly into
+  // notebooks / chat panes without horizontal scrolling.
+  const wrap = (text, width = 78) => {
+    const words = text.split(/\s+/);
+    const out = [];
+    let line = '';
+    for (const w of words) {
+      if (line.length === 0) { line = w; continue; }
+      if (line.length + 1 + w.length > width) { out.push(line); line = w; }
+      else line += ' ' + w;
+    }
+    if (line) out.push(line);
+    return out.join('\n');
+  };
+
+  // Flat copy-pasteable signature block. Each segment gets a plain-text
+  // header ("=== SEQ 01 · T01–T05 · Title ===" + wrapped summary), then
+  // its turns are listed `T01 = [Group › Sub › Leaf, ...]` so the full
+  // codebook triple plus narrative context survive a copy/paste.
+  // A segment whose start turn directly follows an interaction should open
+  // BEFORE that interaction (the human prompt is what opens the cycle), so
+  // look ahead from interaction entries and mark consumed segments.
+  const segEmitted = new Set();
+  const emitSegFlat = (seg, i) => {
+    if (segEmitted.has(seg._idx)) return;
+    segEmitted.add(seg._idx);
+    if (i > 0) flatLines.push('');  // blank line before each segment except the first
+    const titleStr = stripHTML(seg.title || '');
+    flatLines.push(`=== SEQ ${String(seg._idx).padStart(2,'0')} · T${pad2(seg.start)}–T${pad2(seg.end)}${titleStr ? ' · ' + titleStr : ''} ===`);
+    if (seg.summary) {
+      flatLines.push(wrap(stripHTML(seg.summary)));
+    }
+    flatLines.push('');  // blank line between header and first turn
+  };
+  const flatLines = [];
+  turns.forEach((t, i) => {
+    if (t.kind === 'interaction') {
+      const nxt = turns[i + 1];
+      const nxtSeg = nxt && nxt.kind !== 'interaction' ? segByStart.get(nxt.n) : null;
+      if (nxtSeg) emitSegFlat(nxtSeg, i);
+      const txt = t.text.replace(/\s+/g, ' ');
+      flatLines.push(`${t.id} ▸ HUMAN${t.label ? ' (' + t.label + ')' : ''}: ${txt.length > 64 ? txt.slice(0, 64) + '…' : txt}`);
+      return;
+    }
+    const seg = segByStart.get(t.n);
+    if (seg) emitSegFlat(seg, i);
+    if (restartAtTurnN.has(t.n)) flatLines.push('↺');
+    const tags = t.quotes.map(q => `${displayGrp(q.grp)} › ${q.sub} › ${q.leaf}`);
+    flatLines.push(`T${pad2(t.n)} = [${tags.join(', ')}]`);
+  });
+  const flatStr = flatLines.join('\n');
+
+  // Per-turn rows.
+  // Chips show the full Group › Sub › Leaf triple, colored by group. Group
+  // is a small uppercase tag; sub is the dominant text; leaf trails in a
+  // muted italic. Full triple is also in the tooltip for hover affordance.
+  const segRowEmitted = new Set();
+  const segCardHTML = (seg) => {
+    if (!seg || segRowEmitted.has(seg._idx)) return '';
+    segRowEmitted.add(seg._idx);
+    return `
+      <div class="sig-segment">
+        <div class="sig-segment-tag">SEQ ${String(seg._idx).padStart(2,'0')} · T${pad2(seg.start)}–T${pad2(seg.end)}</div>
+        ${seg.title ? `<div class="sig-segment-title">${seg.title}</div>` : ''}
+        ${seg.summary ? `<div class="sig-segment-body">${seg.summary}</div>` : ''}
+      </div>
+    `;
+  };
+  const rowsHTML = turns.map((t, i) => {
+    if (t.kind === 'interaction') {
+      const nxt = turns[i + 1];
+      const nxtSeg = nxt && nxt.kind !== 'interaction' ? segByStart.get(nxt.n) : null;
+      const txt = t.text.replace(/\s+/g, ' ');
+      const short = txt.length > 56 ? txt.slice(0, 56) + '…' : txt;
+      const tipI = `${t.id} · human prompt${t.label ? ' · ' + t.label : ''}`;
+      return segCardHTML(nxtSeg) + `
+      <button class="sig-row sig-interaction" data-turn="${t.id}" title="${escapeHTML(tipI)}">
+        <span class="sig-num sig-num-h">${t.id}</span>
+        <span class="sig-int-text">${ICON_HUMAN}${escapeHTML(short)}</span>
+      </button>
+    `;
+    }
+    const segHTML = segCardHTML(segByStart.get(t.n));
+    const restartHTML = restartAtTurnN.has(t.n)
+      ? '<div class="sig-restart-row" title="Session restart — Planner thought matches an earlier turn verbatim"><span class="sig-restart-glyph">↺</span><span class="sig-restart-text">session restart · thought matches an earlier turn verbatim</span></div>'
+      : '';
+    const chipsHTML = t.quotes.length === 0
+      ? '<span class="sig-chip-empty">∅</span>'
+      : t.quotes.map(q => {
+          const _p = PATTERNS[q.sub + ' › ' + q.leaf];
+          const baseTip = `${displayGrp(q.grp)} › ${q.sub} › ${q.leaf}`;
+          const _cls = _p ? ` sig-chip-anom sig-chip-anom-${_p.t}` : '';
+          const _flag = _p ? `<span class="sig-chip-flag sig-chip-flag-${_p.t}">${ANOM_MARK[_p.t]}</span>` : '';
+          const _attr = _p ? `data-anom-key="${escapeHTML(q.sub + ' › ' + q.leaf)}"` : `title="${escapeHTML(baseTip)}"`;
+          return `<span class="sig-chip grp-${q.grp}${_cls}" ${_attr}><span class="sig-chip-grp">${displayGrp(q.grp)}</span><span class="sig-chip-sub">${escapeHTML(q.sub)}</span><span class="sig-chip-sep">›</span><span class="sig-chip-leaf">${escapeHTML(q.leaf)}</span>${_flag}</span>`;
+        }).join('');
+    const flag = (t.phase === 'submit') ? '<span class="sig-flag">‡</span>' : '';
+    const headline = (t.headline || '').replace(/"/g, '&quot;');
+    const tip = `T${pad2(t.n)} · ${t.phaseLabel} · ${headline}`;
+    return segHTML + restartHTML + `
+      <button class="sig-row" data-turn="${t.n}" title="${tip}">
+        <span class="sig-num">T${pad2(t.n)}${flag}</span>
+        <span class="sig-chips">${chipsHTML}</span>
+      </button>
+    `;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="signature-section">
+      <div class="sig-section-title">Trajectory signature</div>
+      <div class="sig-section-sub">One row per step, listing its tags in the order they appear. Amber rows are the human speaking. Click any row to jump to that step.</div>
+      <pre class="sig-flat" title="copy-paste signature">${escapeHTML(flatStr)}</pre>
+      <div class="sig-rows">${rowsHTML}</div>
+    </div>
+  `;
+}
+
+function renderCodebook() {
+  const container = document.getElementById('codebook-container');
+  const sorted = Object.entries(codebook).sort((a,b) => b[1].total - a[1].total);
+  if (sorted.length === 0) { container.innerHTML = '<em style="color: var(--ink-mute)">No annotations.</em>'; return; }
+  const maxCount = Math.max(...sorted.map(([,g]) => g.total));
+
+  const legend = Object.keys(PATTERNS).length
+    ? '<div class="cb-anom-legend"><strong>标注旗标:</strong> <span style="color:#16a34a">✓ 成功模式(做得好)</span> · ⚠ 缺失 · ▲ 冗余 · ◆ 时序/触发/沉淀错位 — 悬浮任意旗标 leaf 查看「模式类型 / 诊断原因 / 建议」</div>'
+    : '';
+  container.innerHTML = legend + sorted.map(([grpName, grp]) => {
+    const pct = (grp.total / maxCount) * 100;
+    const items = Object.values(grp.items).sort((a,b) => b.turns.length - a.turns.length);
+    return `
+      <div class="cb-group" data-group="${grpName}" style="--qcolor: var(--grp-${grpName}); --qbg: var(--grp-${grpName}-bg);">
+        <div class="cb-group-header">
+          <div class="cb-group-name">${displayGrp(grpName)}</div>
+          <div class="cb-count">${grp.total}</div>
+        </div>
+        <div class="cb-bar"><div class="cb-bar-fill" style="width: ${pct}%; background: var(--grp-${grpName});"></div></div>
+        <div class="cb-items">
+          ${items.map(item => {
+            const _p = PATTERNS[item.sub + ' › ' + item.leaf];
+            const _cls = _p ? ' cb-anom cb-anom-' + _p.t : '';
+            const _attr = _p ? ` data-anom-key="${item.sub} › ${item.leaf}"` : '';
+            const _badge = _p ? ` <span class="cb-anom-badge cb-anom-b-${_p.t}">${ANOM_MARK[_p.t]}</span>` : '';
+            return `
+            <div class="cb-item${_cls}" data-grp="${grpName}" data-key="${item.sub} › ${item.leaf}" data-turns="${item.turns.join(',')}" style="--qcolor: var(--grp-${grpName}); --qbg: var(--grp-${grpName}-bg);"${_attr}>
+              <span class="cb-item-text">${item.sub} <span style="opacity:0.5">›</span> ${item.leaf}${_badge}</span>
+              <span class="turn-refs">[${item.turns.map(n => 'T'+n).join(',')}]</span>
+            </div>
+          `;}).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function markPieAnomalies() {
+  const svgns = 'http://www.w3.org/2000/svg';
+  const byGrp = {};
+  Object.entries(codebook).forEach(([g, gd]) => {
+    Object.values(gd.items).forEach(it => {
+      const p = PATTERNS[it.sub + ' › ' + it.leaf];
+      if (p && p.t !== 'ok') (byGrp[g] = byGrp[g] || []).push(p);
+    });
+  });
+  Object.entries(byGrp).forEach(([g, list]) => {
+    const node = document.querySelector('.pie-slice[data-grp="' + g + '"]');
+    if (!node) return;
+    const label = node.querySelector('text');
+    if (!label) return;
+    const name = label.textContent;
+    label.textContent = '';
+    const ts = document.createElementNS(svgns, 'tspan');
+    ts.setAttribute('fill', '#e11d48'); ts.setAttribute('font-weight', '700');
+    ts.textContent = '⚠' + list.length + ' ';
+    const ts2 = document.createElementNS(svgns, 'tspan');
+    ts2.textContent = name;
+    label.appendChild(ts); label.appendChild(ts2);
+    const tt = document.createElementNS(svgns, 'title');
+    tt.textContent = g + ' — ' + list.length + ' 个待改进:\n' + list.map(a => '• [' + a.status + '] ' + a.advice).join('\n');
+    label.appendChild(tt);
+  });
+}
+
+function setupAnomalyTip() {
+  const tip = document.createElement('div');
+  tip.id = 'anom-tip';
+  document.body.appendChild(tip);
+  const place = (x, y) => {
+    const r = tip.getBoundingClientRect();
+    let nx = x + 16, ny = y + 16;
+    if (nx + r.width > window.innerWidth - 10) nx = x - r.width - 16;
+    if (ny + r.height > window.innerHeight - 10) ny = y - r.height - 16;
+    tip.style.left = Math.max(10, nx) + 'px';
+    tip.style.top = Math.max(10, ny) + 'px';
+  };
+  const show = (key, x, y) => {
+    const a = PATTERNS[key];
+    if (!a) return;
+    const ok = a.status === '成功';
+    tip.innerHTML =
+      '<span class="at-type ' + (ok ? 'at-ok' : 'at-bad') + '">模式类型:' + escapeHTML(a.status) + '</span>' +
+      '<div class="at-row"><span class="at-label">诊断原因</span><span class="at-val">' + escapeHTML(a.cause || '') + '</span></div>' +
+      '<div class="at-row"><span class="at-label">给用户 / agent 的建议</span><span class="at-val">' + escapeHTML(a.advice || '') + '</span></div>';
+    tip.classList.add('show');
+    place(x, y);
+  };
+  const hide = () => tip.classList.remove('show');
+  let suppressedEl = null, suppressedTitle = null;
+  const restoreTitle = () => {
+    if (suppressedEl) { suppressedEl.setAttribute('title', suppressedTitle); suppressedEl = null; suppressedTitle = null; }
+  };
+  document.addEventListener('mouseover', e => {
+    const el = e.target.closest && e.target.closest('[data-anom-key]');
+    if (!el) return;
+    show(el.getAttribute('data-anom-key'), e.clientX, e.clientY);
+    const titled = el.closest('[title]');
+    if (titled && titled !== suppressedEl) {
+      restoreTitle();
+      suppressedEl = titled; suppressedTitle = titled.getAttribute('title');
+      titled.removeAttribute('title');
+    }
+  });
+  document.addEventListener('mousemove', e => {
+    if (tip.classList.contains('show')) place(e.clientX, e.clientY);
+  });
+  document.addEventListener('mouseout', e => {
+    const el = e.target.closest && e.target.closest('[data-anom-key]');
+    if (!el) return;
+    if (e.relatedTarget && el.contains(e.relatedTarget)) return;
+    hide();
+    restoreTitle();
+  });
+}
+
+function renderPatternsSummary() {
+  const el = document.getElementById('patterns-summary');
+  if (!el) return;
+  const entries = Object.entries(PATTERNS);
+  if (entries.length === 0) return;
+  const order = {ok:0, lo:1, hi:2, mid:3};
+  entries.sort((a,b) => (order[a[1].t] ?? 9) - (order[b[1].t] ?? 9));
+  const rows = entries.map(([key, p]) => {
+    const ok = p.status === '成功';
+    const leaf = key.split(' › ').pop();
+    return `<tr>
+      <td><span class="ps-pill ${ok ? 'ps-ok' : 'ps-bad'}">${ANOM_MARK[p.t] || ''} ${escapeHTML(p.status)}</span></td>
+      <td><span class="ps-leaf">${escapeHTML(leaf)}</span><br><span class="ps-key">${escapeHTML(key)}</span></td>
+      <td>${escapeHTML(p.cause || '')}</td>
+      <td>${escapeHTML(p.advice || '')}</td>
+    </tr>`;
+  }).join('');
+  const nOk = entries.filter(([, p]) => p.status === '成功').length;
+  const nBad = entries.length - nOk;
+  el.innerHTML =
+    '<div class="section-label">behavior patterns · ' + nOk + ' 成功 / ' + nBad + ' 待改进</div>' +
+    '<div class="ps-table-wrap"><table class="ps-table">' +
+    '<thead><tr><th>模式类型</th><th>Act-onomy leaf</th><th>诊断原因</th><th>建议</th></tr></thead>' +
+    '<tbody>' + rows + '</tbody></table></div>';
+}
+
+function clearActive() {
+  document.querySelectorAll('.turn.active').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.cb-item.fired').forEach(el => el.classList.remove('fired', 'flash'));
+  document.querySelectorAll('.qmark.flash-pulse').forEach(el => el.classList.remove('flash-pulse'));
+  document.querySelectorAll('.annot-row.flash').forEach(el => el.classList.remove('flash'));
+  document.querySelectorAll('.pie-slice.dimmed').forEach(el => el.classList.remove('dimmed'));
+}
+
+function flashAnnotationLink(turnN, qidx, grp, key) {
+  document.querySelectorAll('.qmark.flash-pulse').forEach(el => el.classList.remove('flash-pulse'));
+  document.querySelectorAll('.annot-row.flash').forEach(el => el.classList.remove('flash'));
+  document.querySelectorAll('.cb-item.fired').forEach(el => el.classList.remove('fired', 'flash'));
+
+  const qm = document.querySelector(`.qmark[data-turn="${turnN}"][data-qidx="${qidx}"]`);
+  const row = document.querySelector(`.annot-row[data-turn="${turnN}"][data-qidx="${qidx}"]`);
+  const item = document.querySelector(`.cb-item[data-grp="${grp}"][data-key="${key}"]`);
+  if (qm) qm.classList.add('flash-pulse');
+  if (row) row.classList.add('flash');
+  if (item) item.classList.add('fired', 'flash');
+}
+
+function scrollToTurn(turnEl) {
+  if (!turnEl) return;
+  // Programmatic navigation always expands the target so highlights are visible.
+  turnEl.classList.add('expanded');
+  // Snapshot the right-side panel's internal scroll position BEFORE we touch
+  // the main page scroll. Some browsers will auto-scroll the focused element
+  // into view, which can cause the codebook panel to drift. We restore the
+  // exact position right after.
+  const panel = document.querySelector('aside.codebook-panel');
+  const panelScrollTop = panel ? panel.scrollTop : 0;
+
+  const rect = turnEl.getBoundingClientRect();
+  const targetY = window.scrollY + rect.top - 24;
+  window.scrollTo({ top: targetY, behavior: 'smooth' });
+
+  // Restore panel scroll on the next animation frame, and again after the
+  // smooth-scroll likely finishes. Both are cheap and cover edge cases.
+  if (panel) {
+    requestAnimationFrame(() => { panel.scrollTop = panelScrollTop; });
+    setTimeout(() => { panel.scrollTop = panelScrollTop; }, 50);
+    setTimeout(() => { panel.scrollTop = panelScrollTop; }, 500);
+  }
+}
+
+function activateCodebookItem(grp, key) {
+  clearActive();
+  const item = codebook[grp] && codebook[grp].items[key];
+  if (!item) return;
+  const itemEl = document.querySelector(`.cb-item[data-grp="${grp}"][data-key="${key}"]`);
+  if (itemEl) itemEl.classList.add('fired', 'flash');
+  item.turns.forEach(n => {
+    const turnEl = document.querySelector(`.turn[data-turn="${n}"]`);
+    if (turnEl) turnEl.classList.add('active', 'expanded');
+    document.querySelectorAll(`.qmark[data-turn="${n}"][data-grp="${grp}"][data-key="${key}"]`).forEach(qm => qm.classList.add('flash-pulse'));
+    document.querySelectorAll(`.annot-row[data-turn="${n}"][data-grp="${grp}"][data-key="${key}"]`).forEach(r => r.classList.add('flash'));
+  });
+  if (item.turns.length > 0) {
+    scrollToTurn(document.querySelector(`.turn[data-turn="${item.turns[0]}"]`));
+  }
+}
+
+function activateGroup(grp) {
+  clearActive();
+  document.querySelectorAll(`.cb-item[data-grp="${grp}"]`).forEach(el => el.classList.add('fired'));
+  document.querySelectorAll(`.qmark[data-grp="${grp}"]`).forEach(qm => qm.classList.add('flash-pulse'));
+  document.querySelectorAll(`.annot-row[data-grp="${grp}"]`).forEach(r => r.classList.add('flash'));
+  const turnsHit = new Set();
+  document.querySelectorAll(`.qmark[data-grp="${grp}"]`).forEach(qm => turnsHit.add(parseInt(qm.dataset.turn)));
+  turnsHit.forEach(n => {
+    const turnEl = document.querySelector(`.turn[data-turn="${n}"]`);
+    if (turnEl) turnEl.classList.add('active', 'expanded');
+  });
+  if (turnsHit.size > 0) {
+    const firstTurn = Math.min(...turnsHit);
+    scrollToTurn(document.querySelector(`.turn[data-turn="${firstTurn}"]`));
+  }
+}
+
+function setupInteractions() {
+  // Collapsible turns: header click toggles; expand/collapse-all controls.
+  document.querySelectorAll('.turn-header, .interaction-header').forEach(h => {
+    h.addEventListener('click', () => h.closest('.turn').classList.toggle('expanded'));
+  });
+  const exAll = document.getElementById('expand-all');
+  const coAll = document.getElementById('collapse-all');
+  if (exAll) exAll.addEventListener('click', () =>
+    document.querySelectorAll('.turn').forEach(el => el.classList.add('expanded')));
+  if (coAll) coAll.addEventListener('click', () =>
+    document.querySelectorAll('.turn').forEach(el => el.classList.remove('expanded')));
+
+  document.querySelectorAll('.qmark').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      flashAnnotationLink(parseInt(el.dataset.turn), parseInt(el.dataset.qidx), el.dataset.grp, el.dataset.key);
+    });
+  });
+  document.querySelectorAll('.annot-row').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      flashAnnotationLink(parseInt(el.dataset.turn), parseInt(el.dataset.qidx), el.dataset.grp, el.dataset.key);
+    });
+  });
+  document.querySelectorAll('.cb-item').forEach(el => {
+    el.addEventListener('click', () => {
+      activateCodebookItem(el.dataset.grp, el.dataset.key);
+    });
+  });
+  document.querySelectorAll('.pie-slice').forEach(el => {
+    el.addEventListener('click', () => {
+      activateGroup(el.dataset.grp);
+    });
+  });
+  document.querySelectorAll('.pie-legend-row').forEach(el => {
+    el.addEventListener('click', () => {
+      activateGroup(el.dataset.grp);
+    });
+  });
+  document.querySelectorAll('.sig-row').forEach(el => {
+    el.addEventListener('click', () => {
+      const n = el.dataset.turn; // agent turns are numeric, interactions are "H<k>"
+      const turnEl = document.querySelector(`.turn[data-turn="${n}"]`);
+      if (!turnEl) return;
+      document.querySelectorAll('.turn.active').forEach(x => x.classList.remove('active'));
+      turnEl.classList.add('active');
+      scrollToTurn(turnEl);
+    });
+  });
+}
+
+// Drag-to-resize handle on the left edge of the codebook panel.
+// The panel is `position: fixed; right: 0; width: 360px;` and the main has a
+// matching `margin-right: 360px`. We drive both off a single CSS variable
+// `--panel-w` so they stay in sync, and persist the user's last width in
+// localStorage so it sticks across reloads.
+function setupPanelResize() {
+  const panel = document.querySelector('aside.codebook-panel');
+  const main  = document.querySelector('main.trajectory');
+  const handle = document.getElementById('panel-resize-handle');
+  if (!panel || !main || !handle) return;
+
+  const MIN = 280;
+  const MAX_FRAC = 0.7;  // never let the panel eat more than 70% of the viewport
+  const STORAGE_KEY = 'tta.panel-width';
+
+  const apply = (w) => {
+    const cap = Math.max(MIN, Math.min(w, window.innerWidth * MAX_FRAC));
+    panel.style.width = cap + 'px';
+    main.style.marginRight = cap + 'px';
+  };
+
+  // Restore persisted width on load.
+  const saved = parseInt(localStorage.getItem(STORAGE_KEY) || '', 10);
+  if (!Number.isNaN(saved) && saved >= MIN) apply(saved);
+
+  let dragging = false;
+  let startX = 0;
+  let startW = 0;
+
+  handle.addEventListener('mousedown', (e) => {
+    dragging = true;
+    startX = e.clientX;
+    startW = panel.getBoundingClientRect().width;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    // Drag left = wider panel; drag right = narrower.
+    const w = startW + (startX - e.clientX);
+    apply(w);
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    localStorage.setItem(STORAGE_KEY, String(panel.getBoundingClientRect().width));
+  });
+
+  // Double-click the handle to reset to the default 360px.
+  handle.addEventListener('dblclick', () => {
+    apply(360);
+    localStorage.removeItem(STORAGE_KEY);
+  });
+}
+
+renderTurns();
+renderSignature();
+renderCodebook();
+markPieAnomalies();
+setupAnomalyTip();
+renderPatternsSummary();
+setupInteractions();
+setupPanelResize();
+
+</script>
+</body>
+</html>

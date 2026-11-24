@@ -1,0 +1,1782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Trajectory & Behavior Profile · django/django-14238</title>
+<!-- Yuque-style restyle: system fonts only, no external font CDN -->
+<style>
+:root {
+  --bg: #f6f7f9;
+  --bg-panel: #ffffff;
+  --ink: #262626;
+  --ink-soft: #585d63;
+  --ink-mute: #8a8f8d;
+  --rule: #ebecef;
+  --rule-soft: #f2f3f5;
+  --accent: #00b96b;
+  --accent-soft: #b7e7d1;
+  --thought: #5a68c9;
+  --action: #0f9b8a;
+  --obs: #c77d1a;
+  --obs-soft: #f7edd6;
+  --highlight: #eafaf2;
+  --radius: 10px;
+
+  --grp-Retrieval: #0891b2;
+  --grp-Retrieval-bg: rgba(8, 145, 178, 0.10);
+  --grp-Memory: #d97706;
+  --grp-Memory-bg: rgba(217, 119, 6, 0.10);
+  --grp-Planning: #0284c7;
+  --grp-Planning-bg: rgba(2, 132, 199, 0.10);
+  --grp-Reasoning: #4f46e5;
+  --grp-Reasoning-bg: rgba(79, 70, 229, 0.10);
+  --grp-Evaluating: #0d9488;
+  --grp-Evaluating-bg: rgba(13, 148, 136, 0.10);
+  --grp-Deciding: #7c3aed;
+  --grp-Deciding-bg: rgba(124, 58, 237, 0.10);
+  --grp-Grounding: #c026d3;
+  --grp-Grounding-bg: rgba(192, 38, 211, 0.10);
+  --grp-Executing: #059669;
+  --grp-Executing-bg: rgba(5, 150, 105, 0.10);
+  --grp-Learning: #db2777;
+  --grp-Learning-bg: rgba(219, 39, 119, 0.10);
+  --grp-Reflection: #e11d48;
+  --grp-Reflection-bg: rgba(225, 29, 72, 0.10);
+
+  --panel-w: 360px;
+}
+
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#1b1c1e; --bg-panel:#232427;
+    --ink:#e6e6e6; --ink-soft:#b3b7bb; --ink-mute:#8d9195;
+    --rule:#303236; --rule-soft:#2a2c30;
+    --accent:#33c98d; --accent-soft:#2b5f48;
+    --thought:#8f9cf0; --action:#34c9b3; --obs:#e0a955; --obs-soft:#382f18;
+    --highlight:#18271f;
+  }
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+body {
+  min-height: 100vh;
+}
+
+header.masthead {
+  border-bottom: 1px solid var(--rule);
+  padding: 28px calc(var(--panel-w) + 24px) 24px 40px;
+  background: var(--bg-panel);
+  position: relative;
+  z-index: 5;
+}
+
+.eyebrow {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin-bottom: 8px;
+}
+
+h1.title {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-weight: 600;
+  font-variation-settings: 'opsz' 144;
+  font-size: 38px;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+}
+
+h1.title em {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--accent);
+}
+
+.subtitle {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 15px;
+  color: var(--ink-soft);
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1.55;
+  max-width: 820px;
+}
+
+.meta-row {
+  display: flex;
+  gap: 24px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: var(--ink-mute);
+}
+
+.meta-row span strong {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.outcome-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 2px;
+  font-weight: 600;
+}
+.outcome-resolved { background: rgba(5, 150, 105, 0.13); color: var(--grp-Executing); }
+.outcome-unresolved { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
+
+.app {
+  position: relative;
+  min-height: calc(100vh - 140px);
+}
+
+@media (max-width: 1100px) {
+  header.masthead { padding-right: 40px; }
+  main.trajectory { margin-right: 0 !important; max-width: 100% !important; }
+  aside.codebook-panel {
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    border-left: none !important;
+    border-top: 1px solid var(--rule);
+  }
+}
+
+main.trajectory {
+  padding: 32px 40px 80px;
+  max-width: 900px;
+  margin-right: var(--panel-w);
+}
+
+.section-label {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--rule); }
+
+.issue-block {
+  background: var(--bg-panel);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--accent);
+  padding: 18px 22px;
+  margin-bottom: 28px;
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  color: var(--ink-soft);
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+.issue-block strong { font-weight: 600; color: var(--ink); }
+.issue-block code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; background: var(--rule-soft); padding: 1px 5px; border-radius: 2px; }
+
+.summary-block {
+  background: var(--bg-panel);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--thought);
+  padding: 20px 24px 22px;
+  margin-bottom: 32px;
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: var(--ink);
+  position: relative;
+}
+.summary-block .summary-eyebrow {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--thought);
+  font-weight: 600;
+  margin-bottom: 10px;
+  display: block;
+}
+.summary-block .summary-text {
+  font-style: normal;
+  color: var(--ink);
+  letter-spacing: 0;
+}
+.summary-block .summary-text strong { font-style: normal; font-weight: 600; color: var(--ink); }
+.summary-block .summary-text em { font-style: normal; color: var(--accent); }
+.summary-block .summary-text code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-style: normal; font-size: 13px; background: var(--rule-soft); padding: 1px 5px; border-radius: 2px; color: var(--ink); }
+.summary-block .summary-text ul { margin: 10px 0; padding-left: 22px; }
+.summary-block .summary-text li { margin-bottom: 8px; line-height: 1.6; }
+.summary-block .summary-text p { margin: 0 0 10px 0; }
+.method-note ul { margin: 8px 0 4px 0; padding-left: 20px; }
+.method-note li { margin-bottom: 5px; line-height: 1.55; }
+
+.method-note {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-style: normal;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  margin-bottom: 24px;
+  padding: 12px 16px;
+  background: var(--highlight);
+  border-left: 2px solid var(--accent);
+  border-radius: 0 2px 2px 0;
+  line-height: 1.6;
+}
+.method-note strong { font-style: normal; font-weight: 600; color: var(--ink); }
+.method-note code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; background: rgba(0,0,0,0.06); padding: 1px 5px; border-radius: 2px; font-style: normal; }
+
+.turn {
+  position: relative;
+  margin-bottom: 28px;
+  padding: 22px 24px 20px 28px;
+  background: var(--bg-panel);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  transition: all 0.25s ease;
+}
+.turn::before { content: ''; position: absolute; left: -1px; top: -1px; bottom: -1px; width: 4px; background: var(--rule); transition: background 0.25s ease; }
+.turn.active { border-color: var(--ink); box-shadow: 0 1px 8px rgba(0,0,0,0.05); }
+.turn.active::before { background: var(--accent); width: 4px; }
+
+.turn-header {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--rule);
+}
+
+.turn-num {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-weight: 600;
+  font-size: 28px;
+  font-variation-settings: 'opsz' 144;
+  color: var(--accent);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.turn-num small { font-size: 11px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink-mute); font-weight: 400; display: block; letter-spacing: 0.1em; margin-bottom: 2px; }
+
+.turn-tag-line { font-family: -apple-system, "PingFang SC", "Helvetica Neue", "Segoe UI", sans-serif; font-style: normal; font-size: 15px; color: var(--ink); font-weight: 500; flex: 1; line-height: 1.45; }
+
+/* ===== Collapsible turns =====
+   Turns render collapsed by default: only the header row (icon, number,
+   headline, phase pill) is visible. Clicking the header toggles the body.
+   Programmatic activation (codebook / signature clicks) auto-expands. */
+.turn-header, .interaction-header { cursor: pointer; user-select: none; }
+.turn-body { display: none; }
+.turn.expanded > .turn-body { display: block; }
+.turn:not(.expanded) .turn-header,
+.turn:not(.expanded) .interaction-header {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+.turn:not(.expanded) { padding-top: 16px; padding-bottom: 16px; }
+.turn-chevron {
+  flex-shrink: 0;
+  align-self: center;
+  color: var(--ink-mute);
+  font-size: 11px;
+  transition: transform 0.2s ease;
+}
+.turn.expanded .turn-chevron { transform: rotate(90deg); }
+
+.turns-controls {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-bottom: 14px;
+}
+.turns-controls button {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: var(--bg-panel);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.turns-controls button:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ===== Actor icons (Google Material Design icons: person / smart_toy) ===== */
+.actor-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  align-self: center;
+}
+.actor-icon svg { width: 20px; height: 20px; }
+.actor-agent { color: var(--accent); background: var(--highlight); border: 1px solid var(--accent-soft); }
+.actor-human { color: #b45309; background: var(--obs-soft); border: 1px solid rgba(217, 119, 6, 0.35); }
+
+/* ===== Human interaction cards =====
+   First-class human turns interleaved with agent (obs, thought, action)
+   turns. Verbatim prompt, amber palette, person icon — visually distinct
+   from agent turn cards. */
+.turn.interaction {
+  background: #fffbeb;
+  border: 1px solid rgba(217, 119, 6, 0.35);
+  border-left: 3px solid var(--obs);
+}
+.interaction-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed rgba(217, 119, 6, 0.35);
+}
+.int-num {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-weight: 600;
+  font-size: 28px;
+  color: #b45309;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.int-num small { font-size: 11px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink-mute); font-weight: 400; display: block; letter-spacing: 0.1em; margin-bottom: 2px; }
+.int-title { font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; font-size: 15px; color: var(--ink); font-weight: 500; flex: 1; }
+.int-title .small { font-size: 10px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink-mute); font-weight: 400; margin-left: 6px; }
+.int-label {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border: 1px solid rgba(217, 119, 6, 0.4);
+  border-radius: 2px;
+  color: #b45309;
+  background: rgba(217, 119, 6, 0.08);
+}
+.interaction-text {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ink);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Interaction rows in the right-panel trajectory signature */
+.sig-row.sig-interaction {
+  background: #fffbeb;
+  border: 1px solid rgba(217, 119, 6, 0.3);
+  border-radius: 3px;
+}
+.sig-row.sig-interaction:hover { background: var(--obs-soft); }
+.sig-num-h { color: #b45309 !important; }
+.sig-int-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  color: #92400e;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sig-int-text svg { width: 12px; height: 12px; flex-shrink: 0; color: #b45309; }
+
+.turn-phase {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  color: var(--ink-soft);
+  background: var(--bg);
+}
+.phase-reproduce { color: var(--obs); border-color: var(--obs-soft); background: var(--obs-soft); }
+.phase-localize { color: var(--thought); border-color: rgba(91,74,138,0.2); background: rgba(91,74,138,0.08); }
+.phase-edit { color: var(--action); border-color: rgba(5, 150, 105, 0.2); background: rgba(5, 150, 105, 0.08); }
+.phase-recover { color: var(--accent); border-color: var(--accent-soft); background: var(--accent-soft); }
+.phase-verify { color: var(--grp-Evaluating); border-color: rgba(26,88,120,0.2); background: rgba(26,88,120,0.08); }
+.phase-submit { color: var(--ink); border-color: var(--rule); background: var(--rule-soft); }
+.phase-other { color: var(--ink-soft); border-color: var(--rule); background: var(--bg); }
+
+.oat-block { margin: 12px 0; padding-left: 14px; border-left: 2px solid; font-size: 14px; line-height: 1.55; }
+.oat-block .lbl { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 600; margin-bottom: 6px; display: block; }
+
+.oat-obs { border-color: var(--obs); }
+.oat-obs .lbl { color: var(--obs); }
+
+.oat-thought { border-color: var(--thought); background: rgba(91, 74, 138, 0.025); padding: 8px 14px 10px; border-radius: 0 2px 2px 0; }
+.oat-thought .lbl { color: var(--thought); }
+.oat-thought .lbl .small { opacity: 0.5; font-weight: 400; text-transform: none; letter-spacing: 0.05em; font-style: italic; }
+.thought-text { font-family: -apple-system, "PingFang SC", "Helvetica Neue", "Segoe UI", sans-serif; font-style: normal; font-size: 14px; color: var(--ink); line-height: 1.65; letter-spacing: 0; }
+
+.oat-action { border-color: var(--action); }
+.oat-action .lbl { color: var(--action); }
+.oat-action .content {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+  background: #1f1f1f;
+  color: #eaeaea;
+  padding: 8px 12px;
+  border-radius: 2px;
+  display: block;
+  margin-top: 4px;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+.oat-action .content .cmt { color: #888888; }
+.oat-action .content .kw { color: #d4a574; }
+
+.content { color: var(--ink); }
+.content code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; background: var(--rule-soft); padding: 1px 5px; border-radius: 2px; }
+
+.qmark {
+  font-style: italic;
+  background: var(--qbg, var(--rule-soft));
+  border-bottom: 1.5px solid var(--qcolor, var(--ink-mute));
+  padding: 0 2px;
+  margin: 0 1px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  border-radius: 1px;
+  position: relative;
+}
+.qmark:hover { background: var(--qcolor, var(--ink-mute)); color: var(--bg); }
+.qmark sup { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-style: normal; font-size: 9px; font-weight: 600; color: var(--qcolor, var(--ink-mute)); margin-left: 2px; letter-spacing: 0; vertical-align: super; line-height: 0; }
+.qmark:hover sup { color: var(--bg); }
+
+.annotations {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.annotations-header { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-mute); font-weight: 600; margin-bottom: 4px; }
+
+.annot-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1.1fr);
+  gap: 10px;
+  align-items: baseline;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 5px 6px;
+  border-radius: 2px;
+  transition: background 0.18s ease;
+}
+.annot-row:hover { background: var(--rule-soft); }
+.annot-row.flash { background: var(--qbg, var(--rule-soft)); }
+
+.annot-quote {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-style: italic;
+  color: var(--qcolor, var(--ink));
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.annot-quote::before { content: '"'; opacity: 0.5; }
+.annot-quote::after { content: '"'; opacity: 0.5; }
+.annot-quote .qnum { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-style: normal; font-size: 9px; font-weight: 600; margin-right: 4px; opacity: 0.7; vertical-align: super; }
+
+.annot-arrow { color: var(--ink-mute); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
+
+.annot-tag { font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; font-size: 11.5px; color: var(--ink-soft); letter-spacing: 0.005em; }
+.annot-tag .annot-grp { font-weight: 600; color: var(--qcolor, var(--ink)); }
+.annot-tag .annot-sep { margin: 0 4px; opacity: 0.4; }
+.annot-tag .annot-leaf { color: var(--ink); }
+
+.insight {
+  margin-top: 12px;
+  padding: 10px 12px 10px 14px;
+  background: var(--highlight);
+  border-radius: 2px;
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 13px;
+  font-style: normal;
+  color: var(--ink-soft);
+  position: relative;
+  line-height: 1.6;
+}
+.insight::before { content: '※'; position: absolute; left: -22px; top: 8px; font-size: 14px; color: var(--accent); font-style: normal; }
+.insight strong { font-style: normal; font-weight: 600; color: var(--ink); }
+
+/* Segment summary card inside the right-panel trajectory signature.
+   Sits above the first row of each `segments[]` entry — a compact "what
+   the agent is doing in this stretch" preface for the row block below. */
+.sig-segment {
+  margin: 14px 0 6px;
+  padding: 8px 10px;
+  background: var(--highlight);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 2px 2px 0;
+}
+.sig-segment:first-child { margin-top: 4px; }
+.sig-segment-tag {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 8.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+.sig-segment-title {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-weight: 600;
+  font-size: 12.5px;
+  font-style: italic;
+  color: var(--ink);
+  line-height: 1.3;
+  margin-bottom: 3px;
+}
+.sig-segment-body {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 12px;
+  color: var(--ink-soft);
+  line-height: 1.55;
+}
+.sig-segment-body code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+  background: rgba(79, 70, 229, 0.08);
+  padding: 0 3px;
+  border-radius: 2px;
+}
+
+aside.codebook-panel {
+  background: var(--bg-panel);
+  border-left: 1px solid var(--rule);
+  padding: 32px 24px 60px;
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: var(--panel-w);
+  height: 100vh;
+  overflow-y: auto;
+  z-index: 10;
+}
+aside.codebook-panel::-webkit-scrollbar { width: 6px; }
+aside.codebook-panel::-webkit-scrollbar-track { background: transparent; }
+aside.codebook-panel::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 3px; }
+
+/* Drag handle on the panel's left edge — sits over the border, 6px hit area,
+   shows a thin colored stripe on hover/drag. Double-click resets width. */
+#panel-resize-handle {
+  position: absolute;
+  top: 0;
+  left: -3px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 20;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+#panel-resize-handle:hover,
+#panel-resize-handle:active {
+  background: linear-gradient(to right, transparent 0%, transparent 40%, var(--accent) 40%, var(--accent) 60%, transparent 60%);
+}
+
+.panel-title { font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; font-weight: 600; font-size: 22px; font-variation-settings: 'opsz' 144; margin-bottom: 4px; letter-spacing: -0.01em; }
+.panel-sub { font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; font-style: normal; font-size: 12.5px; color: var(--ink-soft); line-height: 1.5; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--rule); }
+
+/* Pie chart section */
+.pie-section {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--rule);
+}
+.pie-svg-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+.pie-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 11px;
+}
+.pie-legend-row {
+  display: grid;
+  grid-template-columns: 12px 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  color: var(--ink-soft);
+}
+.pie-legend-swatch { width: 10px; height: 10px; border-radius: 1px; }
+.pie-legend-name { font-weight: 500; color: var(--ink); }
+.pie-legend-pct { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; color: var(--ink-mute); }
+.pie-legend-count { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; color: var(--ink-mute); }
+
+.pie-slice { transition: opacity 0.2s ease; cursor: pointer; }
+.pie-slice:hover { opacity: 0.8; }
+
+.cb-group { margin-bottom: 18px; }
+.cb-group-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+.cb-group-name { font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; font-weight: 600; font-size: 14px; font-style: italic; color: var(--qcolor, var(--ink)); }
+.cb-count { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; color: var(--ink-mute); background: var(--bg); padding: 1px 6px; border-radius: 8px; border: 1px solid var(--rule); }
+.cb-bar { height: 4px; background: var(--rule-soft); border-radius: 2px; margin-bottom: 8px; overflow: hidden; }
+.cb-bar-fill { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
+.cb-items { display: flex; flex-direction: column; gap: 2px; margin-left: 4px; }
+.cb-item {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  padding: 4px 8px 4px 12px;
+  border-left: 2px solid var(--rule);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 0 2px 2px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+}
+.cb-item:hover { background: var(--bg); border-left-color: var(--ink-soft); color: var(--ink); }
+.cb-item.fired { border-left-color: var(--qcolor, var(--accent)); color: var(--ink); background: var(--qbg, var(--accent-soft)); font-weight: 500; }
+.cb-item-text { flex: 1; }
+.cb-item .turn-refs { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; color: var(--ink-mute); flex-shrink: 0; }
+.cb-item.fired .turn-refs { color: var(--qcolor, var(--accent)); font-weight: 600; }
+
+.summary-footer {
+  margin-top: 60px;
+  padding: 28px;
+  background: var(--bg-panel);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+.summary-footer h2 { font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; font-weight: 600; font-size: 22px; margin-bottom: 4px; letter-spacing: -0.01em; }
+.summary-footer .sub { font-style: italic; color: var(--ink-soft); font-size: 14px; margin-bottom: 20px; }
+.findings { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+.finding { padding: 14px 16px; border-left: 2px solid var(--accent); background: var(--bg); font-size: 13px; line-height: 1.55; }
+.finding strong { font-weight: 600; display: block; margin-bottom: 4px; color: var(--ink); }
+.finding span { color: var(--ink-soft); }
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 40%, transparent); }
+  100% { box-shadow: 0 0 0 8px transparent; }
+}
+.cb-item.fired.flash, .annot-row.flash, .qmark.flash-pulse { animation: pulse-ring 0.6s ease-out; }
+
+.legend {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 24px;
+  padding: 10px 14px;
+  background: var(--bg-panel);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  color: var(--ink-soft);
+  flex-wrap: wrap;
+  align-items: center;
+}
+.legend-item { display: flex; align-items: center; gap: 6px; }
+.legend-dot { width: 8px; height: 8px; border-radius: 1px; }
+.legend-dot.obs { background: var(--obs); }
+.legend-dot.thought { background: var(--thought); }
+.legend-dot.action { background: var(--action); }
+.legend small { margin-left: auto; color: var(--ink-mute); font-style: italic; }
+
+/* ===== Trajectory signature (right panel, above the bar chart) =====
+   Auto-built in JS from the same turns/quotes data. No extra schema fields. */
+.signature-section {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--rule);
+}
+.sig-section-title {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+.sig-section-sub {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-style: italic;
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+.sig-flat {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  white-space: pre-wrap;
+  word-break: normal;
+  overflow-wrap: anywhere;
+  user-select: all;
+  cursor: text;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.sig-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+.sig-row {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 6px;
+  align-items: start;
+  padding: 5px 6px 5px 4px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 2px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  transition: background 0.15s ease;
+}
+.sig-row:hover { background: var(--bg); }
+.sig-row:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.sig-num {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  color: var(--ink-mute);
+  font-weight: 600;
+  text-align: right;
+  padding-right: 4px;
+  padding-top: 2px;
+}
+.sig-num .sig-flag {
+  display: inline;
+  margin-left: 2px;
+  color: var(--accent);
+  font-weight: 700;
+}
+.sig-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  align-items: center;
+}
+.sig-chip {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 1px 6px 2px;
+  border-radius: 2px;
+  border: 1px solid;
+  line-height: 1.35;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.sig-chip-grp {
+  text-transform: uppercase;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+}
+.sig-chip-sub {
+  font-size: 10px;
+  font-weight: 600;
+}
+.sig-chip-sep {
+  font-size: 10px;
+  opacity: 0.45;
+  margin: 0 1px;
+}
+.sig-chip-leaf {
+  font-size: 9.5px;
+  font-weight: 500;
+  font-style: italic;
+  opacity: 0.78;
+}
+.sig-chip-empty {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: var(--ink-mute);
+  padding: 0 4px;
+}
+.sig-chip.grp-Retrieval  { color: var(--grp-Retrieval);  background: var(--grp-Retrieval-bg);  border-color: var(--grp-Retrieval); }
+.sig-chip.grp-Memory     { color: var(--grp-Memory);     background: var(--grp-Memory-bg);     border-color: var(--grp-Memory); }
+.sig-chip.grp-Planning   { color: var(--grp-Planning);   background: var(--grp-Planning-bg);   border-color: var(--grp-Planning); }
+.sig-chip.grp-Reasoning  { color: var(--grp-Reasoning);  background: var(--grp-Reasoning-bg);  border-color: var(--grp-Reasoning); }
+.sig-chip.grp-Evaluating   { color: var(--grp-Evaluating);   background: var(--grp-Evaluating-bg);   border-color: var(--grp-Evaluating); }
+.sig-chip.grp-Deciding   { color: var(--grp-Deciding);   background: var(--grp-Deciding-bg);   border-color: var(--grp-Deciding); }
+.sig-chip.grp-Grounding  { color: var(--grp-Grounding);  background: var(--grp-Grounding-bg);  border-color: var(--grp-Grounding); }
+.sig-chip.grp-Executing  { color: var(--grp-Executing);  background: var(--grp-Executing-bg);  border-color: var(--grp-Executing); }
+.sig-chip.grp-Learning   { color: var(--grp-Learning);   background: var(--grp-Learning-bg);   border-color: var(--grp-Learning); }
+.sig-chip.grp-Reflection { color: var(--grp-Reflection); background: var(--grp-Reflection-bg); border-color: var(--grp-Reflection); }
+
+.sig-restart-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  margin: 4px 0;
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  border-left: 2px solid var(--accent);
+  border-radius: 0 2px 2px 0;
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-style: italic;
+  font-size: 11px;
+  color: var(--accent);
+  cursor: help;
+}
+.sig-restart-glyph { font-size: 16px; line-height: 1; }
+.sig-restart-text { color: var(--ink-soft); }
+
+/* ============ behavior-pattern (success / failure) layer ============ */
+/* driven by the optional `patterns` field in the annotated JSON; absent -> nothing renders */
+/* signature chip highlight */
+.sig-chip-anom { outline: 1.5px solid; outline-offset: 1px; border-radius: 3px; }
+.sig-chip-anom-lo { outline-color: #e11d48; }
+.sig-chip-anom-hi { outline-color: #d97706; }
+.sig-chip-anom-mid { outline-color: #2563eb; }
+.sig-chip-anom-ok { outline-color: #16a34a; }
+.sig-chip-flag { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8px; font-weight: 700; margin-left: 3px; padding: 0 3px; border-radius: var(--radius); vertical-align: middle; }
+.sig-chip-flag-lo { color: #be123c; background: rgba(225,29,72,0.18); }
+.sig-chip-flag-hi { color: #b45309; background: rgba(217,119,6,0.18); }
+.sig-chip-flag-mid { color: #1d4ed8; background: rgba(37,99,235,0.18); }
+.sig-chip-flag-ok { color: #15803d; background: rgba(34,197,94,0.18); }
+/* codebook-panel leaf highlight */
+.cb-anom-legend { font-size: 10px; color: var(--ink-soft); margin-bottom: 10px; padding: 6px 8px; background: var(--rule-soft); border-radius: 3px; line-height: 1.6; }
+.cb-item.cb-anom:not(.fired) { border-left-width: 3px; }
+.cb-item.cb-anom-lo:not(.fired) { border-left-color: #e11d48; background: rgba(225,29,72,0.07); }
+.cb-item.cb-anom-hi:not(.fired) { border-left-color: #d97706; background: rgba(217,119,6,0.07); }
+.cb-item.cb-anom-mid:not(.fired) { border-left-color: #2563eb; background: rgba(37,99,235,0.07); }
+.cb-item.cb-anom-ok:not(.fired) { border-left-color: #16a34a; background: rgba(34,197,94,0.07); }
+.cb-anom-badge { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; font-weight: 700; padding: 0 4px; border-radius: 6px; margin-left: 4px; }
+.cb-anom-b-lo { color: #be123c; background: rgba(225,29,72,0.16); }
+.cb-anom-b-hi { color: #b45309; background: rgba(217,119,6,0.16); }
+.cb-anom-b-mid { color: #1d4ed8; background: rgba(37,99,235,0.16); }
+.cb-anom-b-ok { color: #15803d; background: rgba(34,197,94,0.16); }
+/* custom hover card (模式类型 / 诊断原因 / 建议) */
+#anom-tip { position: fixed; z-index: 99999; max-width: 340px; background: #0f172a; color: #f8fafc; border-radius: 9px; padding: 12px 14px; font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; font-size: 12.5px; line-height: 1.55; box-shadow: 0 10px 34px rgba(0,0,0,0.32); pointer-events: none; opacity: 0; display: none; }
+#anom-tip.show { opacity: 1; display: block; }
+#anom-tip .at-type { font-weight: 700; font-size: 11px; letter-spacing: 0.03em; padding: 2px 9px; border-radius: 11px; }
+#anom-tip .at-ok { color: #86efac; background: rgba(34,197,94,0.20); }
+#anom-tip .at-bad { color: #fca5a5; background: rgba(239,68,68,0.20); }
+#anom-tip .at-row { margin-top: 9px; }
+#anom-tip .at-label { color: #94a3b8; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-bottom: 2px; }
+#anom-tip .at-val { color: #f1f5f9; }
+/* auto pattern-summary table (main column) */
+#patterns-summary { margin-top: 30px; }
+.ps-table-wrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--bg-panel); }
+table.ps-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 640px; }
+table.ps-table th { text-align: left; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-mute); font-weight: 600; padding: 10px 12px; border-bottom: 1px solid var(--rule); background: var(--rule-soft); }
+table.ps-table td { padding: 9px 12px; border-bottom: 1px solid var(--rule-soft); color: var(--ink-soft); vertical-align: top; line-height: 1.45; }
+table.ps-table tr:last-child td { border-bottom: none; }
+.ps-leaf { font-weight: 600; color: var(--ink); }
+.ps-key { font-size: 10px; color: var(--ink-mute); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.ps-pill { display: inline-block; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; letter-spacing: 0.03em; font-weight: 700; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+.ps-ok { color: #15803d; background: rgba(34,197,94,0.14); }
+.ps-bad { color: #be123c; background: rgba(225,29,72,0.13); }
+
+
+:root { --grp-Evaluate: var(--grp-Evaluating); --grp-Evaluate-bg: var(--grp-Evaluating-bg); }
+.sig-chip.grp-Evaluate {color:var(--grp-Evaluate);background:var(--grp-Evaluate-bg);border-color:var(--grp-Evaluate);}
+.sig-chip {display:inline-block;max-width:100%;white-space:normal;overflow-wrap:anywhere;}
+.sig-chip > span + span {margin-left:4px;}
+.archive-nav {font: 12px/1.7 Inter, sans-serif; margin-bottom:12px; overflow-wrap:anywhere; color:var(--ink-soft);}
+.archive-nav a {color:var(--accent);}
+.archive-notes {font: 13px/1.6 Inter, sans-serif; color:var(--ink-soft); margin: 14px 0;}
+.archive-notes summary {cursor:pointer; font-weight:600;}
+.archive-notes ul {padding-left:1.5rem;}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+<nav class="archive-nav"><a href="../index.html">Report index</a> &nbsp;›&nbsp; SWE-bench-Verified &nbsp;·&nbsp; <a href="django__django-14238__batch-5__claude-code__claude-opus-5__xhigh.annotated.json">Annotation JSON</a></nav>
+  <div class="eyebrow">Quote-grounded annotation</div>
+  <h1 class="title">Agent Trajectory <em>&</em> Behavior Profile</h1>
+  <div class="subtitle">This report walks through one agent session step by step. Every label is tied to the exact quoted words that justify it — so you can see what was asked, what the agent did, and why.</div>
+  <div class="meta-row">
+    <span><strong>Instance</strong> django/django-14238</span>
+    <span><strong>Model</strong> gpt-4o-2024-05-13</span>
+    <span><strong>Turns</strong> 20</span>
+    
+    <span><strong>Outcome</strong> <span class="outcome-pill outcome-resolved">RESOLVED ✓</span></span>
+    <span><strong>Annotations</strong> 64</span>
+  </div>
+</header>
+
+<div class="app">
+
+<main class="trajectory">
+
+<div class="section-label">the task</div>
+<div class="issue-block">DEFAULT_AUTO_FIELD subclass check fails for subclasses of BigAutoField and SmallAutoField.
+Description
+	
+Set DEFAULT_AUTO_FIELD = &quot;example.core.models.MyBigAutoField&quot; , with contents of example.core.models:
+from django.db import models
+class MyBigAutoField(models.BigAutoField):
+	pass
+class MyModel(models.Model):
+	pass
+Django then crashes with:
+Traceback (most recent call last):
+ File &quot;/..././manage.py&quot;, line 21, in &lt;module&gt;
+	main()
+ File &quot;/..././manage.py&quot;, line 17, in main
+	execute_from_command_line(sys.argv)
+ File &quot;/.../venv/lib/python3.9/site-packages/django/core/management/__init__.py&quot;, line 419, in execute_from_command_line
+	utility.execute()
+ File &quot;/.../venv/lib/python3.9/site-packages/django/core/management/__init__.py&quot;, line 395, in execute
+	django.setup()
+ File &quot;/.../venv/lib/python3.9/site-packages/django/__init__.py&quot;, line 24, in setup
+	apps.populate(settings.INSTALLED_APPS)
+ File &quot;/.../venv/lib/python3.9/site-packages/django/apps/registry.py&quot;, line 114, in populate
+	app_config.import_models()
+ File &quot;/.../venv/lib/python3.9/site-packages/django/apps/config.py&quot;, line 301, in import_models
+	self.models_module = import_module(models_module_name)
+ File &quot;/Users/chainz/.pyenv/versions/3.9.1/lib/python3.9/importlib/__init__.py&quot;, line 127, in import_module
+	return _bootstrap._gcd_import(name[level:], package, level)
+ File &quot;&lt;frozen importlib._bootstrap&gt;&quot;, line 1030, in _gcd_import
+ File &quot;&lt;frozen importlib._bootstrap&gt;&quot;, line 1007, in _find_and_load
+ File &quot;&lt;frozen importlib._bootstrap&gt;&quot;, line 986, in _find_and_load_unlocked
+ File &quot;&lt;frozen importlib._bootstrap&gt;&quot;, line 680, in _load_unlocked
+ File &quot;&lt;frozen importlib._bootstrap_external&gt;&quot;, line 790, in exec_module
+ File &quot;&lt;frozen importlib._bootstrap&gt;&quot;, line 228, in _call_with_frames_removed
+ File &quot;/.../example/core/models.py&quot;, line 8, in &lt;module&gt;
+	class MyModel(models.Model):
+ File &quot;/.../venv/lib/python3.9/site-packages/django/db/models/base.py&quot;, line 320, in __new__
+	new_class._prepare()
+ File &quot;/.../venv/lib/python3.9/site-packages/django/db/models/base.py&quot;, line 333, in _prepare
+	opts._prepare(cls)
+ File &quot;/.../venv/lib/python3.9/site-packages/django/db/models/options.py&quot;, line 285, in _prepare
+	pk_class = self._get_default_pk_class()
+ File &quot;/.../venv/lib/python3.9/site-packages/django/db/models/options.py&quot;, line 246, in _get_default_pk_class
+	raise ValueError(
+ValueError: Primary key 'example.core.models.MyBigAutoField' referred by DEFAULT_AUTO_FIELD must subclass AutoField.
+This can be fixed in AutoFieldMeta.__subclasscheck__ by allowing subclasses of those classes in the _subclasses property.</div>
+
+<div class="section-label">trajectory summary</div>
+<div class="summary-block">
+  <span class="summary-eyebrow">What happened in this run</span>
+  <div class="summary-text">The agent had to make Django's <code>AutoFieldMeta.__subclasscheck__</code> accept user subclasses of <code>BigAutoField</code> and <code>SmallAutoField</code>, which the issue already diagnosed for it. The run splits into four blocks: <strong>T1–T10</strong> build and repeatedly repair a standalone reproduction script, <strong>T11–T14</strong> pivot to the codebase and walk <code>search_dir → open → search_file → goto</code> straight to line 2502, <strong>T15–T17</strong> draft and land the one-line patch, and <strong>T18–T20</strong> verify, clean up, and submit. Two thirds of the trajectory is harness maintenance: T4 pastes a settings block in duplicate, and T6/T7/T9 then chase <code>app_label</code> errors through two malformed <code>edit</code> ranges. <strong>T11</strong> is the pivotal turn — it declares the bug reproduced on the strength of a model re-registration <code>RuntimeWarning</code>, even though the issue's <code>ValueError</code> never fired, because the script assigns <code>models.options.DEFAULT_AUTO_FIELD</code> after <code>settings.configure()</code> where nothing reads it. <strong>T15</strong> carries the only real design work in the run, and it is correct on the first try; what fails twice is the mechanical edit range, which swallows the <code>def</code> header at T15 and again at T16 before T17 restores it. Verification is therefore circular: T18's observation is byte-identical to T10's, and the same output is read as "reproduced" before the patch and "resolved" after it. The instance still resolves, because the patch the agent copied out of the issue text is the correct upstream fix — the run got the right diff without ever having evidence that it changed anything.</div>
+</div>
+
+
+<div class="method-note">
+  <strong>How to read this.</strong> Every card below is one step of the session. Amber cards are the human speaking; white cards are the agent working. Cards start collapsed — click a header to open it. Inside an open agent card:<ul><li><em>Observation</em> — what the agent saw before acting (tool output, file contents).</li><li><em>Thought</em> — what the agent said to itself. Underlined phrases here explain <em>why</em> it acted.</li><li><em>Action</em> — what it actually did (commands, code edits). Underlined phrases here show <em>what</em> was done.</li></ul>Each underline carries a color-coded tag from the action codebook on the right. Click any underlined phrase, tag row, or codebook entry — the matching pieces light up together.
+</div>
+
+<div class="legend">
+  <div class="legend-item"><span class="legend-dot obs"></span> Observation</div>
+  <div class="legend-item"><span class="legend-dot thought"></span> Thought</div>
+  <div class="legend-item"><span class="legend-dot action"></span> Action</div>
+  <small>click anything underlined to light up its tag — and the other way around</small>
+</div>
+
+<div class="section-label">trajectory · 20 turns</div>
+
+<div class="turns-controls">
+  <button id="expand-all" type="button">expand all</button>
+  <button id="collapse-all" type="button">collapse all</button>
+</div>
+
+<div id="turns-container"></div>
+
+<div class="summary-footer">
+  <h2>Summary findings</h2>
+  <div class="sub">Patterns that only become visible when every tag points at an exact quote</div>
+  <div class="findings"><div class="finding"><strong>The same observation is read twice, in opposite directions</strong><span>T10 and T18 produce identical stdout — one re-registration <code>RuntimeWarning</code>. At T11 the quote <em>"This indicates that the issue has been replicated"</em> fires <code>Evaluating › Goal-completion check</code>; at T19 <em>"indicates that the issue has been resolved"</em> fires the same leaf on the same evidence. The quote-level view makes the circularity legible: two Goal-completion checks eight turns apart, both grounded in nothing.</span></div><div class="finding"><strong>One generative span in twenty turns</strong><span><code>Reasoning › Generating</code> fires exactly once, on T15's <em>"checking if the subclass is a subclass of any of the classes in `_subclasses`"</em>. Every other design-flavoured span is <code>Planning › Plan code or artifact structure</code> restating an instruction the issue text already supplied. The agent's contribution is almost entirely mechanical.</span></div><div class="finding"><strong>Reflection recurs without generalizing</strong><span><code>Reflection › Detect failed action</code> fires at T7, T9, T16, and T17, each time followed by <code>Reflection › Self-Correct Step Implementation</code> or a <code>Planning</code> restatement and an identical <code>edit</code> retry. T16 repeats T15's exact line-range mistake, and T17's wording (<em>"I made a mistake in the edit command again"</em>) is T16's with one word added. Self-correction here is local repair, never a change of edit strategy.</span></div><div class="finding"><strong>Contract-v3 rhythm: Planning on the thought, Executing on the action</strong><span>Thirteen of the twenty turns pair a thought-targeted <code>Planning</code> span with an action-targeted <code>Executing</code> or <code>Grounding</code> span. The split also separates the five <code>python reproduce.py</code> turns cleanly: T3/T5/T8/T10 carry <code>Grounding › Execute code</code> (pre-fix evidence gathering) and only T18 carries <code>Executing › Run verification command</code>.</span></div></div>
+</div>
+
+<div id="patterns-summary"></div>
+
+</main>
+
+<aside class="codebook-panel">
+  <div id="panel-resize-handle" title="Drag to resize · double-click to reset"></div>
+  <div class="panel-title">What the agent did, by category</div>
+  <div class="panel-sub">Counted from the tagged quotes across all 20 agent steps</div>
+
+  <div class="pie-section">
+    <div class="pie-legend"><div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ink-mute); letter-spacing: 0.08em; text-transform: uppercase; text-align: center; margin-bottom: 10px;">64 tags across 9 groups</div></div>
+    <div class="pie-svg-wrap"><svg width="300" height="206" viewBox="0 0 300 206" xmlns="http://www.w3.org/2000/svg" style="display: block; margin: 0 auto;"><g class="pie-slice" data-grp="Planning" style="cursor: pointer;"><title>Planning: 17 (27%)</title><rect x="0" y="4" width="300" height="22" fill="transparent"/><text x="96" y="18.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Planning</text><rect x="102" y="9" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="9" width="164.0" height="12" fill="#0284c7" rx="2"/><text x="298" y="18.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">17</text></g><g class="pie-slice" data-grp="Executing" style="cursor: pointer;"><title>Executing: 11 (17%)</title><rect x="0" y="26" width="300" height="22" fill="transparent"/><text x="96" y="40.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Executing</text><rect x="102" y="31" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="31" width="106.1" height="12" fill="#059669" rx="2"/><text x="298" y="40.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">11</text></g><g class="pie-slice" data-grp="Evaluating" style="cursor: pointer;"><title>Evaluating: 9 (14%)</title><rect x="0" y="48" width="300" height="22" fill="transparent"/><text x="96" y="62.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Evaluating</text><rect x="102" y="53" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="53" width="86.8" height="12" fill="#0d9488" rx="2"/><text x="298" y="62.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">9</text></g><g class="pie-slice" data-grp="Reasoning" style="cursor: pointer;"><title>Reasoning: 7 (11%)</title><rect x="0" y="70" width="300" height="22" fill="transparent"/><text x="96" y="84.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Reasoning</text><rect x="102" y="75" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="75" width="67.5" height="12" fill="#4f46e5" rx="2"/><text x="298" y="84.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">7</text></g><g class="pie-slice" data-grp="Reflection" style="cursor: pointer;"><title>Reflection: 7 (11%)</title><rect x="0" y="92" width="300" height="22" fill="transparent"/><text x="96" y="106.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Reflection</text><rect x="102" y="97" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="97" width="67.5" height="12" fill="#e11d48" rx="2"/><text x="298" y="106.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">7</text></g><g class="pie-slice" data-grp="Grounding" style="cursor: pointer;"><title>Grounding: 6 (9%)</title><rect x="0" y="114" width="300" height="22" fill="transparent"/><text x="96" y="128.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Grounding</text><rect x="102" y="119" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="119" width="57.9" height="12" fill="#c026d3" rx="2"/><text x="298" y="128.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">6</text></g><g class="pie-slice" data-grp="Retrieval" style="cursor: pointer;"><title>Retrieval: 5 (8%)</title><rect x="0" y="136" width="300" height="22" fill="transparent"/><text x="96" y="150.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Retrieval</text><rect x="102" y="141" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="141" width="48.2" height="12" fill="#0891b2" rx="2"/><text x="298" y="150.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">5</text></g><g class="pie-slice" data-grp="Memory" style="cursor: pointer;"><title>Memory: 1 (2%)</title><rect x="0" y="158" width="300" height="22" fill="transparent"/><text x="96" y="172.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Memory</text><rect x="102" y="163" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="163" width="9.6" height="12" fill="#d97706" rx="2"/><text x="298" y="172.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">1</text></g><g class="pie-slice" data-grp="Deciding" style="cursor: pointer;"><title>Deciding: 1 (2%)</title><rect x="0" y="180" width="300" height="22" fill="transparent"/><text x="96" y="194.5" text-anchor="end" font-family="Inter, sans-serif" font-size="11" font-weight="500" fill="#0f172a">Deciding</text><rect x="102" y="185" width="164.0" height="12" fill="#f1f5f9" rx="2"/><rect x="102" y="185" width="9.6" height="12" fill="#7c3aed" rx="2"/><text x="298" y="194.5" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">1</text></g></svg></div>
+  </div>
+
+  <div id="signature-container"></div>
+
+  <div id="codebook-container"></div>
+</aside>
+
+</div>
+
+<script>
+const turns = [{"n": 1, "phase": "reproduce", "phaseLabel": "Reproduction setup", "headline": "Agent creates reproduce.py to replicate the reported crash.", "obs": "[File: /django__django/reproduce.py (1 lines total)]\n1:", "thought": "DISCUSSION\nFirst, I'll create a new file called `reproduce.py` to replicate the issue using the provided code snippet. This will help us confirm the bug and understand its behavior.\n", "action": "create reproduce.py\n", "quotes": [{"quote": "create a new file called `reproduce.py` to replicate the issue", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Plan function or tool use", "target": "thought"}, {"quote": "help us confirm the bug and understand its behavior", "grp": "Evaluating", "sub": "Evaluating with gold", "leaf": "Plan verification step", "target": "thought"}, {"quote": "create reproduce.py", "grp": "Executing", "sub": "Executing plan", "leaf": "Initiate planned action", "target": "action"}], "insight": ""}, {"n": 2, "phase": "reproduce", "phaseLabel": "Reproduction script", "headline": "Agent writes the issue's snippet into the reproducer.", "obs": "[File: /django__django/reproduce.py (16 lines total)]\n1:from django.db import models\n2:\n3:class MyBigAutoField(models.BigAutoField):\n4:    pass\n5:\n6:class MyModel(models.Model):\n7:    pass\n8:\n9:# Simulate the DEFAULT_AUTO_FIELD setting\n10:models.options.DEFAULT_AUTO_FIELD = 'example.core.models.MyBigAutoField'\n11:\n12:# Trigger the error by creating an instance of MyModel\n13:try:\n14:    MyModel()\n15:except ValueError as e:\n16:    print(e)\nFile updated. Please review the changes and make sure they are correct (correct indentation, no duplicate lines, etc). Edit the file again if necessary.", "thought": "DISCUSSION\nNow, I'll add the provided code snippet to the `reproduce.py` file to replicate the issue.\n", "action": "edit 1:1\nfrom django.db import models\n\nclass MyBigAutoField(models.BigAutoField):\n    pass\n\nclass MyModel(models.Model):\n    pass\n\n# Simulate the DEFAULT_AUTO_FIELD setting\nmodels.options.DEFAULT_AUTO_FIELD = 'example.core.models.MyBigAutoField'\n\n# Trigger the error by creating an instance of MyModel\ntry:\n    MyModel()\nexcept ValueError as e:\n    print(e)\nend_of_edit\n", "quotes": [{"quote": "add the provided code snippet to the `reproduce.py` file", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Plan code or artifact structure", "target": "thought"}, {"quote": "edit 1:1\nfrom django.db import models", "grp": "Executing", "sub": "Executing plan", "leaf": "Apply patch via edit", "target": "action"}], "insight": ""}, {"n": 3, "phase": "reproduce", "phaseLabel": "First reproduction run", "headline": "Agent runs the reproducer and hits a settings import error.", "obs": "Traceback (most recent call last):\n  File \"reproduce.py\", line 6, in <module>\n    class MyModel(models.Model):\n  File \"/django__django/django/db/models/base.py\", line 108, in __new__\n    app_config = apps.get_containing_app_config(module)\n  File \"/django__django/django/apps/registry.py\", line 253, in get_containing_app_config\n    self.check_apps_ready()\n  File \"/django__django/django/apps/registry.py\", line 135, in check_apps_ready\n    settings.INSTALLED_APPS\n  File \"/django__django/django/conf/__init__.py\", line 67, in __getattr__\n    self._setup(name)\n  File \"/django__django/django/conf/__init__.py\", line 54, in _setup\n    self._wrapped = Settings(settings_module)\n  File \"/django__django/django/conf/__init__.py\", line 141, in __init__\n    mod = importlib.import_module(self.SETTINGS_MODULE)\n  File \"/root/miniconda3/envs/django__django__4.0/lib/python3.8/importlib/__init__.py\", line 127, in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\n  File \"<frozen importlib._bootstrap>\", line 1014, in _gcd_import\n  File \"<frozen importlib._bootstrap>\", line 991, in _find_and_load\n  File \"<frozen importlib._bootstrap>\", line 973, in _find_and_load_unlocked\nModuleNotFoundError: No module named 'test_settings'", "thought": "DISCUSSION\nNow, I'll run the `reproduce.py` script to see if it replicates the issue as described.\n", "action": "python reproduce.py\n", "quotes": [{"quote": "run the `reproduce.py` script to see if it replicates the issue", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Plan function or tool use", "target": "thought"}, {"quote": "python reproduce.py", "grp": "Grounding", "sub": "Augment with external computation", "leaf": "Execute code", "target": "action"}], "insight": ""}, {"n": 4, "phase": "recover", "phaseLabel": "Settings bootstrap", "headline": "Agent adds a minimal Django settings block to the script.", "obs": "[File: /django__django/reproduce.py (48 lines total)]\n1:import django\n2:from django.conf import settings\n3:from django.db import models\n4:\n5:# Minimal settings configuration\n6:settings.configure(\n7:    INSTALLED_APPS=[\n8:        'django.contrib.contenttypes',\n9:    ],\n10:    DATABASES={\n11:        'default': {\n12:            'ENGINE': 'django.db.backends.sqlite3',\n13:            'NAME': ':memory:',\n14:        }\n15:    }\n16:)\n17:\n18:django.setup()\n19:\n20:class MyBigAutoField(models.BigAutoField):\n21:    pass\n22:\n23:class MyModel(models.Model):\n24:    pass\n25:\n26:# Simulate the DEFAULT_AUTO_FIELD setting\n27:models.options.DEFAULT_AUTO_FIELD = 'example.core.models.MyBigAutoField'\n28:\n29:# Trigger the error by creating an instance of MyModel\n30:try:\n31:    MyModel()\n32:except ValueError as e:\n33:    print(e)\n34:\n35:class MyBigAutoField(models.BigAutoField):\n36:    pass\n37:\n38:class MyModel(models.Model):\n39:    pass\n40:\n41:# Simulate the DEFAULT_AUTO_FIELD setting\n42:models.options.DEFAULT_AUTO_FIELD = 'example.core.models.MyBigAutoField'\n43:\n44:# Trigger the error by creating an instance of MyModel\n45:try:\n46:    MyModel()\n47:except ValueError as e:\n48:    print(e)\nFile updated. Please review the changes and make sure they are correct (correct indentation, no duplicate lines, etc). Edit the file again if necessary.", "thought": "DISCUSSION\nIt seems like the script is trying to access Django settings, which are not configured. To properly simulate the issue, we need to set up a minimal Django settings configuration within the script. I'll update the `reproduce.py` file to include a minimal settings configuration.\n\n", "action": "edit 1:1\nimport django\nfrom django.conf import settings\nfrom django.db import models\n\n# Minimal settings configuration\nsettings.configure(\n    INSTALLED_APPS=[\n        'django.contrib.contenttypes',\n    ],\n    DATABASES={\n        'default': {\n            'ENGINE': 'django.db.backends.sqlite3',\n            'NAME': ':memory:',\n        }\n    }\n)\n\ndjango.setup()\n\nclass MyBigAutoField(models.BigAutoField):\n    pass\n\nclass MyModel(models.Model):\n    pass\n\n# Simulate the DEFAULT_AUTO_FIELD setting\nmodels.options.DEFAULT_AUTO_FIELD = 'example.core.models.MyBigAutoField'\n\n# Trigger the error by creating an instance of MyModel\ntry:\n    MyModel()\nexcept ValueError as e:\n    print(e)\nend_of_edit\n", "quotes": [{"quote": "the script is trying to access Django settings, which are not configured", "grp": "Reasoning", "sub": "Inferring", "leaf": "Diagnose Error Cause", "target": "thought"}, {"quote": "we need to set up a minimal Django settings configuration within the script", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Formulate a high-level plan", "target": "thought"}, {"quote": "update the `reproduce.py` file to include a minimal settings configuration", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Plan code or artifact structure", "target": "thought"}, {"quote": "edit 1:1\nimport django\nfrom django.conf import settings", "grp": "Executing", "sub": "Executing plan", "leaf": "Apply patch via edit", "target": "action"}], "insight": "The edit duplicates the whole model block instead of replacing line 1, which is what forces the next five turns of harness repair."}, {"n": 5, "phase": "reproduce", "phaseLabel": "Reproduction re-run", "headline": "Agent re-runs the script and hits a missing app_label.", "obs": "Traceback (most recent call last):\n  File \"reproduce.py\", line 23, in <module>\n    class MyModel(models.Model):\n  File \"/django__django/django/db/models/base.py\", line 113, in __new__\n    raise RuntimeError(\nRuntimeError: Model class __main__.MyModel doesn't declare an explicit app_label and isn't in an application in INSTALLED_APPS.", "thought": "DISCUSSION\nThe script has been updated with a minimal Django settings configuration. Now, I'll run the `reproduce.py` script again to see if it replicates the issue as described.\n", "action": "python reproduce.py\n", "quotes": [{"quote": "The script has been updated with a minimal Django settings configuration", "grp": "Evaluating", "sub": "Evaluating with goals/requirements/constraints", "leaf": "Goal-completion check", "target": "thought"}, {"quote": "run the `reproduce.py` script again to see if it replicates the issue", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Plan function or tool use", "target": "thought"}, {"quote": "python reproduce.py", "grp": "Grounding", "sub": "Augment with external computation", "leaf": "Execute code", "target": "action"}], "insight": ""}, {"n": 6, "phase": "recover", "phaseLabel": "app_label attempt", "headline": "Agent tries to give MyModel an explicit app_label.", "obs": "Your proposed edit has introduced new syntax error(s). Please read this error message carefully and then retry editing the file.\n\nERRORS:\n- F821 undefined name 'MyModel'\n\nThis is how your edit would have looked if applied\n-------------------------------------------------\n[File: /django__django/reproduce.py (48 lines total)]\n(17 more lines above)\n18:django.setup()\n19:\n20:class MyBigAutoField(models.BigAutoField):\n21:    pass\n22:\n23:    class Meta:\n24:        app_label = 'example'\n25:\n26:# Simulate the DEFAULT_AUTO_FIELD setting\n27:models.options.DEFAULT_AUTO_FIELD = 'example.core.models.MyBigAutoField'\n28:\n29:# Trigger the error by creating an instance of MyModel\n(19 more lines below)\n-------------------------------------------------\n\nThis is the original code before your edit\n-------------------------------------------------\n[File: /django__django/reproduce.py (48 lines total)]\n(17 more lines above)\n18:django.setup()\n19:\n20:class MyBigAutoField(models.BigAutoField):\n21:    pass\n22:\n23:class MyModel(models.Model):\n24:    pass\n25:\n26:# Simulate the DEFAULT_AUTO_FIELD setting\n27:models.options.DEFAULT_AUTO_FIELD = 'example.core.models.MyBigAutoField'\n28:\n29:# Trigger the error by creating an instance of MyModel\n(19 more lines below)\n-------------------------------------------------\nYour changes have NOT been applied. Please fix your edit command and try again.\nYou either need to 1) Specify the correct start/end line arguments or 2) Correct your edit code.\nDO NOT re-run the same failed edit command. Running it again will lead to the same error.", "thought": "DISCUSSION\nThe error indicates that the `MyModel` class needs to be associated with an app label. I'll update the `MyModel` class to include an `app_label` in its `Meta` class to resolve this issue.\n\n", "action": "edit 23:24\n    class Meta:\n        app_label = 'example'\nend_of_edit\n", "quotes": [{"quote": "The error indicates that the `MyModel` class needs to be associated with an app label", "grp": "Reasoning", "sub": "Inferring", "leaf": "Diagnose Error Cause", "target": "thought"}, {"quote": "update the `MyModel` class to include an `app_label` in its `Meta` class", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Plan code or artifact structure", "target": "thought"}, {"quote": "edit 23:24\n    class Meta:\n        app_label = 'example'", "grp": "Executing", "sub": "Executing plan", "leaf": "Apply patch via edit", "target": "action"}], "insight": ""}, {"n": 7, "phase": "recover", "phaseLabel": "Edit-range correction", "headline": "Agent re-targets the edit range after the lint rejection.", "obs": "[File: /django__django/reproduce.py (49 lines total)]\n1:import django\n2:from django.conf import settings\n3:from django.db import models\n4:\n5:# Minimal settings configuration\n6:settings.configure(\n7:    INSTALLED_APPS=[\n8:        'django.contrib.contenttypes',\n9:    ],\n10:    DATABASES={\n11:        'default': {\n12:            'ENGINE': 'django.db.backends.sqlite3',\n13:            'NAME': ':memory:',\n14:        }\n15:    }\n16:)\n17:\n18:django.setup()\n19:\n20:class MyBigAutoField(models.BigAutoField):\n21:    pass\n22:\n23:class MyModel(models.Model):\n24:    class Meta:\n25:        app_label = 'example'\n26:\n27:# Simulate the DEFAULT_AUTO_FIELD setting\n28:models.options.DEFAULT_AUTO_FIELD = 'example.core.models.MyBigAutoField'\n29:\n30:# Trigger the error by creating an instance of MyModel\n31:try:\n32:    MyModel()\n33:except ValueError as e:\n34:    print(e)\n35:\n36:class MyBigAutoField(models.BigAutoField):\n37:    pass\n38:\n39:class MyModel(models.Model):\n40:    pass\n41:\n42:# Simulate the DEFAULT_AUTO_FIELD setting\n43:models.options.DEFAULT_AUTO_FIELD = 'example.core.models.MyBigAutoField'\n44:\n45:# Trigger the error by creating an instance of MyModel\n46:try:\n47:    MyModel()\n48:except ValueError as e:\n49:    print(e)\nFile updated. Please review the changes and make sure they are correct (correct indentation, no duplicate lines, etc). Edit the file again if necessary.", "thought": "DISCUSSION\nIt looks like I made a mistake in specifying the correct lines for the edit. I need to add the `Meta` class inside the `MyModel` class. I'll correct the edit command to properly include the `Meta` class within `MyModel`.\n\n", "action": "edit 24:24\n    class Meta:\n        app_label = 'example'\nend_of_edit\n", "quotes": [{"quote": "I made a mistake in specifying the correct lines for the edit", "grp": "Reflection", "sub": "Reflect on errors and failures", "leaf": "Detect failed action", "target": "thought"}, {"quote": "add the `Meta` class inside the `MyModel` class", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Plan code or artifact structure", "target": "thought"}, {"quote": "correct the edit command to properly include the `Meta` class", "grp": "Reflection", "sub": "Reflect on errors and failures", "leaf": "Self-Correct Step Implementation", "target": "thought"}, {"quote": "edit 24:24\n    class Meta:\n        app_label = 'example'", "grp": "Executing", "sub": "Executing plan", "leaf": "Apply patch via edit", "target": "action"}], "insight": ""}, {"n": 8, "phase": "reproduce", "phaseLabel": "Reproduction re-run", "headline": "Agent re-runs the script and hits the same error lower down.", "obs": "Traceback (most recent call last):\n  File \"reproduce.py\", line 39, in <module>\n    class MyModel(models.Model):\n  File \"/django__django/django/db/models/base.py\", line 113, in __new__\n    raise RuntimeError(\nRuntimeError: Model class __main__.MyModel doesn't declare an explicit app_label and isn't in an application in INSTALLED_APPS.", "thought": "DISCUSSION\nThe `Meta` class has been added to `MyModel` to include the `app_label`. Now, I'll run the `reproduce.py` script again to see if it replicates the issue as described.\n\n", "action": "python reproduce.py\n", "quotes": [{"quote": "The `Meta` class has been added to `MyModel` to include the `app_label`", "grp": "Evaluating", "sub": "Evaluating with goals/requirements/constraints", "leaf": "Goal-completion check", "target": "thought"}, {"quote": "run the `reproduce.py` script again to see if it replicates the issue", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Plan function or tool use", "target": "thought"}, {"quote": "python reproduce.py", "grp": "Grounding", "sub": "Augment with external computation", "leaf": "Execute code", "target": "action"}], "insight": ""}, {"n": 9, "phase": "recover", "phaseLabel": "Duplicate model repair", "headline": "Agent patches the duplicated second MyModel definition.", "obs": "[File: /django__django/reproduce.py (50 lines total)]\n1:import django\n2:from django.conf import settings\n3:from django.db import models\n4:\n5:# Minimal settings configuration\n6:settings.configure(\n7:    INSTALLED_APPS=[\n8:        'django.contrib.contenttypes',\n9:    ],\n10:    DATABASES={\n11:        'default': {\n12:            'ENGINE': 'django.db.backends.sqlite3',\n13:            'NAME': ':memory:',\n14:        }\n15:    }\n16:)\n17:\n18:django.setup()\n19:\n20:class MyBigAutoField(models.BigAutoField):\n21:    pass\n22:\n23:class MyModel(models.Model):\n24:    class Meta:\n25:        app_label = 'example'\n26:\n27:# Simulate the DEFAULT_AUTO_FIELD setting\n28:models.options.DEFAULT_AUTO_FIELD = 'example.core.models.MyBigAutoField'\n29:\n30:# Trigger the error by creating an instance of MyModel\n31:try:\n32:    MyModel()\n33:except ValueError as e:\n34:    print(e)\n35:\n36:class MyBigAutoField(models.BigAutoField):\n37:    pass\n38:\n39:class MyModel(models.Model):\n40:    class Meta:\n41:        app_label = 'example'\n42:\n43:# Simulate the DEFAULT_AUTO_FIELD setting\n44:models.options.DEFAULT_AUTO_FIELD = 'example.core.models.MyBigAutoField'\n45:\n46:# Trigger the error by creating an instance of MyModel\n47:try:\n48:    MyModel()\n49:except ValueError as e:\n50:    print(e)\nFile updated. Please review the changes and make sure they are correct (correct indentation, no duplicate lines, etc). Edit the file again if necessary.", "thought": "DISCUSSION\nIt seems I missed adding the `Meta` class to the second `MyModel` definition. I'll update the second `MyModel` class to include the `Meta` class with the `app_label`.\n\n", "action": "edit 40:40\n    class Meta:\n        app_label = 'example'\nend_of_edit\n", "quotes": [{"quote": "I missed adding the `Meta` class to the second `MyModel` definition", "grp": "Reflection", "sub": "Reflect on errors and failures", "leaf": "Detect failed action", "target": "thought"}, {"quote": "update the second `MyModel` class to include the `Meta` class", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Plan code or artifact structure", "target": "thought"}, {"quote": "edit 40:40\n    class Meta:\n        app_label = 'example'", "grp": "Executing", "sub": "Executing plan", "leaf": "Apply patch via edit", "target": "action"}], "insight": ""}, {"n": 10, "phase": "reproduce", "phaseLabel": "Reproduction re-run", "headline": "Agent runs the script once more and gets only a warning.", "obs": "/django__django/django/db/models/base.py:321: RuntimeWarning: Model 'example.mymodel' was already registered. Reloading models is not advised as it can lead to inconsistencies, most notably with related models.\n  new_class._meta.apps.register_model(new_class._meta.app_label, new_class)", "thought": "DISCUSSION\nThe `Meta` class has been added to the second `MyModel` definition. Now, I'll run the `reproduce.py` script again to see if it replicates the issue as described.\n\n", "action": "python reproduce.py\n", "quotes": [{"quote": "The `Meta` class has been added to the second `MyModel` definition", "grp": "Evaluating", "sub": "Evaluating with goals/requirements/constraints", "leaf": "Goal-completion check", "target": "thought"}, {"quote": "run the `reproduce.py` script again to see if it replicates the issue", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Plan function or tool use", "target": "thought"}, {"quote": "python reproduce.py", "grp": "Grounding", "sub": "Augment with external computation", "leaf": "Execute code", "target": "action"}], "insight": "The run prints only a re-registration RuntimeWarning. The issue's ValueError never fires, because the script assigns `models.options.DEFAULT_AUTO_FIELD` after `settings.configure()` and nothing ever reads it."}, {"n": 11, "phase": "localize", "phaseLabel": "Phase pivot to localize", "headline": "Agent declares the bug reproduced and searches for AutoFieldMeta.", "obs": "Found 1 matches for \"class AutoFieldMeta\" in /django__django:\n/django__django/django/db/models/fields/__init__.py (1 matches)\nEnd of matches for \"class AutoFieldMeta\" in /django__django", "thought": "DISCUSSION\nThe script has successfully run, and we can see the warning about the model being already registered. This indicates that the issue has been replicated. Now, we need to fix the issue in the Django codebase. The issue suggests modifying the `AutoFieldMeta.__subclasscheck__` method to allow subclasses of `BigAutoField` and `SmallAutoField`.\n\nFirst, let's locate the file where `AutoFieldMeta` is defined. We can search for `AutoFieldMeta` in the codebase.\n\n", "action": "search_dir \"class AutoFieldMeta\"\n", "quotes": [{"quote": "we can see the warning about the model being already registered", "grp": "Reasoning", "sub": "Analysing", "leaf": "Interpret meaning of artifacts", "target": "thought"}, {"quote": "This indicates that the issue has been replicated", "grp": "Evaluating", "sub": "Evaluating with goals/requirements/constraints", "leaf": "Goal-completion check", "target": "thought"}, {"quote": "we need to fix the issue in the Django codebase", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Formulate a high-level plan", "target": "thought"}, {"quote": "modifying the `AutoFieldMeta.__subclasscheck__` method to allow subclasses of `BigAutoField` and `SmallAutoField`", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Plan code or artifact structure", "target": "thought"}, {"quote": "search_dir \"class AutoFieldMeta\"", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus", "target": "action"}], "insight": "The densest turn in the run and the one that decides its quality: the agent accepts an unrelated RuntimeWarning as proof of reproduction, then reads the fix straight out of the issue text rather than out of the observed failure."}, {"n": 12, "phase": "localize", "phaseLabel": "Open the fields module", "headline": "Agent opens the fields module that holds AutoFieldMeta.", "obs": "[File: /django__django/django/db/models/fields/__init__.py (2554 lines total)]\n1:import collections.abc\n2:import copy\n3:import datetime\n4:import decimal\n5:import operator\n6:import uuid\n7:import warnings\n8:from base64 import b64decode, b64encode\n9:from functools import partialmethod, total_ordering\n10:\n11:from django import forms\n12:from django.apps import apps\n13:from django.conf import settings\n14:from django.core import checks, exceptions, validators\n15:from django.db import connection, connections, router\n16:from django.db.models.constants import LOOKUP_SEP\n17:from django.db.models.query_utils import DeferredAttribute, RegisterLookupMixin\n18:from django.utils import timezone\n19:from django.utils.datastructures import DictWrapper\n20:from django.utils.dateparse import (\n21:    parse_date, parse_datetime, parse_duration, parse_time,\n22:)\n23:from django.utils.duration import duration_microseconds, duration_string\n24:from django.utils.functional import Promise, cached_property\n25:from django.utils.ipv6 import clean_ipv6_address\n26:from django.utils.itercompat import is_iterable\n27:from django.utils.text import capfirst\n28:from django.utils.translation import gettext_lazy as _\n29:\n30:__all__ = [\n31:    'AutoField', 'BLANK_CHOICE_DASH', 'BigAutoField', 'BigIntegerField',\n32:    'BinaryField', 'BooleanField', 'CharField', 'CommaSeparatedIntegerField',\n33:    'DateField', 'DateTimeField', 'DecimalField', 'DurationField',\n34:    'EmailField', 'Empty', 'Field', 'FilePathField', 'FloatField',\n35:    'GenericIPAddressField', 'IPAddressField', 'IntegerField', 'NOT_PROVIDED',\n36:    'NullBooleanField', 'PositiveBigIntegerField', 'PositiveIntegerField',\n37:    'PositiveSmallIntegerField', 'SlugField', 'SmallAutoField',\n38:    'SmallIntegerField', 'TextField', 'TimeField', 'URLField', 'UUIDField',\n39:]\n40:\n41:\n42:class Empty:\n43:    pass\n44:\n45:\n46:class NOT_PROVIDED:\n47:    pass\n48:\n49:\n50:# The values to use for \"blank\" in SelectFields. Will be appended to the start\n51:# of most \"choices\" lists.\n52:BLANK_CHOICE_DASH = [(\"\", \"---------\")]\n53:\n54:\n55:def _load_field(app_label, model_name, field_name):\n56:    return apps.get_model(app_label, model_name)._meta.get_field(field_name)\n57:\n58:\n59:# A guide to Field parameters:\n60:#\n61:#   * name:      The name of the field specified in the model.\n62:#   * attname:   The attribute to use on the model object. This is the same as\n63:#                \"name\", except in the case of ForeignKeys, where \"_id\" is\n64:#                appended.\n65:#   * db_column: The db_column specified in the model (or None).\n66:#   * column:    The database column for this field. This is the same as\n67:#                \"attname\", except if db_column is specified.\n68:#\n69:# Code that introspects values, or does other dynamic things, should use\n70:# attname. For example, this gets the primary key value of object \"obj\":\n71:#\n72:#     getattr(obj, opts.pk.attname)\n73:\n74:def _empty(of_cls):\n75:    new = Empty()\n76:    new.__class__ = of_cls\n77:    return new\n78:\n79:\n80:def return_None():\n81:    return None\n82:\n83:\n84:@total_ordering\n85:class Field(RegisterLookupMixin):\n86:    \"\"\"Base class for all field types\"\"\"\n87:\n88:    # Designates whether empty strings fundamentally are allowed at the\n89:    # database level.\n90:    empty_strings_allowed = True\n91:    empty_values = list(validators.EMPTY_VALUES)\n92:\n93:    # These track each time a Field instance is created. Used to retain order.\n94:    # The auto_creation_counter is used for fields that Django implicitly\n95:    # creates, creation_counter is used for all user-specified fields.\n96:    creation_counter = 0\n97:    auto_creation_counter = -1\n98:    default_validators = []  # Default set of validators\n99:    default_error_messages = {\n100:        'invalid_choice': _('Value %(value)r is not a valid choice.'),\n(2454 more lines below)", "thought": "DISCUSSION\nThe `AutoFieldMeta` class is defined in the `django/db/models/fields/__init__.py` file. Let's open this file and navigate to the definition of the `AutoFieldMeta` class to make the necessary changes.\n\n", "action": "open django/db/models/fields/__init__.py 1\n", "quotes": [{"quote": "The `AutoFieldMeta` class is defined in the `django/db/models/fields/__init__.py` file", "grp": "Reasoning", "sub": "Analysing", "leaf": "Analyse source code", "target": "thought"}, {"quote": "open this file and navigate to the definition of the `AutoFieldMeta` class", "grp": "Grounding", "sub": "Interact with digital environments", "leaf": "Navigate digital interfaces", "target": "thought"}, {"quote": "open django/db/models/fields/__init__.py 1", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus", "target": "action"}], "insight": ""}, {"n": 13, "phase": "localize", "phaseLabel": "In-file search", "headline": "Agent searches inside the file for the class definition.", "obs": "Found 2 matches for \"AutoFieldMeta\" in /django__django/django/db/models/fields/__init__.py:\nLine 2502:class AutoFieldMeta(type):\nLine 2530:class AutoField(AutoFieldMixin, IntegerField, metaclass=AutoFieldMeta):\nEnd of matches for \"AutoFieldMeta\" in /django__django/django/db/models/fields/__init__.py", "thought": "DISCUSSION\nSince the `AutoFieldMeta` class is likely not at the top of the file, I'll search for the term `AutoFieldMeta` within this file to quickly locate its definition.\n\n", "action": "search_file \"AutoFieldMeta\"\n", "quotes": [{"quote": "the `AutoFieldMeta` class is likely not at the top of the file", "grp": "Reasoning", "sub": "Inferring", "leaf": "Infer structure from indirect evidence", "target": "thought"}, {"quote": "search for the term `AutoFieldMeta` within this file to quickly locate its definition", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus", "target": "thought"}, {"quote": "search_file \"AutoFieldMeta\"", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus", "target": "action"}], "insight": ""}, {"n": 14, "phase": "localize", "phaseLabel": "Jump to definition", "headline": "Agent jumps to line 2502 to read the metaclass.", "obs": "[File: /django__django/django/db/models/fields/__init__.py (2554 lines total)]\n(2454 more lines above)\n2455:        super().__init__(*args, **kwargs)\n2456:\n2457:    def check(self, **kwargs):\n2458:        return [\n2459:            *super().check(**kwargs),\n2460:            *self._check_primary_key(),\n2461:        ]\n2462:\n2463:    def _check_primary_key(self):\n2464:        if not self.primary_key:\n2465:            return [\n2466:                checks.Error(\n2467:                    'AutoFields must set primary_key=True.',\n2468:                    obj=self,\n2469:                    id='fields.E100',\n2470:                ),\n2471:            ]\n2472:        else:\n2473:            return []\n2474:\n2475:    def deconstruct(self):\n2476:        name, path, args, kwargs = super().deconstruct()\n2477:        del kwargs['blank']\n2478:        kwargs['primary_key'] = True\n2479:        return name, path, args, kwargs\n2480:\n2481:    def validate(self, value, model_instance):\n2482:        pass\n2483:\n2484:    def get_db_prep_value(self, value, connection, prepared=False):\n2485:        if not prepared:\n2486:            value = self.get_prep_value(value)\n2487:            value = connection.ops.validate_autopk_value(value)\n2488:        return value\n2489:\n2490:    def contribute_to_class(self, cls, name, **kwargs):\n2491:        assert not cls._meta.auto_field, (\n2492:            \"Model %s can't have more than one auto-generated field.\"\n2493:            % cls._meta.label\n2494:        )\n2495:        super().contribute_to_class(cls, name, **kwargs)\n2496:        cls._meta.auto_field = self\n2497:\n2498:    def formfield(self, **kwargs):\n2499:        return None\n2500:\n2501:\n2502:class AutoFieldMeta(type):\n2503:    \"\"\"\n2504:    Metaclass to maintain backward inheritance compatibility for AutoField.\n2505:\n2506:    It is intended that AutoFieldMixin become public API when it is possible to\n2507:    create a non-integer automatically-generated field using column defaults\n2508:    stored in the database.\n2509:\n2510:    In many areas Django also relies on using isinstance() to check for an\n2511:    automatically-generated field as a subclass of AutoField. A new flag needs\n2512:    to be implemented on Field to be used instead.\n2513:\n2514:    When these issues have been addressed, this metaclass could be used to\n2515:    deprecate inheritance from AutoField and use of isinstance() with AutoField\n2516:    for detecting automatically-generated fields.\n2517:    \"\"\"\n2518:\n2519:    @property\n2520:    def _subclasses(self):\n2521:        return (BigAutoField, SmallAutoField)\n2522:\n2523:    def __instancecheck__(self, instance):\n2524:        return isinstance(instance, self._subclasses) or super().__instancecheck__(instance)\n2525:\n2526:    def __subclasscheck__(self, subclass):\n2527:        return subclass in self._subclasses or super().__subclasscheck__(subclass)\n2528:\n2529:\n2530:class AutoField(AutoFieldMixin, IntegerField, metaclass=AutoFieldMeta):\n2531:\n2532:    def get_internal_type(self):\n2533:        return 'AutoField'\n2534:\n2535:    def rel_db_type(self, connection):\n2536:        return IntegerField().db_type(connection=connection)\n2537:\n2538:\n2539:class BigAutoField(AutoFieldMixin, BigIntegerField):\n2540:\n2541:    def get_internal_type(self):\n2542:        return 'BigAutoField'\n2543:\n2544:    def rel_db_type(self, connection):\n2545:        return BigIntegerField().db_type(connection=connection)\n2546:\n2547:\n2548:class SmallAutoField(AutoFieldMixin, SmallIntegerField):\n2549:\n2550:    def get_internal_type(self):\n2551:        return 'SmallAutoField'\n2552:\n2553:    def rel_db_type(self, connection):\n2554:        return SmallIntegerField().db_type(connection=connection)", "thought": "DISCUSSION\nThe `AutoFieldMeta` class is defined at line 2502. Let's navigate to that line to examine the class and make the necessary changes.\n\n", "action": "goto 2502\n", "quotes": [{"quote": "The `AutoFieldMeta` class is defined at line 2502", "grp": "Memory", "sub": "Read memory", "leaf": "Read from working memory", "target": "thought"}, {"quote": "navigate to that line to examine the class", "grp": "Grounding", "sub": "Interact with digital environments", "leaf": "Navigate digital interfaces", "target": "thought"}, {"quote": "goto 2502", "grp": "Retrieval", "sub": "Retrieve from local corpus", "leaf": "Retrieve from local corpus", "target": "action"}], "insight": ""}, {"n": 15, "phase": "edit", "phaseLabel": "First patch attempt", "headline": "Agent designs the issubclass fix and applies it.", "obs": "Your proposed edit has introduced new syntax error(s). Please read this error message carefully and then retry editing the file.\n\nERRORS:\n- F821 undefined name 'subclass'\n- F821 undefined name 'subclass'\n\nThis is how your edit would have looked if applied\n-------------------------------------------------\n[File: /django__django/django/db/models/fields/__init__.py (2553 lines total)]\n(2519 more lines above)\n2520:    def _subclasses(self):\n2521:        return (BigAutoField, SmallAutoField)\n2522:\n2523:    def __instancecheck__(self, instance):\n2524:        return isinstance(instance, self._subclasses) or super().__instancecheck__(instance)\n2525:\n2526:        return issubclass(subclass, self._subclasses) or super().__subclasscheck__(subclass)\n2527:\n2528:\n2529:class AutoField(AutoFieldMixin, IntegerField, metaclass=AutoFieldMeta):\n2530:\n(23 more lines below)\n-------------------------------------------------\n\nThis is the original code before your edit\n-------------------------------------------------\n[File: /django__django/django/db/models/fields/__init__.py (2554 lines total)]\n(2520 more lines above)\n2521:        return (BigAutoField, SmallAutoField)\n2522:\n2523:    def __instancecheck__(self, instance):\n2524:        return isinstance(instance, self._subclasses) or super().__instancecheck__(instance)\n2525:\n2526:    def __subclasscheck__(self, subclass):\n2527:        return subclass in self._subclasses or super().__subclasscheck__(subclass)\n2528:\n2529:\n2530:class AutoField(AutoFieldMixin, IntegerField, metaclass=AutoFieldMeta):\n2531:\n2532:    def get_internal_type(self):\n(22 more lines below)\n-------------------------------------------------\nYour changes have NOT been applied. Please fix your edit command and try again.\nYou either need to 1) Specify the correct start/end line arguments or 2) Correct your edit code.\nDO NOT re-run the same failed edit command. Running it again will lead to the same error.", "thought": "DISCUSSION\nTo fix the issue, we need to modify the `__subclasscheck__` method of the `AutoFieldMeta` class to allow subclasses of `BigAutoField` and `SmallAutoField`. We can do this by checking if the subclass is a subclass of any of the classes in `_subclasses`.\n\nI'll update the `__subclasscheck__` method accordingly.\n\n", "action": "edit 2526:2527\n        return issubclass(subclass, self._subclasses) or super().__subclasscheck__(subclass)\nend_of_edit\n", "quotes": [{"quote": "we need to modify the `__subclasscheck__` method of the `AutoFieldMeta` class", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Formulate a high-level plan", "target": "thought"}, {"quote": "checking if the subclass is a subclass of any of the classes in `_subclasses`", "grp": "Reasoning", "sub": "Generating", "leaf": "Generate initial fix candidate", "target": "thought"}, {"quote": "edit 2526:2527\n        return issubclass(subclass, self._subclasses) or super().__subclasscheck__(subclass)", "grp": "Executing", "sub": "Executing plan", "leaf": "Apply patch via edit", "target": "action"}], "insight": "The only genuinely generative span in the run. The edit range 2526:2527 swallows the `def __subclasscheck__(self, subclass):` header, so the body is left orphaned and the linter rejects it."}, {"n": 16, "phase": "recover", "phaseLabel": "Patch retry", "headline": "Agent retries the edit after the undefined-name error.", "obs": "Your proposed edit has introduced new syntax error(s). Please read this error message carefully and then retry editing the file.\n\nERRORS:\n- F821 undefined name 'subclass'\n- F821 undefined name 'subclass'\n\nThis is how your edit would have looked if applied\n-------------------------------------------------\n[File: /django__django/django/db/models/fields/__init__.py (2553 lines total)]\n(2519 more lines above)\n2520:    def _subclasses(self):\n2521:        return (BigAutoField, SmallAutoField)\n2522:\n2523:    def __instancecheck__(self, instance):\n2524:        return isinstance(instance, self._subclasses) or super().__instancecheck__(instance)\n2525:\n2526:        return any(issubclass(subclass, cls) for cls in self._subclasses) or super().__subclasscheck__(subclass)\n2527:\n2528:\n2529:class AutoField(AutoFieldMixin, IntegerField, metaclass=AutoFieldMeta):\n2530:\n(23 more lines below)\n-------------------------------------------------\n\nThis is the original code before your edit\n-------------------------------------------------\n[File: /django__django/django/db/models/fields/__init__.py (2554 lines total)]\n(2520 more lines above)\n2521:        return (BigAutoField, SmallAutoField)\n2522:\n2523:    def __instancecheck__(self, instance):\n2524:        return isinstance(instance, self._subclasses) or super().__instancecheck__(instance)\n2525:\n2526:    def __subclasscheck__(self, subclass):\n2527:        return subclass in self._subclasses or super().__subclasscheck__(subclass)\n2528:\n2529:\n2530:class AutoField(AutoFieldMixin, IntegerField, metaclass=AutoFieldMeta):\n2531:\n2532:    def get_internal_type(self):\n(22 more lines below)\n-------------------------------------------------\nYour changes have NOT been applied. Please fix your edit command and try again.\nYou either need to 1) Specify the correct start/end line arguments or 2) Correct your edit code.\nDO NOT re-run the same failed edit command. Running it again will lead to the same error.", "thought": "DISCUSSION\nIt seems I made a mistake in the edit command. I need to ensure that the `subclass` parameter is properly referenced. I'll correct the edit command to properly reference the `subclass` parameter.\n\n", "action": "edit 2526:2527\n        return any(issubclass(subclass, cls) for cls in self._subclasses) or super().__subclasscheck__(subclass)\nend_of_edit\n", "quotes": [{"quote": "I made a mistake in the edit command", "grp": "Reflection", "sub": "Reflect on errors and failures", "leaf": "Detect failed action", "target": "thought"}, {"quote": "correct the edit command to properly reference the `subclass` parameter", "grp": "Reflection", "sub": "Reflect on errors and failures", "leaf": "Self-Correct Step Implementation", "target": "thought"}, {"quote": "edit 2526:2527\n        return any(issubclass(subclass, cls) for cls in self._subclasses) or super().__subclasscheck__(subclass)", "grp": "Executing", "sub": "Executing plan", "leaf": "Apply patch via edit", "target": "action"}], "insight": "The retry changes the expression but keeps the same line range, so it drops the `def` header a second time and fails identically."}, {"n": 17, "phase": "edit", "phaseLabel": "Patch lands", "headline": "Agent restores the def header and the patch applies.", "obs": "[File: /django__django/django/db/models/fields/__init__.py (2554 lines total)]\n(2454 more lines above)\n2455:        super().__init__(*args, **kwargs)\n2456:\n2457:    def check(self, **kwargs):\n2458:        return [\n2459:            *super().check(**kwargs),\n2460:            *self._check_primary_key(),\n2461:        ]\n2462:\n2463:    def _check_primary_key(self):\n2464:        if not self.primary_key:\n2465:            return [\n2466:                checks.Error(\n2467:                    'AutoFields must set primary_key=True.',\n2468:                    obj=self,\n2469:                    id='fields.E100',\n2470:                ),\n2471:            ]\n2472:        else:\n2473:            return []\n2474:\n2475:    def deconstruct(self):\n2476:        name, path, args, kwargs = super().deconstruct()\n2477:        del kwargs['blank']\n2478:        kwargs['primary_key'] = True\n2479:        return name, path, args, kwargs\n2480:\n2481:    def validate(self, value, model_instance):\n2482:        pass\n2483:\n2484:    def get_db_prep_value(self, value, connection, prepared=False):\n2485:        if not prepared:\n2486:            value = self.get_prep_value(value)\n2487:            value = connection.ops.validate_autopk_value(value)\n2488:        return value\n2489:\n2490:    def contribute_to_class(self, cls, name, **kwargs):\n2491:        assert not cls._meta.auto_field, (\n2492:            \"Model %s can't have more than one auto-generated field.\"\n2493:            % cls._meta.label\n2494:        )\n2495:        super().contribute_to_class(cls, name, **kwargs)\n2496:        cls._meta.auto_field = self\n2497:\n2498:    def formfield(self, **kwargs):\n2499:        return None\n2500:\n2501:\n2502:class AutoFieldMeta(type):\n2503:    \"\"\"\n2504:    Metaclass to maintain backward inheritance compatibility for AutoField.\n2505:\n2506:    It is intended that AutoFieldMixin become public API when it is possible to\n2507:    create a non-integer automatically-generated field using column defaults\n2508:    stored in the database.\n2509:\n2510:    In many areas Django also relies on using isinstance() to check for an\n2511:    automatically-generated field as a subclass of AutoField. A new flag needs\n2512:    to be implemented on Field to be used instead.\n2513:\n2514:    When these issues have been addressed, this metaclass could be used to\n2515:    deprecate inheritance from AutoField and use of isinstance() with AutoField\n2516:    for detecting automatically-generated fields.\n2517:    \"\"\"\n2518:\n2519:    @property\n2520:    def _subclasses(self):\n2521:        return (BigAutoField, SmallAutoField)\n2522:\n2523:    def __instancecheck__(self, instance):\n2524:        return isinstance(instance, self._subclasses) or super().__instancecheck__(instance)\n2525:\n2526:    def __subclasscheck__(self, subclass):\n2527:        return any(issubclass(subclass, cls) for cls in self._subclasses) or super().__subclasscheck__(subclass)\n2528:\n2529:\n2530:class AutoField(AutoFieldMixin, IntegerField, metaclass=AutoFieldMeta):\n2531:\n2532:    def get_internal_type(self):\n2533:        return 'AutoField'\n2534:\n2535:    def rel_db_type(self, connection):\n2536:        return IntegerField().db_type(connection=connection)\n2537:\n2538:\n2539:class BigAutoField(AutoFieldMixin, BigIntegerField):\n2540:\n2541:    def get_internal_type(self):\n2542:        return 'BigAutoField'\n2543:\n2544:    def rel_db_type(self, connection):\n2545:        return BigIntegerField().db_type(connection=connection)\n2546:\n2547:\n2548:class SmallAutoField(AutoFieldMixin, SmallIntegerField):\n2549:\n2550:    def get_internal_type(self):\n2551:        return 'SmallAutoField'\n2552:\n2553:    def rel_db_type(self, connection):\n2554:        return SmallIntegerField().db_type(connection=connection)\nFile updated. Please review the changes and make sure they are correct (correct indentation, no duplicate lines, etc). Edit the file again if necessary.", "thought": "DISCUSSION\nIt seems I made a mistake in the edit command again. I need to ensure that the `subclass` parameter is properly referenced within the method. I'll correct the edit command to properly reference the `subclass` parameter.\n\n", "action": "edit 2526:2527\n    def __subclasscheck__(self, subclass):\n        return any(issubclass(subclass, cls) for cls in self._subclasses) or super().__subclasscheck__(subclass)\nend_of_edit\n", "quotes": [{"quote": "I made a mistake in the edit command again", "grp": "Reflection", "sub": "Reflect on errors and failures", "leaf": "Detect failed action", "target": "thought"}, {"quote": "ensure that the `subclass` parameter is properly referenced within the method", "grp": "Reflection", "sub": "Reflect on errors and failures", "leaf": "Self-Correct Step Implementation", "target": "thought"}, {"quote": "edit 2526:2527\n    def __subclasscheck__(self, subclass):\n        return any(issubclass(subclass, cls) for cls in self._subclasses) or super().__subclasscheck__(subclass)", "grp": "Executing", "sub": "Executing plan", "leaf": "Apply patch via edit", "target": "action"}], "insight": ""}, {"n": 18, "phase": "verify", "phaseLabel": "Post-fix verification", "headline": "Agent re-runs the reproducer to check the patch.", "obs": "/django__django/django/db/models/base.py:321: RuntimeWarning: Model 'example.mymodel' was already registered. Reloading models is not advised as it can lead to inconsistencies, most notably with related models.\n  new_class._meta.apps.register_model(new_class._meta.app_label, new_class)", "thought": "DISCUSSION\nThe `__subclasscheck__` method has been updated to allow subclasses of `BigAutoField` and `SmallAutoField`. Now, I'll run the `reproduce.py` script again to see if the issue has been resolved.\n\n", "action": "python reproduce.py\n", "quotes": [{"quote": "The `__subclasscheck__` method has been updated to allow subclasses of `BigAutoField` and `SmallAutoField`", "grp": "Evaluating", "sub": "Evaluating with goals/requirements/constraints", "leaf": "Goal-completion check", "target": "thought"}, {"quote": "run the `reproduce.py` script again to see if the issue has been resolved", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Plan function or tool use", "target": "thought"}, {"quote": "python reproduce.py", "grp": "Executing", "sub": "Executing plan", "leaf": "Run verification command", "target": "action"}], "insight": "The observation here is byte-identical to T10's. The same output was read as 'bug reproduced' before the patch and is read as 'bug fixed' after it."}, {"n": 19, "phase": "other", "phaseLabel": "Cleanup", "headline": "Agent concludes the fix works and deletes the reproducer.", "obs": "", "thought": "DISCUSSION\nThe script ran without raising the `ValueError`, which indicates that the issue has been resolved. The warning about the model being already registered is expected due to the script being run multiple times.\n\nNow, I'll remove the `reproduce.py` file since it is no longer needed.\n\n", "action": "rm reproduce.py\n", "quotes": [{"quote": "The script ran without raising the `ValueError`", "grp": "Evaluating", "sub": "Evaluating with gold", "leaf": "Confirm actual == expected", "target": "thought"}, {"quote": "indicates that the issue has been resolved", "grp": "Evaluating", "sub": "Evaluating with goals/requirements/constraints", "leaf": "Goal-completion check", "target": "thought"}, {"quote": "The warning about the model being already registered is expected", "grp": "Reasoning", "sub": "Analysing", "leaf": "Interpret meaning of artifacts", "target": "thought"}, {"quote": "remove the `reproduce.py` file since it is no longer needed", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Plan function or tool use", "target": "thought"}, {"quote": "rm reproduce.py", "grp": "Executing", "sub": "Executing plan", "leaf": "Initiate planned action", "target": "action"}], "insight": ""}, {"n": 20, "phase": "submit", "phaseLabel": "Submission", "headline": "Agent accepts the change and submits the patch.", "obs": "\ndiff --git a/django/db/models/fields/__init__.py b/django/db/models/fields/__init__.py\nindex 0f53d9c30b..c0942efc4f 100644\n--- a/django/db/models/fields/__init__.py\n+++ b/django/db/models/fields/__init__.py\n@@ -2524,7 +2524,7 @@ class AutoFieldMeta(type):\n         return isinstance(instance, self._subclasses) or super().__instancecheck__(instance)\n \n     def __subclasscheck__(self, subclass):\n-        return subclass in self._subclasses or super().__subclasscheck__(subclass)\n+        return any(issubclass(subclass, cls) for cls in self._subclasses) or super().__subclasscheck__(subclass)\n \n \n class AutoField(AutoFieldMixin, IntegerField, metaclass=AutoFieldMeta):\n", "thought": "DISCUSSION\nThe `reproduce.py` file has been removed successfully. Now that we have fixed the issue, we should submit our changes to the code base.\n\n", "action": "submit\n", "quotes": [{"quote": "The `reproduce.py` file has been removed successfully", "grp": "Evaluating", "sub": "Evaluating with goals/requirements/constraints", "leaf": "Goal-completion check", "target": "thought"}, {"quote": "Now that we have fixed the issue", "grp": "Deciding", "sub": "Decide accept or not", "leaf": "Decide accept", "target": "thought"}, {"quote": "we should submit our changes to the code base", "grp": "Planning", "sub": "Formulate a workflow or plan", "leaf": "Formulate a high-level plan", "target": "thought"}], "insight": ""}];
+const segments = [{"start": 1, "end": 3, "title": "Agent scaffolds the reproducer", "summary": "Agent creates <code>reproduce.py</code>, pastes the issue's snippet in, and runs it; the run dies on a missing <code>test_settings</code> module before reaching any Django model code."}, {"start": 4, "end": 10, "title": "Agent fights its own reproduction harness", "summary": "Seven turns spent making the script importable: a settings block that is pasted in duplicate (T4), then three <code>Meta.app_label</code> repairs (T6, T7, T9) around two failed <code>edit</code> ranges. The final run at T10 prints only a model re-registration warning, never the issue's <code>ValueError</code>."}, {"start": 11, "end": 14, "title": "Agent pivots to localizing AutoFieldMeta", "summary": "Agent reads the warning as successful reproduction and moves on. <code>search_dir</code> → <code>open</code> → <code>search_file</code> → <code>goto 2502</code> walks straight to the metaclass with no wasted lookups; the fix target comes from the issue text, not from the reproduction."}, {"start": 15, "end": 17, "title": "Agent lands the one-line fix in three tries", "summary": "T15 designs the correct patch — <code>any(issubclass(subclass, cls) for cls in self._subclasses)</code> — but the edit range 2526:2527 eats the <code>def</code> header. T16 repeats the same range error, and only T17 includes the header and applies."}, {"start": 18, "end": 20, "title": "Agent verifies, cleans up, and submits", "summary": "The post-fix run at T18 returns the same warning-only output as T10, which Agent reads as resolution. Reproducer is deleted at T19 and the patch submitted at T20; the diff is the correct upstream fix despite the circular verification."}];
+const QUOTE_TARGET = "both"; // "thought" | "action"
+
+// Actor icons — Google Material Design icons (Apache 2.0):
+// "person" (social) for human turns, "smart_toy" (hardware) for agent turns.
+const ICON_HUMAN = '<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24" fill="currentColor"><path d="M0 0h24v24H0z" fill="none"/><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>';
+const ICON_AGENT = '<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24" fill="currentColor"><g><rect fill="none" height="24" width="24" y="0"/></g><g><path d="M20,9V7c0-1.1-0.9-2-2-2h-3c0-1.66-1.34-3-3-3S9,3.34,9,5H6C4.9,5,4,5.9,4,7v2c-1.66,0-3,1.34-3,3c0,1.66,1.34,3,3,3v4 c0,1.1,0.9,2,2,2h12c1.1,0,2-0.9,2-2v-4c1.66,0,3-1.34,3-3C23,10.34,21.66,9,20,9z M7.5,11.5C7.5,10.67,8.17,10,9,10 s1.5,0.67,1.5,1.5S9.83,13,9,13S7.5,12.33,7.5,11.5z M16,17H8v-2h8V17z M15,13c-0.83,0-1.5-0.67-1.5-1.5S14.17,10,15,10 s1.5,0.67,1.5,1.5S15.83,13,15,13z"/></g></svg>';
+
+function buildCodebook() {
+  const cb = {};
+  turns.forEach(t => {
+    t.quotes.forEach(q => {
+      if (!cb[q.grp]) cb[q.grp] = { items: {}, total: 0 };
+      const key = q.sub + ' › ' + q.leaf;
+      if (!cb[q.grp].items[key]) cb[q.grp].items[key] = { sub: q.sub, leaf: q.leaf, turns: [] };
+      cb[q.grp].items[key].turns.push(t.n);
+      cb[q.grp].total += 1;
+    });
+  });
+  return cb;
+}
+
+const codebook = buildCodebook();
+// Optional behavior-pattern layer: key = "`${sub} › ${leaf}`", value = {t, status, cause, advice}.
+// Injected from the annotated JSON's `patterns` field; {} when absent (nothing highlights).
+const PATTERNS = {};
+const ANOM_MARK = {lo:'⚠', hi:'▲', mid:'◆', ok:'✓'};
+
+const grpDisplayName = {};
+function displayGrp(g) { return grpDisplayName[g] || g; }
+
+function escapeHTML(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function highlightAction(s) {
+  let out = escapeHTML(s);
+  out = out.replace(/^(edit|create|open|search_dir|search_file|find_file|goto|scroll_down|scroll_up|submit|rm|pylint|python|pytest|cat|ls|cd|grep|sed|find|end_of_edit)(\b)/gm, '<span class="kw">$1</span>$2');
+  out = out.replace(/(#[^\n]*)/g, '<span class="cmt">$1</span>');
+  return out;
+}
+
+function renderThoughtWithQuotes(thought, quotes, turnNum, allQuotes = quotes) {
+  const positioned = quotes.map((q, idx) => {
+    const pos = thought.indexOf(q.quote);
+    return { ...q, idx: allQuotes.indexOf(q), pos };
+  }).filter(q => q.pos !== -1).sort((a, b) => a.pos - b.pos);
+
+  const filtered = [];
+  let lastEnd = -1;
+  for (const q of positioned) {
+    if (q.pos >= lastEnd) {
+      filtered.push(q);
+      lastEnd = q.pos + q.quote.length;
+    }
+  }
+
+  let out = '';
+  let cursor = 0;
+  for (const q of filtered) {
+    out += escapeHTML(thought.slice(cursor, q.pos));
+    out += `<span class="qmark" data-turn="${turnNum}" data-qidx="${q.idx}" data-grp="${q.grp}" data-key="${q.sub} › ${q.leaf}" style="--qcolor: var(--grp-${q.grp}); --qbg: var(--grp-${q.grp}-bg);">${escapeHTML(q.quote)}<sup>${q.idx + 1}</sup></span>`;
+    cursor = q.pos + q.quote.length;
+  }
+  out += escapeHTML(thought.slice(cursor));
+  return out;
+}
+
+function renderTurns() {
+  const container = document.getElementById('turns-container');
+  container.innerHTML = turns.map(t => {
+    // Human interaction events render as distinct verbatim-prompt cards.
+    if (t.kind === 'interaction') {
+      const intHeadline = t.headline || `${t.actor === 'human' ? 'Human' : escapeHTML(t.actor)} prompt`;
+      return `
+      <div class="turn interaction" data-turn="${t.id}">
+        <div class="interaction-header">
+          <span class="actor-icon actor-human" title="Human">${ICON_HUMAN}</span>
+          <div class="int-num"><small>prompt</small>${t.id}</div>
+          <div class="int-title">${escapeHTML(intHeadline)}</div>
+          ${t.label ? `<span class="int-label">${escapeHTML(t.label)}</span>` : ''}
+          <span class="turn-chevron">▶</span>
+        </div>
+        <div class="turn-body">
+          <div class="interaction-text">${escapeHTML(t.text)}</div>
+        </div>
+      </div>`;
+    }
+    const annotCount = t.quotes.length;
+    const annotRows = t.quotes.map((q, idx) => `
+      <div class="annot-row" data-turn="${t.n}" data-qidx="${idx}" data-grp="${q.grp}" data-key="${q.sub} › ${q.leaf}" style="--qcolor: var(--grp-${q.grp}); --qbg: var(--grp-${q.grp}-bg);">
+        <div class="annot-quote"><span class="qnum">${idx + 1}</span>${escapeHTML(q.quote)}</div>
+        <div class="annot-arrow">→</div>
+        <div class="annot-tag"><span class="annot-grp">${displayGrp(q.grp)}</span><span class="annot-sep">›</span>${q.sub}<span class="annot-sep">›</span><span class="annot-leaf">${q.leaf}</span></div>
+      </div>
+    `).join('');
+
+    let thoughtBlock, actionBlock, thoughtAnnotBlock = '', actionAnnotBlock = '', annotBlock = '';
+    if (QUOTE_TARGET === "action") {
+      // Action surface is the host: quote highlights live in the <code> action block.
+      // Thought becomes plain context.
+      const actionHTML = renderThoughtWithQuotes(t.action, t.quotes, t.n);
+      thoughtBlock = `
+        <div class="oat-block oat-thought">
+          <span class="lbl">Thought <span class="small">context · not annotated</span></span>
+          <div class="thought-text">${escapeHTML(t.thought)}</div>
+        </div>`;
+      actionBlock = `
+        <div class="oat-block oat-action">
+          <span class="lbl">Action <span class="small">verbatim · ${annotCount} annotation${annotCount === 1 ? '' : 's'}</span></span>
+          <code class="content">${actionHTML}</code>
+        </div>`;
+      annotBlock = annotCount > 0 ? `
+        <div class="annotations">
+          <div class="annotations-header">Quote-grounded annotations</div>
+          ${annotRows}
+        </div>` : '';
+    } else if (QUOTE_TARGET === "both") {
+      // Dual annotation: each quote carries its own target ("thought" | "action").
+      // Render both surfaces with their respective highlights, and put a small
+      // annotation table under each surface (so the reader can scan the surface,
+      // then immediately see what was tagged on it).
+      const thoughtQuotes = t.quotes.filter(q => (q.target || 'action') === 'thought');
+      const actionQuotes = t.quotes.filter(q => (q.target || 'action') === 'action');
+      const thoughtHTML = renderThoughtWithQuotes(t.thought, thoughtQuotes, t.n, t.quotes);
+      const actionHTML = renderThoughtWithQuotes(t.action, actionQuotes, t.n, t.quotes);
+      const tCount = thoughtQuotes.length;
+      const aCount = actionQuotes.length;
+      thoughtBlock = `
+        <div class="oat-block oat-thought">
+          <span class="lbl">Thought <span class="small">verbatim · ${tCount} meta annotation${tCount === 1 ? '' : 's'}</span></span>
+          <div class="thought-text">${thoughtHTML}</div>
+        </div>`;
+      actionBlock = `
+        <div class="oat-block oat-action">
+          <span class="lbl">Action <span class="small">verbatim · ${aCount} surface annotation${aCount === 1 ? '' : 's'}</span></span>
+          <code class="content">${actionHTML}</code>
+        </div>`;
+      // Two sub-tables, each grouping the rows for its host surface.
+      const buildRows = (quotes) => quotes.map((q) => {
+        const idx = t.quotes.indexOf(q);
+        return `
+          <div class="annot-row" data-turn="${t.n}" data-qidx="${idx}" data-grp="${q.grp}" data-key="${q.sub} › ${q.leaf}" style="--qcolor: var(--grp-${q.grp}); --qbg: var(--grp-${q.grp}-bg);">
+            <div class="annot-quote"><span class="qnum">${idx + 1}</span>${escapeHTML(q.quote)}</div>
+            <div class="annot-arrow">→</div>
+            <div class="annot-tag"><span class="annot-grp">${displayGrp(q.grp)}</span><span class="annot-sep">›</span>${q.sub}<span class="annot-sep">›</span><span class="annot-leaf">${q.leaf}</span></div>
+          </div>`;
+      }).join('');
+      thoughtAnnotBlock = tCount > 0 ? `
+        <div class="annotations">
+          <div class="annotations-header">Thought · meta-move annotations</div>
+          ${buildRows(thoughtQuotes)}
+        </div>` : '';
+      actionAnnotBlock = aCount > 0 ? `
+        <div class="annotations">
+          <div class="annotations-header">Action · surface annotations</div>
+          ${buildRows(actionQuotes)}
+        </div>` : '';
+    } else {
+      // Default: thought is the host (SWE-agent style).
+      const thoughtHTML = renderThoughtWithQuotes(t.thought, t.quotes, t.n);
+      thoughtBlock = `
+        <div class="oat-block oat-thought">
+          <span class="lbl">Thought <span class="small">verbatim · ${annotCount} annotation${annotCount === 1 ? '' : 's'}</span></span>
+          <div class="thought-text">${thoughtHTML}</div>
+        </div>`;
+      actionBlock = `
+        <div class="oat-block oat-action">
+          <span class="lbl">Action</span>
+          <code class="content">${highlightAction(t.action)}</code>
+        </div>`;
+      annotBlock = annotCount > 0 ? `
+        <div class="annotations">
+          <div class="annotations-header">Quote-grounded annotations</div>
+          ${annotRows}
+        </div>` : '';
+    }
+
+    // Layout per mode:
+    //   action mode  : Thought (context) → Action (highlighted) → annot table
+    //   both mode    : Thought (highlighted) → thought-table → Action (highlighted) → action-table
+    //   thought mode : Thought (highlighted) → annot table → Action (plain code)
+    let body;
+    if (QUOTE_TARGET === "action") {
+      body = `${thoughtBlock}${actionBlock}${annotBlock}`;
+    } else if (QUOTE_TARGET === "both") {
+      body = `${thoughtBlock}${thoughtAnnotBlock}${actionBlock}${actionAnnotBlock}`;
+    } else {
+      body = `${thoughtBlock}${annotBlock}${actionBlock}`;
+    }
+
+    const obsBlock = t.obs ? `
+        <div class="oat-block oat-obs">
+          <span class="lbl">Observation</span>
+          <div class="content">${escapeHTML(t.obs)}</div>
+        </div>` : '';
+    return `
+      <div class="turn" data-turn="${t.n}">
+        <div class="turn-header">
+          <span class="actor-icon actor-agent" title="Agent">${ICON_AGENT}</span>
+          <div class="turn-num"><small>turn</small>${String(t.n).padStart(2,'0')}</div>
+          <div class="turn-tag-line">${escapeHTML(t.headline || '')}</div>
+          <div class="turn-phase phase-${t.phase || 'other'}">${t.phaseLabel || 'Step'}</div>
+          <span class="turn-chevron">▶</span>
+        </div>
+        <div class="turn-body">
+          ${obsBlock}
+          ${body}
+          ${t.insight ? `<div class="insight">${t.insight}</div>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderSignature() {
+  // Build the codebook-group signature for the right panel.
+  // For each turn, list the groups of its quotes in firing order; show both a
+  // copy-pasteable flat block and a clickable per-turn row list. Sessions
+  // restarts are auto-detected as turns whose verbatim thought equals an
+  // earlier turn's thought, and shown as a `↺` divider.
+  const container = document.getElementById('signature-container');
+  if (!container) return;
+
+  // Detect restart points: turn n is a restart if t.thought has appeared earlier.
+  const seenThoughts = new Map(); // thought-text -> first turn index
+  const restartAtTurnN = new Set();
+  turns.forEach((t, i) => {
+    if (t.kind === 'interaction') return;
+    if (t.thought && seenThoughts.has(t.thought)) {
+      restartAtTurnN.add(t.n);
+    } else if (t.thought) {
+      seenThoughts.set(t.thought, i);
+    }
+  });
+
+  const pad2 = (n) => String(n).padStart(2, '0');
+
+  // Index segments by their `start` turn so we can interleave segment
+  // summaries both into the flat copy-paste block (as plain-text headers)
+  // and above the first row of each segment in the clickable list.
+  const segByStart = new Map();
+  (segments || []).forEach((s, i) => {
+    segByStart.set(s.start, { ...s, _idx: i + 1 });
+  });
+
+  // Strip inline HTML so segment summaries render cleanly inside the
+  // <pre> copy-paste block.  We unescape a small set of named entities
+  // (mdash/ndash/strong tags etc.) and drop everything else.
+  const stripHTML = (s) => {
+    if (!s) return '';
+    return s
+      .replace(/<[^>]+>/g, '')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&mdash;/g, '—')
+      .replace(/&ndash;/g, '–')
+      .replace(/&rarr;/g, '→')
+      .replace(/&middot;/g, '·')
+      .replace(/&nbsp;/g, ' ');
+  };
+
+  // Word-wrap a paragraph to ~78 cols so it copy-pastes cleanly into
+  // notebooks / chat panes without horizontal scrolling.
+  const wrap = (text, width = 78) => {
+    const words = text.split(/\s+/);
+    const out = [];
+    let line = '';
+    for (const w of words) {
+      if (line.length === 0) { line = w; continue; }
+      if (line.length + 1 + w.length > width) { out.push(line); line = w; }
+      else line += ' ' + w;
+    }
+    if (line) out.push(line);
+    return out.join('\n');
+  };
+
+  // Flat copy-pasteable signature block. Each segment gets a plain-text
+  // header ("=== SEQ 01 · T01–T05 · Title ===" + wrapped summary), then
+  // its turns are listed `T01 = [Group › Sub › Leaf, ...]` so the full
+  // codebook triple plus narrative context survive a copy/paste.
+  // A segment whose start turn directly follows an interaction should open
+  // BEFORE that interaction (the human prompt is what opens the cycle), so
+  // look ahead from interaction entries and mark consumed segments.
+  const segEmitted = new Set();
+  const emitSegFlat = (seg, i) => {
+    if (segEmitted.has(seg._idx)) return;
+    segEmitted.add(seg._idx);
+    if (i > 0) flatLines.push('');  // blank line before each segment except the first
+    const titleStr = stripHTML(seg.title || '');
+    flatLines.push(`=== SEQ ${String(seg._idx).padStart(2,'0')} · T${pad2(seg.start)}–T${pad2(seg.end)}${titleStr ? ' · ' + titleStr : ''} ===`);
+    if (seg.summary) {
+      flatLines.push(wrap(stripHTML(seg.summary)));
+    }
+    flatLines.push('');  // blank line between header and first turn
+  };
+  const flatLines = [];
+  turns.forEach((t, i) => {
+    if (t.kind === 'interaction') {
+      const nxt = turns[i + 1];
+      const nxtSeg = nxt && nxt.kind !== 'interaction' ? segByStart.get(nxt.n) : null;
+      if (nxtSeg) emitSegFlat(nxtSeg, i);
+      const txt = t.text.replace(/\s+/g, ' ');
+      flatLines.push(`${t.id} ▸ HUMAN${t.label ? ' (' + t.label + ')' : ''}: ${txt.length > 64 ? txt.slice(0, 64) + '…' : txt}`);
+      return;
+    }
+    const seg = segByStart.get(t.n);
+    if (seg) emitSegFlat(seg, i);
+    if (restartAtTurnN.has(t.n)) flatLines.push('↺');
+    const tags = t.quotes.map(q => `${displayGrp(q.grp)} › ${q.sub} › ${q.leaf}`);
+    flatLines.push(`T${pad2(t.n)} = [${tags.join(', ')}]`);
+  });
+  const flatStr = flatLines.join('\n');
+
+  // Per-turn rows.
+  // Chips show the full Group › Sub › Leaf triple, colored by group. Group
+  // is a small uppercase tag; sub is the dominant text; leaf trails in a
+  // muted italic. Full triple is also in the tooltip for hover affordance.
+  const segRowEmitted = new Set();
+  const segCardHTML = (seg) => {
+    if (!seg || segRowEmitted.has(seg._idx)) return '';
+    segRowEmitted.add(seg._idx);
+    return `
+      <div class="sig-segment">
+        <div class="sig-segment-tag">SEQ ${String(seg._idx).padStart(2,'0')} · T${pad2(seg.start)}–T${pad2(seg.end)}</div>
+        ${seg.title ? `<div class="sig-segment-title">${seg.title}</div>` : ''}
+        ${seg.summary ? `<div class="sig-segment-body">${seg.summary}</div>` : ''}
+      </div>
+    `;
+  };
+  const rowsHTML = turns.map((t, i) => {
+    if (t.kind === 'interaction') {
+      const nxt = turns[i + 1];
+      const nxtSeg = nxt && nxt.kind !== 'interaction' ? segByStart.get(nxt.n) : null;
+      const txt = t.text.replace(/\s+/g, ' ');
+      const short = txt.length > 56 ? txt.slice(0, 56) + '…' : txt;
+      const tipI = `${t.id} · human prompt${t.label ? ' · ' + t.label : ''}`;
+      return segCardHTML(nxtSeg) + `
+      <button class="sig-row sig-interaction" data-turn="${t.id}" title="${escapeHTML(tipI)}">
+        <span class="sig-num sig-num-h">${t.id}</span>
+        <span class="sig-int-text">${ICON_HUMAN}${escapeHTML(short)}</span>
+      </button>
+    `;
+    }
+    const segHTML = segCardHTML(segByStart.get(t.n));
+    const restartHTML = restartAtTurnN.has(t.n)
+      ? '<div class="sig-restart-row" title="Session restart — Planner thought matches an earlier turn verbatim"><span class="sig-restart-glyph">↺</span><span class="sig-restart-text">session restart · thought matches an earlier turn verbatim</span></div>'
+      : '';
+    const chipsHTML = t.quotes.length === 0
+      ? '<span class="sig-chip-empty">∅</span>'
+      : t.quotes.map(q => {
+          const _p = PATTERNS[q.sub + ' › ' + q.leaf];
+          const baseTip = `${displayGrp(q.grp)} › ${q.sub} › ${q.leaf}`;
+          const _cls = _p ? ` sig-chip-anom sig-chip-anom-${_p.t}` : '';
+          const _flag = _p ? `<span class="sig-chip-flag sig-chip-flag-${_p.t}">${ANOM_MARK[_p.t]}</span>` : '';
+          const _attr = _p ? `data-anom-key="${escapeHTML(q.sub + ' › ' + q.leaf)}"` : `title="${escapeHTML(baseTip)}"`;
+          return `<span class="sig-chip grp-${q.grp}${_cls}" ${_attr}><span class="sig-chip-grp">${displayGrp(q.grp)}</span><span class="sig-chip-sub">${escapeHTML(q.sub)}</span><span class="sig-chip-sep">›</span><span class="sig-chip-leaf">${escapeHTML(q.leaf)}</span>${_flag}</span>`;
+        }).join('');
+    const flag = (t.phase === 'submit') ? '<span class="sig-flag">‡</span>' : '';
+    const headline = (t.headline || '').replace(/"/g, '&quot;');
+    const tip = `T${pad2(t.n)} · ${t.phaseLabel} · ${headline}`;
+    return segHTML + restartHTML + `
+      <button class="sig-row" data-turn="${t.n}" title="${tip}">
+        <span class="sig-num">T${pad2(t.n)}${flag}</span>
+        <span class="sig-chips">${chipsHTML}</span>
+      </button>
+    `;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="signature-section">
+      <div class="sig-section-title">Trajectory signature</div>
+      <div class="sig-section-sub">One row per step, listing its tags in the order they appear. Amber rows are the human speaking. Click any row to jump to that step.</div>
+      <pre class="sig-flat" title="copy-paste signature">${escapeHTML(flatStr)}</pre>
+      <div class="sig-rows">${rowsHTML}</div>
+    </div>
+  `;
+}
+
+function renderCodebook() {
+  const container = document.getElementById('codebook-container');
+  const sorted = Object.entries(codebook).sort((a,b) => b[1].total - a[1].total);
+  if (sorted.length === 0) { container.innerHTML = '<em style="color: var(--ink-mute)">No annotations.</em>'; return; }
+  const maxCount = Math.max(...sorted.map(([,g]) => g.total));
+
+  const legend = Object.keys(PATTERNS).length
+    ? '<div class="cb-anom-legend"><strong>标注旗标:</strong> <span style="color:#16a34a">✓ 成功模式(做得好)</span> · ⚠ 缺失 · ▲ 冗余 · ◆ 时序/触发/沉淀错位 — 悬浮任意旗标 leaf 查看「模式类型 / 诊断原因 / 建议」</div>'
+    : '';
+  container.innerHTML = legend + sorted.map(([grpName, grp]) => {
+    const pct = (grp.total / maxCount) * 100;
+    const items = Object.values(grp.items).sort((a,b) => b.turns.length - a.turns.length);
+    return `
+      <div class="cb-group" data-group="${grpName}" style="--qcolor: var(--grp-${grpName}); --qbg: var(--grp-${grpName}-bg);">
+        <div class="cb-group-header">
+          <div class="cb-group-name">${displayGrp(grpName)}</div>
+          <div class="cb-count">${grp.total}</div>
+        </div>
+        <div class="cb-bar"><div class="cb-bar-fill" style="width: ${pct}%; background: var(--grp-${grpName});"></div></div>
+        <div class="cb-items">
+          ${items.map(item => {
+            const _p = PATTERNS[item.sub + ' › ' + item.leaf];
+            const _cls = _p ? ' cb-anom cb-anom-' + _p.t : '';
+            const _attr = _p ? ` data-anom-key="${item.sub} › ${item.leaf}"` : '';
+            const _badge = _p ? ` <span class="cb-anom-badge cb-anom-b-${_p.t}">${ANOM_MARK[_p.t]}</span>` : '';
+            return `
+            <div class="cb-item${_cls}" data-grp="${grpName}" data-key="${item.sub} › ${item.leaf}" data-turns="${item.turns.join(',')}" style="--qcolor: var(--grp-${grpName}); --qbg: var(--grp-${grpName}-bg);"${_attr}>
+              <span class="cb-item-text">${item.sub} <span style="opacity:0.5">›</span> ${item.leaf}${_badge}</span>
+              <span class="turn-refs">[${item.turns.map(n => 'T'+n).join(',')}]</span>
+            </div>
+          `;}).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function markPieAnomalies() {
+  const svgns = 'http://www.w3.org/2000/svg';
+  const byGrp = {};
+  Object.entries(codebook).forEach(([g, gd]) => {
+    Object.values(gd.items).forEach(it => {
+      const p = PATTERNS[it.sub + ' › ' + it.leaf];
+      if (p && p.t !== 'ok') (byGrp[g] = byGrp[g] || []).push(p);
+    });
+  });
+  Object.entries(byGrp).forEach(([g, list]) => {
+    const node = document.querySelector('.pie-slice[data-grp="' + g + '"]');
+    if (!node) return;
+    const label = node.querySelector('text');
+    if (!label) return;
+    const name = label.textContent;
+    label.textContent = '';
+    const ts = document.createElementNS(svgns, 'tspan');
+    ts.setAttribute('fill', '#e11d48'); ts.setAttribute('font-weight', '700');
+    ts.textContent = '⚠' + list.length + ' ';
+    const ts2 = document.createElementNS(svgns, 'tspan');
+    ts2.textContent = name;
+    label.appendChild(ts); label.appendChild(ts2);
+    const tt = document.createElementNS(svgns, 'title');
+    tt.textContent = g + ' — ' + list.length + ' 个待改进:\n' + list.map(a => '• [' + a.status + '] ' + a.advice).join('\n');
+    label.appendChild(tt);
+  });
+}
+
+function setupAnomalyTip() {
+  const tip = document.createElement('div');
+  tip.id = 'anom-tip';
+  document.body.appendChild(tip);
+  const place = (x, y) => {
+    const r = tip.getBoundingClientRect();
+    let nx = x + 16, ny = y + 16;
+    if (nx + r.width > window.innerWidth - 10) nx = x - r.width - 16;
+    if (ny + r.height > window.innerHeight - 10) ny = y - r.height - 16;
+    tip.style.left = Math.max(10, nx) + 'px';
+    tip.style.top = Math.max(10, ny) + 'px';
+  };
+  const show = (key, x, y) => {
+    const a = PATTERNS[key];
+    if (!a) return;
+    const ok = a.status === '成功';
+    tip.innerHTML =
+      '<span class="at-type ' + (ok ? 'at-ok' : 'at-bad') + '">模式类型:' + escapeHTML(a.status) + '</span>' +
+      '<div class="at-row"><span class="at-label">诊断原因</span><span class="at-val">' + escapeHTML(a.cause || '') + '</span></div>' +
+      '<div class="at-row"><span class="at-label">给用户 / agent 的建议</span><span class="at-val">' + escapeHTML(a.advice || '') + '</span></div>';
+    tip.classList.add('show');
+    place(x, y);
+  };
+  const hide = () => tip.classList.remove('show');
+  let suppressedEl = null, suppressedTitle = null;
+  const restoreTitle = () => {
+    if (suppressedEl) { suppressedEl.setAttribute('title', suppressedTitle); suppressedEl = null; suppressedTitle = null; }
+  };
+  document.addEventListener('mouseover', e => {
+    const el = e.target.closest && e.target.closest('[data-anom-key]');
+    if (!el) return;
+    show(el.getAttribute('data-anom-key'), e.clientX, e.clientY);
+    const titled = el.closest('[title]');
+    if (titled && titled !== suppressedEl) {
+      restoreTitle();
+      suppressedEl = titled; suppressedTitle = titled.getAttribute('title');
+      titled.removeAttribute('title');
+    }
+  });
+  document.addEventListener('mousemove', e => {
+    if (tip.classList.contains('show')) place(e.clientX, e.clientY);
+  });
+  document.addEventListener('mouseout', e => {
+    const el = e.target.closest && e.target.closest('[data-anom-key]');
+    if (!el) return;
+    if (e.relatedTarget && el.contains(e.relatedTarget)) return;
+    hide();
+    restoreTitle();
+  });
+}
+
+function renderPatternsSummary() {
+  const el = document.getElementById('patterns-summary');
+  if (!el) return;
+  const entries = Object.entries(PATTERNS);
+  if (entries.length === 0) return;
+  const order = {ok:0, lo:1, hi:2, mid:3};
+  entries.sort((a,b) => (order[a[1].t] ?? 9) - (order[b[1].t] ?? 9));
+  const rows = entries.map(([key, p]) => {
+    const ok = p.status === '成功';
+    const leaf = key.split(' › ').pop();
+    return `<tr>
+      <td><span class="ps-pill ${ok ? 'ps-ok' : 'ps-bad'}">${ANOM_MARK[p.t] || ''} ${escapeHTML(p.status)}</span></td>
+      <td><span class="ps-leaf">${escapeHTML(leaf)}</span><br><span class="ps-key">${escapeHTML(key)}</span></td>
+      <td>${escapeHTML(p.cause || '')}</td>
+      <td>${escapeHTML(p.advice || '')}</td>
+    </tr>`;
+  }).join('');
+  const nOk = entries.filter(([, p]) => p.status === '成功').length;
+  const nBad = entries.length - nOk;
+  el.innerHTML =
+    '<div class="section-label">behavior patterns · ' + nOk + ' 成功 / ' + nBad + ' 待改进</div>' +
+    '<div class="ps-table-wrap"><table class="ps-table">' +
+    '<thead><tr><th>模式类型</th><th>Act-onomy leaf</th><th>诊断原因</th><th>建议</th></tr></thead>' +
+    '<tbody>' + rows + '</tbody></table></div>';
+}
+
+function clearActive() {
+  document.querySelectorAll('.turn.active').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.cb-item.fired').forEach(el => el.classList.remove('fired', 'flash'));
+  document.querySelectorAll('.qmark.flash-pulse').forEach(el => el.classList.remove('flash-pulse'));
+  document.querySelectorAll('.annot-row.flash').forEach(el => el.classList.remove('flash'));
+  document.querySelectorAll('.pie-slice.dimmed').forEach(el => el.classList.remove('dimmed'));
+}
+
+function flashAnnotationLink(turnN, qidx, grp, key) {
+  document.querySelectorAll('.qmark.flash-pulse').forEach(el => el.classList.remove('flash-pulse'));
+  document.querySelectorAll('.annot-row.flash').forEach(el => el.classList.remove('flash'));
+  document.querySelectorAll('.cb-item.fired').forEach(el => el.classList.remove('fired', 'flash'));
+
+  const qm = document.querySelector(`.qmark[data-turn="${turnN}"][data-qidx="${qidx}"]`);
+  const row = document.querySelector(`.annot-row[data-turn="${turnN}"][data-qidx="${qidx}"]`);
+  const item = document.querySelector(`.cb-item[data-grp="${grp}"][data-key="${key}"]`);
+  if (qm) qm.classList.add('flash-pulse');
+  if (row) row.classList.add('flash');
+  if (item) item.classList.add('fired', 'flash');
+}
+
+function scrollToTurn(turnEl) {
+  if (!turnEl) return;
+  // Programmatic navigation always expands the target so highlights are visible.
+  turnEl.classList.add('expanded');
+  // Snapshot the right-side panel's internal scroll position BEFORE we touch
+  // the main page scroll. Some browsers will auto-scroll the focused element
+  // into view, which can cause the codebook panel to drift. We restore the
+  // exact position right after.
+  const panel = document.querySelector('aside.codebook-panel');
+  const panelScrollTop = panel ? panel.scrollTop : 0;
+
+  const rect = turnEl.getBoundingClientRect();
+  const targetY = window.scrollY + rect.top - 24;
+  window.scrollTo({ top: targetY, behavior: 'smooth' });
+
+  // Restore panel scroll on the next animation frame, and again after the
+  // smooth-scroll likely finishes. Both are cheap and cover edge cases.
+  if (panel) {
+    requestAnimationFrame(() => { panel.scrollTop = panelScrollTop; });
+    setTimeout(() => { panel.scrollTop = panelScrollTop; }, 50);
+    setTimeout(() => { panel.scrollTop = panelScrollTop; }, 500);
+  }
+}
+
+function activateCodebookItem(grp, key) {
+  clearActive();
+  const item = codebook[grp] && codebook[grp].items[key];
+  if (!item) return;
+  const itemEl = document.querySelector(`.cb-item[data-grp="${grp}"][data-key="${key}"]`);
+  if (itemEl) itemEl.classList.add('fired', 'flash');
+  item.turns.forEach(n => {
+    const turnEl = document.querySelector(`.turn[data-turn="${n}"]`);
+    if (turnEl) turnEl.classList.add('active', 'expanded');
+    document.querySelectorAll(`.qmark[data-turn="${n}"][data-grp="${grp}"][data-key="${key}"]`).forEach(qm => qm.classList.add('flash-pulse'));
+    document.querySelectorAll(`.annot-row[data-turn="${n}"][data-grp="${grp}"][data-key="${key}"]`).forEach(r => r.classList.add('flash'));
+  });
+  if (item.turns.length > 0) {
+    scrollToTurn(document.querySelector(`.turn[data-turn="${item.turns[0]}"]`));
+  }
+}
+
+function activateGroup(grp) {
+  clearActive();
+  document.querySelectorAll(`.cb-item[data-grp="${grp}"]`).forEach(el => el.classList.add('fired'));
+  document.querySelectorAll(`.qmark[data-grp="${grp}"]`).forEach(qm => qm.classList.add('flash-pulse'));
+  document.querySelectorAll(`.annot-row[data-grp="${grp}"]`).forEach(r => r.classList.add('flash'));
+  const turnsHit = new Set();
+  document.querySelectorAll(`.qmark[data-grp="${grp}"]`).forEach(qm => turnsHit.add(parseInt(qm.dataset.turn)));
+  turnsHit.forEach(n => {
+    const turnEl = document.querySelector(`.turn[data-turn="${n}"]`);
+    if (turnEl) turnEl.classList.add('active', 'expanded');
+  });
+  if (turnsHit.size > 0) {
+    const firstTurn = Math.min(...turnsHit);
+    scrollToTurn(document.querySelector(`.turn[data-turn="${firstTurn}"]`));
+  }
+}
+
+function setupInteractions() {
+  // Collapsible turns: header click toggles; expand/collapse-all controls.
+  document.querySelectorAll('.turn-header, .interaction-header').forEach(h => {
+    h.addEventListener('click', () => h.closest('.turn').classList.toggle('expanded'));
+  });
+  const exAll = document.getElementById('expand-all');
+  const coAll = document.getElementById('collapse-all');
+  if (exAll) exAll.addEventListener('click', () =>
+    document.querySelectorAll('.turn').forEach(el => el.classList.add('expanded')));
+  if (coAll) coAll.addEventListener('click', () =>
+    document.querySelectorAll('.turn').forEach(el => el.classList.remove('expanded')));
+
+  document.querySelectorAll('.qmark').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      flashAnnotationLink(parseInt(el.dataset.turn), parseInt(el.dataset.qidx), el.dataset.grp, el.dataset.key);
+    });
+  });
+  document.querySelectorAll('.annot-row').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      flashAnnotationLink(parseInt(el.dataset.turn), parseInt(el.dataset.qidx), el.dataset.grp, el.dataset.key);
+    });
+  });
+  document.querySelectorAll('.cb-item').forEach(el => {
+    el.addEventListener('click', () => {
+      activateCodebookItem(el.dataset.grp, el.dataset.key);
+    });
+  });
+  document.querySelectorAll('.pie-slice').forEach(el => {
+    el.addEventListener('click', () => {
+      activateGroup(el.dataset.grp);
+    });
+  });
+  document.querySelectorAll('.pie-legend-row').forEach(el => {
+    el.addEventListener('click', () => {
+      activateGroup(el.dataset.grp);
+    });
+  });
+  document.querySelectorAll('.sig-row').forEach(el => {
+    el.addEventListener('click', () => {
+      const n = el.dataset.turn; // agent turns are numeric, interactions are "H<k>"
+      const turnEl = document.querySelector(`.turn[data-turn="${n}"]`);
+      if (!turnEl) return;
+      document.querySelectorAll('.turn.active').forEach(x => x.classList.remove('active'));
+      turnEl.classList.add('active');
+      scrollToTurn(turnEl);
+    });
+  });
+}
+
+// Drag-to-resize handle on the left edge of the codebook panel.
+// The panel is `position: fixed; right: 0; width: 360px;` and the main has a
+// matching `margin-right: 360px`. We drive both off a single CSS variable
+// `--panel-w` so they stay in sync, and persist the user's last width in
+// localStorage so it sticks across reloads.
+function setupPanelResize() {
+  const panel = document.querySelector('aside.codebook-panel');
+  const main  = document.querySelector('main.trajectory');
+  const handle = document.getElementById('panel-resize-handle');
+  if (!panel || !main || !handle) return;
+
+  const MIN = 280;
+  const MAX_FRAC = 0.7;  // never let the panel eat more than 70% of the viewport
+  const STORAGE_KEY = 'tta.panel-width';
+
+  const apply = (w) => {
+    const cap = Math.max(MIN, Math.min(w, window.innerWidth * MAX_FRAC));
+    panel.style.width = cap + 'px';
+    main.style.marginRight = cap + 'px';
+  };
+
+  // Restore persisted width on load.
+  const saved = parseInt(localStorage.getItem(STORAGE_KEY) || '', 10);
+  if (!Number.isNaN(saved) && saved >= MIN) apply(saved);
+
+  let dragging = false;
+  let startX = 0;
+  let startW = 0;
+
+  handle.addEventListener('mousedown', (e) => {
+    dragging = true;
+    startX = e.clientX;
+    startW = panel.getBoundingClientRect().width;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    // Drag left = wider panel; drag right = narrower.
+    const w = startW + (startX - e.clientX);
+    apply(w);
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    localStorage.setItem(STORAGE_KEY, String(panel.getBoundingClientRect().width));
+  });
+
+  // Double-click the handle to reset to the default 360px.
+  handle.addEventListener('dblclick', () => {
+    apply(360);
+    localStorage.removeItem(STORAGE_KEY);
+  });
+}
+
+renderTurns();
+renderSignature();
+renderCodebook();
+markPieAnomalies();
+setupAnomalyTip();
+renderPatternsSummary();
+setupInteractions();
+setupPanelResize();
+
+</script>
+</body>
+</html>
