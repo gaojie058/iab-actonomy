@@ -98,6 +98,8 @@ will still appear).
 import argparse
 import json
 import math
+import re
+from report_layout import layout_values, script_json
 import sys
 from pathlib import Path
 
@@ -188,7 +190,7 @@ def validate_data(data):
             for f in ("quote", "grp", "sub", "leaf"):
                 if f not in q:
                     raise ValueError(f"Turn {t['n']}, quote {j}: missing field '{f}'")
-            if q["grp"] not in GROUP_COLOURS:
+            if q["grp"] not in GROUP_COLOURS and q["grp"] != "Evaluating":
                 warnings.append(f"Turn {t['n']}, quote {j}: unknown group '{q['grp']}'")
 
             if quote_target == "both":
@@ -388,6 +390,7 @@ def main():
     with open(args.input_json) as f:
         data = json.load(f)
 
+    source_json = script_json(data)
     warnings = validate_data(data)
     for w in warnings:
         print(f"WARN: {w}", file=sys.stderr)
@@ -481,11 +484,13 @@ def main():
         "{{FINDINGS_HTML}}": findings_html,
         "{{QUOTE_TARGET}}": data["quote_target"],
         "{{METHOD_NOTE}}": method_note_html,
-        "{{TURNS_JSON}}": json.dumps(turns_js, ensure_ascii=False),
-        "{{SEGMENTS_JSON}}": json.dumps(segments, ensure_ascii=False),
+        "{{TURNS_JSON}}": script_json(turns_js),
+        "{{PATTERNS_JSON}}": script_json(data.get("patterns", {})),
+        "{{SEGMENTS_JSON}}": script_json(segments),
     }
-    for k, v in replacements.items():
-        template = template.replace(k, v)
+    if "{{RUN_FACTS}}" in template:
+        replacements.update(layout_values(data, agent_turns, segments, group_counts, source_json))
+    template = re.sub(r"\{\{[A-Z_]+\}\}", lambda m: replacements.get(m[0], m[0]), template)
 
     # Output path
     if args.output:

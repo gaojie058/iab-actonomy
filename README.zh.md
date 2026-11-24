@@ -8,7 +8,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/Code-MIT-yellow?style=flat" alt="Code license: MIT"></a>
   <a href="LICENSE-codebook"><img src="https://img.shields.io/badge/Data-CC_BY_4.0-lightgrey?style=flat" alt="Codebook and data license: CC BY 4.0"></a>
   <a href="data/taxonomy/taxonomy.md"><img src="https://img.shields.io/badge/Codebook-V4.2-7564B0?style=flat" alt="Codebook V4.2"></a>
-  <a href="tools/trace-qualitative-analyst/README.md"><img src="https://img.shields.io/badge/Coding_Agent-Claude_Code-D97757?style=flat" alt="Coding Agent: Claude Code"></a>
+  <a href="trace-qualitative-analyst/README.md"><img src="https://img.shields.io/badge/Coding_Agent-Claude_Code-D97757?style=flat" alt="Coding Agent: Claude Code"></a>
 </p>
 
 <h3 align="center">用于理解 AI 智能体运行时行为的共同词汇</h3>
@@ -41,7 +41,7 @@
 
 | 你的目标 | 从这里开始 |
 | --- | --- |
-| 理解智能体的推理与动作 | [轨迹分析](tools/trace-qualitative-analyst/README.md) |
+| 理解智能体的推理与动作 | [轨迹分析](trace-qualitative-analyst/README.md) |
 | 研究用户如何引导智能体 | [人机交互分析](tools/human-trace-qualitative-analyst/SKILL.md) |
 | 比较不同智能体或任务的行为特征 | [案例](trajectory%20annotation%20examples/README.md) |
 | 发现现有词汇未覆盖的行为 | [发现与扩展流程](tools/discovery-qualitative-analyst/SKILL.md) |
@@ -57,7 +57,7 @@
 
 ### 1. 下载 Skills
 
-下载本仓库；Skill 包位于 [`tools/`](tools/) 目录。
+下载本仓库。[轨迹标注 skill](trace-qualitative-analyst/) 内含[案例库](trace-qualitative-analyst/case-library.html)和报告渲染器。其他 skill 位于 [`tools/`](tools/)。
 
 ```bash
 git clone https://github.com/gaojie058/iab-actonomy.git
@@ -69,7 +69,7 @@ cd iab-actonomy
 在 AI 助手中打开仓库，并输入：
 
 ```text
-请按照当前环境的 Skill 安装方式，安装 tools/trace-qualitative-analyst 和
+请按照当前环境的 Skill 安装方式，安装 trace-qualitative-analyst 和
 tools/human-trace-qualitative-analyst。保留各自完整的目录内容，包括 references、
 scripts 和 assets，并将两个 Skill 放在同一父目录下。
 ```
@@ -86,7 +86,7 @@ scripts 和 assets，并将两个 Skill 放在同一父目录下。
 和 outputs/trajectory.html。
 ```
 
-如果是包含用户交互的 Claude Code 会话，改用 `human-trace-qualitative-analyst`，并提供会话 `.jsonl` 文件。Skill 的用法和目录结构见[轨迹分析说明](tools/trace-qualitative-analyst/README.md)。
+如果是包含用户交互的 Claude Code 会话，改用 `human-trace-qualitative-analyst`，并提供会话 `.jsonl` 文件。Skill 的用法和目录结构见[轨迹分析说明](trace-qualitative-analyst/README.md)。
 
 ### 4. 输出报告
 
@@ -117,7 +117,7 @@ scripts 和 assets，并将两个 Skill 放在同一父目录下。
 | 目录 | 内容 |
 | --- | --- |
 | [data/](data/README.md) | 研究语料、正式分类数据与开发历史版本 |
-| [tools/](tools/) | 四个 skill 包，包含说明、脚本及配套资源 |
+| [tools/](tools/) | 各工具包及轨迹标注 skill 的兼容入口 |
 | [trajectory annotation examples/](trajectory%20annotation%20examples/README.md) | 智能体轨迹与标注报告 |
 | [assets/](assets/) | Act\*ONOMY 品牌素材、工作流动图与静态预览 |
 

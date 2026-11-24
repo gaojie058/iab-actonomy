@@ -1,0 +1,1257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Case library · Act-onomy</title>
+<style>
+* { box-sizing: border-box; }
+html { color-scheme: light; scroll-padding-top: 1rem; }
+body { margin: 0; color: #171717; background: #fff; font: 16px/1.6 Arial, Helvetica, sans-serif; }
+main, header { max-width: 850px; margin: 0 auto; padding-inline: 28px; }
+header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 22px; border-bottom: 1px solid #222; font-size: 14px; }
+nav, .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+nav { gap: 20px; }
+a { color: inherit; text-underline-offset: 3px; }
+h1, h2, h3, h4, p, blockquote { margin: 0; }
+h1 { font-size: clamp(34px, 5vw, 46px); line-height: 1.1; letter-spacing: -.04em; margin: 0 0 14px; }
+h2 { font-size: 24px; line-height: 1.25; letter-spacing: -.025em; }
+h3 { font-size: 17px; line-height: 1.45; }
+h4 { font-size: 15px; }
+.intro { padding-block: 50px 32px; max-width: 650px; }
+.intro p, .hint, .meta, .status { color: #515151; }
+.intro p { font-size: 17px; }
+section { border-top: 1px solid #c6c6c6; padding-block: 26px 32px; }
+section > p { margin-top: 8px; }
+#library { padding-bottom: 72px; }
+.actions { margin: 16px 0 8px; }
+button, .file-button, input, textarea, select { font: inherit; }
+button, .file-button { color: #191919; border: 1px solid #888; border-radius: 3px; padding: 6px 13px; background: #fff; cursor: pointer; font-size: 14px; }
+button:hover, .file-button:hover { background: #eee; }
+button.primary { background: #171717; border-color: #171717; color: #fff; }
+button.primary:hover { background: #393939; }
+button:disabled { opacity: .45; cursor: default; }
+:focus-visible { outline: 2px solid #171717; outline-offset: 3px; }
+input:not([type=file]), select, textarea { display: block; width: 100%; margin-top: 5px; padding: 8px 10px; background: #fff; color: #171717; border: 1px solid #929292; border-radius: 2px; }
+textarea { resize: vertical; min-height: 70px; }
+label { display: block; }
+form { padding: 22px 0 10px; }
+form label { font-size: 14px; font-weight: 600; margin-top: 13px; }
+form label :is(textarea,input,select) { font-size: 16px; font-weight: normal; }
+form h3 { margin-bottom: 8px; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.hint, .meta, .status { font-size: 14px; }
+.status:empty { display: none; }
+.status { margin: 10px 0; }
+.entries { margin-top: 16px; }
+details { border-top: 1px solid #dedede; }
+summary { cursor: pointer; padding: 12px 0; font-weight: 600; overflow-wrap: anywhere; }
+details[open] > summary { margin-bottom: 4px; }
+.body { padding: 0 2px 16px 19px; overflow-wrap: anywhere; }
+.body p, .body table, .body ul, .body blockquote { margin: 8px 0; }
+.body code { font: inherit; }
+.body blockquote { border-left: 2px solid #b2b2b2; padding-left: 14px; }
+.body ul { padding-left: 21px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+td, th { padding: 6px; border: 1px solid #bbb; vertical-align: top; text-align: left; }
+pre { white-space: pre-wrap; }
+code { overflow-wrap: anywhere; }
+#search-label { margin-top: 19px; }
+#search { margin: 5px 0 4px; }
+#count { display: block; margin: 5px 0 10px; }
+.case-id { color: #555; font-size: 12px; margin-right: 9px; font-weight: normal; }
+#mine-list article { padding: 18px 0; border-top: 1px solid #ddd; overflow-wrap: anywhere; }
+#mine-list p { margin: 5px 0; white-space: pre-wrap; }
+.link-button { text-decoration: underline; text-underline-offset: 3px; border: 0; padding: 2px 0; background: transparent; }
+[hidden] { display: none !important; }
+@media (max-width: 600px) {
+  main, header { padding-inline: 18px; }
+  header { align-items: baseline; padding-block: 14px; }
+  nav { gap: 10px; font-size: 13px; }
+  .intro { padding-block: 32px 22px; }
+  .row { grid-template-columns: 1fr; gap: 0; }
+  .body { padding-left: 4px; }
+}
+</style>
+</head>
+<body>
+<header><strong>Act-onomy</strong><nav aria-label="Contents"><a href="#mine">My cases</a><a href="#library">Reference library</a></nav></header>
+<main>
+<div class="intro"><h1>Case library</h1><p>Record how to label an ambiguous passage in an agent trajectory. Use the reference cases to compare decisions, or write your own.</p></div>
+<section id="mine" aria-labelledby="mine-title">
+<h2 id="mine-title">My cases</h2>
+<p class="hint">Cases are saved in this browser. Export a JSON file to share your decisions or use them with the trajectory analyst.</p>
+<div class="actions"><button type="button" class="primary" id="add">Add a case</button><button type="button" id="export" disabled>Export JSON</button><button type="button" id="import">Import JSON</button><input type="file" id="file" accept=".json,application/json" hidden></div>
+<p id="status" class="status" role="status" aria-live="polite"></p>
+<div id="mine-list"></div>
+<form id="editor" hidden>
+<h3 id="form-title">New case</h3>
+<label>Quoted passage<textarea id="quote" required rows="2" placeholder="Paste the words you are annotating."></textarea></label>
+<div class="row">
+<label><span id="surface-name">Evidence field</span><select id="surface" aria-labelledby="surface-name"><option value="thought">Thought</option><option value="action">Action</option><option value="other">Other</option></select></label>
+<label><span id="decision-name">Decision</span><select id="decision" aria-labelledby="decision-name"><option value="label">Assign a label</option><option value="omit">Leave passage untagged</option><option value="unresolved">Record an unresolved case</option></select></label>
+</div>
+<label id="label-wrap">Chosen label<input id="label" list="labels" placeholder="Action > Subaction > Leaf, or your own label"></label>
+<datalist id="labels"><option value="Retrieval &gt; Retrieve from skill library &gt; Retrieve from skill library"></option>
+<option value="Retrieval &gt; Retrieve from local corpus &gt; Retrieve from local corpus"></option>
+<option value="Retrieval &gt; Retrieve from external knowledge base &gt; Retrieve from external knowledge base"></option>
+<option value="Retrieval &gt; Retrieve from open web &gt; Retrieve from open web"></option>
+<option value="Retrieval &gt; Retrieve relevant context &gt; Retrieve relevant context"></option>
+<option value="Memory &gt; Store Information &gt; Store information in working memory"></option>
+<option value="Memory &gt; Store Information &gt; Store episodic trajectories"></option>
+<option value="Memory &gt; Store Information &gt; Store knowledge in semantic memory"></option>
+<option value="Memory &gt; Store Information &gt; Store experiences in episodic memory"></option>
+<option value="Memory &gt; Store Information &gt; Store information in long-term memory"></option>
+<option value="Memory &gt; Store Information &gt; Maintain curriculum library"></option>
+<option value="Memory &gt; Update Information &gt; Update memory"></option>
+<option value="Memory &gt; Discard information &gt; Discard information from working memory"></option>
+<option value="Memory &gt; Discard information &gt; Discard redundant game state, keep summaries"></option>
+<option value="Memory &gt; Consolidate memory &gt; Consolidate working memory into long-term memory"></option>
+<option value="Memory &gt; Consolidate memory &gt; Compact context window"></option>
+<option value="Memory &gt; Read memory &gt; Read from working memory"></option>
+<option value="Memory &gt; Read memory &gt; Read from long-term memory"></option>
+<option value="Planning &gt; Decompose task &gt; Decompose into subtasks"></option>
+<option value="Planning &gt; Decompose task &gt; Decompose into subgoals with success conditions"></option>
+<option value="Planning &gt; Decompose task &gt; Decompose by role specialization"></option>
+<option value="Planning &gt; Formulate a workflow or plan &gt; Formulate a high-level plan"></option>
+<option value="Planning &gt; Formulate a workflow or plan &gt; Formulate an analysis workflow"></option>
+<option value="Planning &gt; Formulate a workflow or plan &gt; Plan navigation through environment"></option>
+<option value="Planning &gt; Formulate a workflow or plan &gt; Plan function or tool use"></option>
+<option value="Planning &gt; Formulate a workflow or plan &gt; Plan Code or artifact structure"></option>
+<option value="Planning &gt; Formulate a workflow or plan &gt; Formulate plan from template"></option>
+<option value="Planning &gt; Select Strategy &gt; Select among candidate strategies"></option>
+<option value="Planning &gt; Select Strategy &gt; Switch to fallback strategy"></option>
+<option value="Planning &gt; Modify Plan &gt; Replan dynamically based on feedback"></option>
+<option value="Planning &gt; Modify Plan &gt; Refine Requirements"></option>
+<option value="Reasoning &gt; Generating &gt; Generate candidate options"></option>
+<option value="Reasoning &gt; Generating &gt; Generate structured artifacts"></option>
+<option value="Reasoning &gt; Generating &gt; Generate evaluations"></option>
+<option value="Reasoning &gt; Analysing &gt; Analyse artifact structure and behavior"></option>
+<option value="Reasoning &gt; Analysing &gt; Detect patterns or trends in data"></option>
+<option value="Reasoning &gt; Analysing &gt; Interpret meaning of artifacts"></option>
+<option value="Reasoning &gt; Analysing &gt; Classify inputs into categories"></option>
+<option value="Reasoning &gt; Explaining &gt; Explain reasoning or outcomes"></option>
+<option value="Reasoning &gt; Summarizing/Distilling &gt; Summarize recent observations and trajectories"></option>
+<option value="Reasoning &gt; Inferring &gt; Infer hidden state from observable evidence"></option>
+<option value="Reasoning &gt; Inferring &gt; Infer causal relationship"></option>
+<option value="Reasoning &gt; Inferring &gt; Infer structure from indirect evidence"></option>
+<option value="Reasoning &gt; Inferring &gt; Infer errors"></option>
+<option value="Reasoning &gt; Comparing &amp; Ranking &gt; Compare values across sources"></option>
+<option value="Reasoning &gt; Comparing &amp; Ranking &gt; Rank items by criteria"></option>
+<option value="Reasoning &gt; Contextualizing &gt; Package prior reasoning as context for subsequent calls"></option>
+<option value="Reasoning &gt; Contextualizing &gt; Construct structured context object"></option>
+<option value="Reasoning &gt; Contextualizing &gt; Configure agent persona or role-conditioning"></option>
+<option value="Reasoning &gt; Contextualizing &gt; Assign roles in a multi-agent team"></option>
+<option value="Reasoning &gt; Combining &amp; Synthesis &gt; Combine information from multiple sources"></option>
+<option value="Reasoning &gt; Combining &amp; Synthesis &gt; Aggregate observations into a structured representation"></option>
+<option value="Reasoning &gt; Filtering &gt; Filter information by threshold"></option>
+<option value="Evaluate &gt; Evaluating with gold &gt; Compare against gold reference"></option>
+<option value="Evaluate &gt; Evaluating with gold &gt; Score on gold criteria"></option>
+<option value="Evaluate &gt; Evaluating with goals/requirements/constraints &gt; goal-completion check"></option>
+<option value="Evaluate &gt; Evaluating with goals/requirements/constraints &gt; Requirement-satisfaction check"></option>
+<option value="Evaluate &gt; Evaluating with goals/requirements/constraints &gt; Constraint / budget check"></option>
+<option value="Evaluate &gt; Evaluating with goals/requirements/constraints &gt; Domain-rule / best-practice check"></option>
+<option value="Evaluate &gt; Evaluating without ground truth &gt; Score on quality dimensions"></option>
+<option value="Evaluate &gt; Evaluating without ground truth &gt; Check rubric compliance"></option>
+<option value="Evaluate &gt; Evaluating without ground truth &gt; Evaluate visual/behavioral correctness"></option>
+<option value="Evaluate &gt; Evaluating without ground truth &gt; Evaluate internal consistency"></option>
+<option value="Evaluate &gt; Evaluating without ground truth &gt; Evaluate intermediate results"></option>
+<option value="Evaluate &gt; Evaluating without ground truth &gt; Provide qualitative judgement"></option>
+<option value="Evaluate &gt; Evaluating without ground truth &gt; Simulate counterfactual outcomes"></option>
+<option value="Evaluate &gt; Evaluating without ground truth &gt; Validate predicted issues"></option>
+<option value="Deciding &gt; Make a decision &gt; Make a decision according to memory"></option>
+<option value="Deciding &gt; Pick scores &gt; Select action by score"></option>
+<option value="Deciding &gt; Decide accept or not &gt; Decline out-of-scope queries"></option>
+<option value="Deciding &gt; Decide under uncertainty &gt; Fork trajectory at uncertainty"></option>
+<option value="Grounding &gt; Interact with users &gt; Accept instructions from humans"></option>
+<option value="Grounding &gt; Interact with users &gt; Ask for clarification from people"></option>
+<option value="Grounding &gt; Interact with users &gt; Communicate task outcome natural language"></option>
+<option value="Grounding &gt; Interact with users &gt; Communicate via visualization"></option>
+<option value="Grounding &gt; Interact with users &gt; Communicate via structured format"></option>
+<option value="Grounding &gt; Interact with users &gt; Communicate refusal/inability"></option>
+<option value="Grounding &gt; Interact with users &gt; Express tone to user"></option>
+<option value="Grounding &gt; Interact with users &gt; Disclose self-information to user"></option>
+<option value="Grounding &gt; Interact with physical environments &gt; Perceive physical environment"></option>
+<option value="Grounding &gt; Interact with physical environments &gt; Affect physical environments"></option>
+<option value="Grounding &gt; Interact with digital environments &gt; Navigate digital interfaces"></option>
+<option value="Grounding &gt; Interact with digital environments &gt; Modify digital objects"></option>
+<option value="Grounding &gt; Interact with digital environments &gt; Issue operational commands"></option>
+<option value="Grounding &gt; Interact with other agents &gt; Monitor peer agent&#x27;s state or decision"></option>
+<option value="Grounding &gt; Interact with other agents &gt; Receive feedback from peer agent"></option>
+<option value="Grounding &gt; Interact with other agents &gt; Send message to peer agent"></option>
+<option value="Grounding &gt; Interact with other agents &gt; Recommend action to peer agent"></option>
+<option value="Grounding &gt; Interact with other agents &gt; Override peer agent&#x27;s decision"></option>
+<option value="Grounding &gt; Interact with other agents &gt; Dispatch task to sub-agent"></option>
+<option value="Grounding &gt; Interact with other agents &gt; Argue or debate with peer agent"></option>
+<option value="Grounding &gt; Augment with external computation &gt; Execute code"></option>
+<option value="Grounding &gt; Augment with external computation &gt; Invoke specialized computation tool"></option>
+<option value="Grounding &gt; Augment with external computation &gt; Invoke visual inspection tool"></option>
+<option value="Executing &gt; Executing plan &gt; Execute strategy"></option>
+<option value="Executing &gt; Executing debug &gt; Adopt debugging instructions"></option>
+<option value="Executing &gt; Executing debug &gt; Rewrite code after bug fix"></option>
+<option value="Executing &gt; Terminating &gt; Provide final answer"></option>
+<option value="Executing &gt; Terminating &gt; Generate refusal"></option>
+<option value="Learning &gt; Learning reasoning &gt; Update reasoning via prompt update"></option>
+<option value="Learning &gt; Learning grounding &gt; Update grounding via code-based skills"></option>
+<option value="Learning &gt; Learning grounding &gt; Update retrieval procedures"></option>
+<option value="Learning &gt; Learning knowledge &gt; Update source code as procedural memory"></option>
+<option value="Learning &gt; Learning knowledge &gt; Update semantic memory with knowledge"></option>
+<option value="Learning &gt; Learning knowledge &gt; Update memory from new experiences"></option>
+<option value="Learning &gt; Learning knowledge &gt; Update hypothesis with new evidence"></option>
+<option value="Learning &gt; Learning LLM parameters &gt; Update parametric policy"></option>
+<option value="Learning &gt; Learning LLM parameters &gt; Update LLM parameters via SL/RL/RLHF"></option>
+<option value="Learning &gt; Learning LLM parameters &gt; Update action parameters based on feedback"></option>
+<option value="Learning &gt; Learning instructions &gt; Learning instructions"></option>
+<option value="Reflection &gt; Reflect on errors and failures &gt; Diagnose failure against ground truth"></option>
+<option value="Reflection &gt; Reflect on errors and failures &gt; Inspect Error Pattern"></option>
+<option value="Reflection &gt; Reflect on errors and failures &gt; Analyze log to formulate fix instructions"></option>
+<option value="Reflection &gt; Reflect on errors and failures &gt; Reflect on failed episodes for prior knowledge"></option>
+<option value="Reflection &gt; Reflect on errors and failures &gt; Self-Correct Step Implementation"></option>
+<option value="Reflection &gt; Reflect on self-outcomes &gt; Self-reflect"></option>
+<option value="Reflection &gt; Reflect on self-outcomes &gt; Reflect on proposed fix"></option>
+<option value="Reflection &gt; Reflect on self-outcomes &gt; Pre-action self-check"></option>
+<option value="Reflection &gt; Reflect on self-outcomes &gt; Refine Strategy Iteratively"></option>
+<option value="Reflection &gt; Reflect on external feedback &gt; Receive and integrate external feedback"></option></datalist>
+<label>Alternative label <span class="hint">(optional)</span><input id="alternative" list="labels"></label>
+<label>Reason for the decision<textarea id="reason" required rows="2" placeholder="What distinguishes this case?"></textarea></label>
+<label>Source <span class="hint">(optional)</span><input id="source" placeholder="Trajectory ID and turn, or another reference"></label>
+<div class="actions"><button type="submit" class="primary">Save case</button><button type="button" id="cancel">Cancel</button></div>
+</form>
+</section>
+<section id="library" aria-labelledby="lib-title">
+<h2 id="lib-title">Reference library</h2>
+<p class="hint">The study recorded 75 adjudicated patterns. The v3 contract revises 25 earlier decisions for thought passages.</p>
+<details><summary>Annotation contract · C1–C6</summary><div class="body"><p>From the human-IRR study (<code>AC-Q2 .../irr/</code>, blind pass by a codebook-fluent
+human against all three stacks). Two of these change <strong>what gets quoted</strong>, so
+they override the general heuristics and any precedent below that predates
+them.</p>
+<h3>C1 · Quote the action surface, not only the thought</h3>
+<p>Set <code>quote_target: &quot;both&quot;</code> and give every quote a <code>&quot;target&quot;: &quot;thought&quot;</code> or
+<code>&quot;target&quot;: &quot;action&quot;</code> field.</p>
+<p>Batch-3 quoted thoughts only — all 922 spans across the three stacks sit in
+<code>thought</code>, none in <code>action</code>. But every <code>Executing</code> leaf is <em>defined</em> by a
+command being run (<code>Apply patch via edit</code> — &quot;running an <code>edit</code> command&quot;;
+<code>Run verification command</code> — &quot;running <code>python</code>, <code>pytest</code>&quot;). So <code>Executing</code> could
+never be evidenced by the field it was defined on, and the stacks resolved that
+by projecting the turn's command back onto the thought that announced it. The
+human annotator, reading the glosses literally, used <code>Executing</code> <strong>zero times in
+41 quotes</strong>. That is not a miss; it is the only self-consistent reading of a
+thought-only contract.</p>
+<h3>C2 · A thought that announces an action is Planning; the action span carries Executing</h3>
+<blockquote>
+<p>就句论句 — the sentence is judged on what it says. In <code>thought</code>, expect
+<code>Planning</code>, at most <code>Evaluating</code>. <code>Executing</code> belongs to the <code>action</code> span.</p>
+</blockquote>
+<p>C1 is what makes C2 payable: the execution still gets labelled, on the span that
+actually executes. Under a thought-only contract C2 alone would simply delete
+<code>Executing</code> from the data.</p>
+<p><strong>Worked pair</strong> (astropy T15, sympy T3, scikit-learn T3 and five more):</p>
+<table>
+<thead>
+<tr>
+  <th>span</th>
+  <th>field</th>
+  <th>label</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>&quot;run the script to see if we can reproduce the issue&quot;</td>
+  <td><code>thought</code></td>
+  <td><code>Planning &gt; Formulate a workflow or plan &gt; Plan function or tool use</code></td>
+</tr>
+<tr>
+  <td><code>python reproduce_issue.py</code></td>
+  <td><code>action</code></td>
+  <td><code>Executing &gt; Executing plan &gt; Run verification command</code></td>
+</tr>
+</tbody>
+</table>
+<p>In all eight blind-pass collisions of this shape the turn's <code>action</code> literally
+performed what the thought announced, and the stacks labelled the thought
+<code>Executing</code> while the human labelled it <code>Planning</code>. Both were right about the
+turn; the contract had not said which span owns the execution. Now it has.</p>
+<h3>C3 · Precedents superseded by C1 and C2</h3>
+<p>25 adjudicated patterns covering 65 spans put a <strong>thought</strong> span into
+<code>Executing</code>. They were adjudicated correctly under the thought-only contract and
+are kept below as history, but <strong>for thought spans they no longer apply</strong>:</p>
+<ul>
+<li><code>R1</code> (P002, P003, P144, P153, P158 — 36 spans, &quot;run it / test our changes by
+running …&quot;) → the thought span is now <code>Planning</code>; <code>Run verification command</code>
+moves to the action span.</li>
+<li><code>Apply patch via edit</code> on thought spans (P009, P015, P019, P027, P038, P049,
+P085, P093, P094, P110 — 17 spans) → thought span is now <code>Planning</code>;
+<code>Apply patch via edit</code> moves to the <code>edit …</code> action span.</li>
+<li><code>Initiate planned action</code> / <code>Normal executing</code> / <code>Adopt debugging instructions</code> on thought spans (P011, P020, P033, P034, P037, P047, P057,
+P060, P062, P063 — 12 spans) → same move.</li>
+</ul>
+<p>An <code>Executing</code> label on an <code>action</code>-targeted span is unaffected — there were
+none before, because there were no action spans.</p>
+<p><strong>This supersession has not been re-adjudicated span by span.</strong> It is a stated
+rule, not 65 fresh human calls. Any batch built under this contract is a new
+annotation contract, not a re-run of batch-3, and is <strong>not span-comparable with
+batch-3</strong>. Say so wherever its numbers are reported.</p>
+<h3>C4 · When two leaves genuinely will not separate</h3>
+<p>Pick the leaf whose <strong>gloss</strong> fits the span most tightly, record the collision,
+and move on. Do not break the tie by model majority, and do not leave the label
+blank — a blank loses the span, while a recorded collision is evidence for the
+next codebook version.</p>
+<h3>C5 · Leaf collisions recorded so far</h3>
+<table>
+<thead>
+<tr>
+  <th>span</th>
+  <th>leaves that would not separate</th>
+  <th>take</th>
+  <th>note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>&quot;it's likely to be in a file related to coordinates&quot;</td>
+  <td><code>Reasoning &gt; Inferring &gt; Infer causal relationship</code> ↔ <code>Infer structure from indirect evidence</code></td>
+  <td><strong><code>Infer structure from indirect evidence</code></strong></td>
+  <td>proposed for <strong>merge</strong> — the two are not separable in general, and this one is the higher-level of the pair</td>
+</tr>
+<tr>
+  <td>&quot;we can try to run the tests using pytest directly without installing the package&quot;</td>
+  <td><code>Planning &gt; Formulate a workflow or plan &gt; Plan function or tool use</code> ↔ <code>Formulate a high-level plan</code></td>
+  <td><strong><code>Plan function or tool use</code></strong></td>
+  <td>separable in principle; on spans that name a specific tool, take <code>Plan function or tool use</code></td>
+</tr>
+<tr>
+  <td>&quot;we need to implement the proposed changes in the appropriate file&quot;</td>
+  <td><code>Planning &gt; Formulate a workflow or plan &gt; Plan code or artifact structure</code> ↔ <code>Formulate a high-level plan</code></td>
+  <td><em>unresolved</em></td>
+  <td>recorded as a collision; no precedent yet</td>
+</tr>
+<tr>
+  <td>&quot;we should test these new transformations to ensure they work as expected&quot;</td>
+  <td><code>Planning &gt; … &gt; Plan function or tool use</code> ↔ <code>Evaluating &gt; Evaluating with gold &gt; Plan verification step</code></td>
+  <td><strong><code>Plan verification step</code></strong></td>
+  <td>structural defect: <code>Plan verification step</code> is the only <code>Plan*</code> leaf living outside <code>Planning</code>, and its four siblings under <code>Evaluating with gold</code> are all post-hoc comparisons. Flagged for the next codebook version</td>
+</tr>
+</tbody>
+</table>
+<h3>C6 · Retrieval vs Grounding on a phrase that will not split</h3>
+<p>From the human-IRR pass on <code>pydata__xarray-3305</code> (Q9 · T18). When a phrase cannot
+be split into an operation part and an object part, decide on what the phrase
+actually states:</p>
+<table>
+<thead>
+<tr>
+  <th>the phrase states</th>
+  <th>label</th>
+  <th>example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>only the operation</td>
+  <td><code>Grounding</code></td>
+  <td>&quot;Let's open the file&quot;</td>
+</tr>
+<tr>
+  <td>the object it acts on, or the information it is after</td>
+  <td><code>Retrieval</code></td>
+  <td>&quot;inspect the implementation of <code>resolve_expression</code>&quot;</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Scope: thought spans.</strong> Command surfaces are unresolved. The span that prompted
+this rule is an action span, <code>search_file &quot;def quantile&quot; xarray/core/dataset.py</code>,
+where the human took <code>Grounding &gt; Augment with external computation &gt; Execute code</code> and all three stacks took <code>Retrieval &gt; Retrieve from local corpus</code>. Read
+literally the rule above sends that span to <code>Retrieval</code>, since it names both the
+pattern searched for and the file, so the rule does not reproduce the label that
+prompted it. Do not extend C6 to action spans until that call is made.</p>
+<p>The same annotator proposed a leaf that would dissolve the conflict rather than
+arbitrate it: <strong><code>Grounding &gt; Augment with external computation &gt; Search relevant files</code></strong>. <code>search_file</code> would land there, and the boundary rule would not have to
+cover command surfaces at all. Recorded in <code>irr/codebook_notes.md</code>, not yet in
+the canonical codebook.</p>
+<p>Standing evidence: <code>Grounding ↔ Retrieval</code> is the largest cross-model confusion
+pair in batch-4, 112 of 545 action-level disagreements (20.6%), up from 28 (8.0%)
+in batch-3. See <code>analysis/IRR_batch-4.md</code>.</p>
+</div></details>
+<details><summary>Proposed labels and passages to leave untagged</summary><div class="body"><h2>Proposed taxonomy additions (not yet canonical)</h2>
+<p>Leaves and sub-actions an adjudicator needed but could not find in the tree. They are recorded here <strong>as proposals with their evidence</strong>, not merged into the canonical taxonomy. Promoting one is a version bump: update <code>act-onomy_taxonomy.csv</code> and propagate with the <code>extension-tool</code> skill.</p>
+<p><strong>During annotation these are usable</strong>: if a span matches a proposal, use it and flag the span, rather than forcing a poor fit onto an existing leaf.</p>
+<p><em>2 proposal(s), backing 8 disputed span(s).</em></p>
+<h3><code>Executing &gt; Executing plan &gt; Normal executing</code></h3>
+<ul>
+<li>kind: <strong>new leaf</strong> <em>(proposed)</em></li>
+<li>attaches under: <code>Executing</code> › <code>Executing plan</code></li>
+<li>evidence: 7 span(s) across 6 pattern(s) (P037, P020, P057, P060, P062, P063)<ul>
+<li><blockquote>
+<p>modify the <code>astropy/wcs/setup_package.py</code> file to remove the dependency</p>
+</blockquote>
+</li>
+<li><blockquote>
+<p>remove the duplicate and keep only the updated version</p>
+</blockquote>
+</li>
+<li><blockquote>
+<p>add the test case mentioned in the issue description</p>
+</blockquote>
+</li>
+</ul>
+</li>
+</ul>
+<h3><code>Reasoning &gt; Analysing &gt; analyse current situation</code></h3>
+<ul>
+<li>kind: <strong>new leaf</strong> <em>(proposed)</em></li>
+<li>attaches under: <code>Reasoning</code> › <code>Analysing</code></li>
+<li>evidence: 1 span(s) across 1 pattern(s) (P035)<ul>
+<li><blockquote>
+<p>the build process encountered an error</p>
+</blockquote>
+</li>
+</ul>
+</li>
+</ul>
+<h2>Spans that should not be quoted</h2>
+<p>Every stack quoted these, and a human adjudicator ruled that they encode <strong>no agent behaviour</strong> — they are narration, restatement, or filler. Do not open a quote span on text like this; a missing quote is better than a quote with no behaviour in it.</p>
+<p><em>1 pattern(s), 1 span(s).</em></p>
+<ul>
+<li><blockquote>
+<p>the test case provided in the issue description</p>
+</blockquote>
+<ul>
+<li>(P050, 1 span(s); the stacks disagreed over how to label it, which is itself a signal it carries no behaviour)</li>
+</ul>
+</li>
+</ul>
+</div></details>
+<label for="search" class="hint" id="search-label">Search reference cases</label>
+<input id="search" type="search" placeholder="Quote, case ID, label or rationale">
+<span id="count" class="meta" aria-live="polite"></span>
+<div id="references"><details id="P002"><summary><span class="case-id">P002</span>test our changes by running the test_fits_card.py script again</summary><div class="body"><p><strong>Contract C3 revises this historical decision for thought passages.</strong> Apply C1–C3 when using the v3 contract.</p><p>17 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Grounding &gt; Augment with external computation &gt; Execute code</code></li>
+<li>gpt: <code>Executing &gt; Executing plan &gt; Run verification command</code></li>
+<li>deepseek: <code>Executing &gt; Executing plan &gt; Run verification command</code></li>
+<li><strong>adjudicated: <code>Executing &gt; Executing plan &gt; Run verification command</code></strong></li>
+<li>rationale: need to identify the main action, the main action is the &quot;run&quot;. And this is the agent's thought</li>
+</ul>
+</div></details>
+<details id="P003"><summary><span class="case-id">P003</span>run it to see if we can reproduce the issue</summary><div class="body"><p><strong>Contract C3 revises this historical decision for thought passages.</strong> Apply C1–C3 when using the v3 contract.</p><p>16 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Grounding &gt; Augment with external computation &gt; Execute code</code></li>
+<li>gpt: <code>Executing &gt; Executing plan &gt; Run verification command</code></li>
+<li>deepseek: <code>Grounding &gt; Augment with external computation &gt; Execute code</code></li>
+<li><strong>adjudicated: <code>Executing &gt; Executing plan &gt; Run verification command</code></strong></li>
+<li>rationale: need to identify the main action, the main action is the &quot;run&quot;. And this is the agent's thought</li>
+</ul>
+</div></details>
+<details id="P144"><summary><span class="case-id">P144</span>run the script to see if we can reproduce the issue</summary><div class="body"><p><strong>Contract C3 revises this historical decision for thought passages.</strong> Apply C1–C3 when using the v3 contract.</p><p>1 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Grounding &gt; Augment with external computation &gt; Execute code</code></li>
+<li>gpt: <code>Executing &gt; Executing plan &gt; Run verification command</code></li>
+<li>deepseek: <code>Evaluating &gt; Evaluating with gold &gt; Confirm actual ≠ expected</code></li>
+<li><strong>adjudicated: <code>Executing &gt; Executing plan &gt; Run verification command</code></strong></li>
+<li>rationale: need to identify the main action, the main action is the &quot;run&quot;. And this is the agent's thought</li>
+</ul>
+</div></details>
+<details id="P153"><summary><span class="case-id">P153</span>run the script to see if our fix for the PythonCodePrinter has resolved the issue</summary><div class="body"><p><strong>Contract C3 revises this historical decision for thought passages.</strong> Apply C1–C3 when using the v3 contract.</p><p>1 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Grounding &gt; Augment with external computation &gt; Execute code</code></li>
+<li>gpt: <code>Executing &gt; Executing plan &gt; Run verification command</code></li>
+<li>deepseek: <code>Evaluating &gt; Evaluating with gold &gt; Plan verification step</code></li>
+<li><strong>adjudicated: <code>Executing &gt; Executing plan &gt; Run verification command</code></strong></li>
+<li>rationale: need to identify the main action, the main action is the &quot;run&quot;. And this is the agent's thought</li>
+</ul>
+</div></details>
+<details id="P158"><summary><span class="case-id">P158</span>run our reproduce.py script again to see if the issue has been resolved</summary><div class="body"><p><strong>Contract C3 revises this historical decision for thought passages.</strong> Apply C1–C3 when using the v3 contract.</p><p>1 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Grounding &gt; Augment with external computation &gt; Execute code</code></li>
+<li>gpt: <code>Executing &gt; Executing plan &gt; Run verification command</code></li>
+<li>deepseek: <code>Evaluating &gt; Evaluating with gold &gt; Confirm actual == expected</code></li>
+<li><strong>adjudicated: <code>Executing &gt; Executing plan &gt; Run verification command</code></strong></li>
+<li>rationale: need to identify the main action, the main action is the &quot;run&quot;. And this is the agent's thought</li>
+</ul>
+</div></details>
+<details id="P001"><summary><span class="case-id">P001</span>The changes look good</summary><div class="body"><p>20 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Evaluating &gt; Evaluating without ground truth &gt; Provide qualitative judgement</code></li>
+<li>gpt: <code>Reasoning &gt; Analysing &gt; Interpret meaning of artifacts</code></li>
+<li>deepseek: <code>Evaluating &gt; Evaluating without ground truth &gt; Provide qualitative judgement</code></li>
+<li><strong>adjudicated: <code>Evaluating &gt; Evaluating without ground truth &gt; Provide qualitative judgement</code></strong></li>
+<li>rationale: qualitative judgement for current status -&gt; evaluating</li>
+</ul>
+</div></details>
+<details id="P054"><summary><span class="case-id">P054</span>The script looks good as it is</summary><div class="body"><p>1 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Evaluating &gt; Evaluating without ground truth &gt; Provide qualitative judgement</code></li>
+<li>gpt: <code>Reasoning &gt; Analysing &gt; Interpret meaning of artifacts</code></li>
+<li>deepseek: <code>Evaluating &gt; Evaluating with goals/requirements/constraints &gt; Goal-completion check</code></li>
+<li><strong>adjudicated: <code>Evaluating &gt; Evaluating without ground truth &gt; Provide qualitative judgement</code></strong></li>
+<li>rationale: qualitative judgement for current status -&gt; evaluating</li>
+</ul>
+</div></details>
+<details id="P007"><summary><span class="case-id">P007</span>the migrations are not being applied correctly</summary><div class="body"><p>5 span(s) · disagreement at <em>leaf</em> level</p>
+<ul>
+<li>claude: <code>Reflection &gt; Reflect on errors and failures &gt; Detect prior fix did not work</code></li>
+<li>gpt: <code>Reflection &gt; Reflect on errors and failures &gt; Detect failed action</code></li>
+<li>deepseek: <code>Reflection &gt; Reflect on errors and failures &gt; Detect failed action</code></li>
+<li><strong>adjudicated: <code>Reflection &gt; Reflect on errors and failures &gt; Detect failed action</code></strong></li>
+<li>rationale: the leaf should not be too much specific</li>
+</ul>
+</div></details>
+<details id="P010"><summary><span class="case-id">P010</span>The exclude() case is still not working as expected</summary><div class="body"><p>4 span(s) · disagreement at <em>leaf</em> level</p>
+<ul>
+<li>claude: <code>Reflection &gt; Reflect on errors and failures &gt; Detect prior fix did not work</code></li>
+<li>gpt: <code>Reflection &gt; Reflect on errors and failures &gt; Detect failed action</code></li>
+<li>deepseek: <code>Reflection &gt; Reflect on errors and failures &gt; Detect prior fix did not work</code></li>
+<li><strong>adjudicated: <code>Reflection &gt; Reflect on errors and failures &gt; Detect failed action</code></strong></li>
+<li>rationale: the leaf should not be too much specific</li>
+</ul>
+</div></details>
+<details id="P016"><summary><span class="case-id">P016</span>our custom newer_group function is being called with an unexpected third argument</summary><div class="body"><p>2 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Reflection &gt; Reflect on errors and failures &gt; Detect prior fix did not work</code></li>
+<li>gpt: <code>Reflection &gt; Reflect on errors and failures &gt; Detect failed action</code></li>
+<li>deepseek: <code>Reasoning &gt; Inferring &gt; Diagnose Error Cause</code></li>
+<li><strong>adjudicated: <code>Reflection &gt; Reflect on errors and failures &gt; Detect failed action</code></strong></li>
+<li>rationale: the leaf should not be too much specific</li>
+</ul>
+</div></details>
+<details id="P004"><summary><span class="case-id">P004</span>successfully reproduced the issue described in the bug report</summary><div class="body"><p>6 span(s) · disagreement at <em>leaf</em> level</p>
+<ul>
+<li>claude: <code>Evaluating &gt; Evaluating with gold &gt; Confirm actual ≠ expected</code></li>
+<li>gpt: <code>Evaluating &gt; Evaluating with gold &gt; Confirm actual == expected</code></li>
+<li>deepseek: <code>Evaluating &gt; Evaluating with gold &gt; Confirm actual ≠ expected</code></li>
+<li><strong>adjudicated: <code>Evaluating &gt; Evaluating with goals/requirements/constraints &gt; Goal-completion check</code></strong></li>
+</ul>
+</div></details>
+<details id="P005"><summary><span class="case-id">P005</span>modify the method to handle these cases more explicitly</summary><div class="body"><p>5 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Reasoning &gt; Generating &gt; Generate initial fix candidate</code></li>
+<li>gpt: <code>Executing &gt; Executing plan &gt; Apply patch via edit</code></li>
+<li>deepseek: <code>Reasoning &gt; Generating &gt; Generate initial fix candidate</code></li>
+<li><strong>adjudicated: <code>Planning &gt; Formulate a workflow or plan &gt; Formulate a high-level plan</code></strong></li>
+</ul>
+</div></details>
+<details id="P006"><summary><span class="case-id">P006</span>The indentation issue has been resolved</summary><div class="body"><p>5 span(s) · disagreement at <em>sub-action</em> level</p>
+<ul>
+<li>claude: <code>Evaluating &gt; Evaluating without ground truth &gt; Provide qualitative judgement</code></li>
+<li>gpt: <code>Evaluating &gt; Evaluating with gold &gt; Confirm actual == expected</code></li>
+<li>deepseek: <code>Evaluating &gt; Evaluating without ground truth &gt; Provide qualitative judgement</code></li>
+<li><strong>adjudicated: <code>Evaluating &gt; Evaluating with goals/requirements/constraints &gt; Goal-completion check</code></strong></li>
+</ul>
+</div></details>
+<details id="P008"><summary><span class="case-id">P008</span>Let&#x27;s try a different approach</summary><div class="body"><p>4 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Planning &gt; Select Strategy &gt; Switch to fallback strategy</code></li>
+<li>gpt: <code>Deciding &gt; Make a decision &gt; Pick alternative strategy</code></li>
+<li>deepseek: <code>Deciding &gt; Make a decision &gt; Pick alternative strategy</code></li>
+<li><strong>adjudicated: <code>Planning &gt; Select Strategy &gt; Select among candidate strategies</code></strong></li>
+</ul>
+</div></details>
+<details id="P009"><summary><span class="case-id">P009</span>update the test_exists_exclude method to test our changes</summary><div class="body"><p><strong>Contract C3 revises this historical decision for thought passages.</strong> Apply C1–C3 when using the v3 contract.</p><p>4 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Reasoning &gt; Generating &gt; Generate structured artifacts</code></li>
+<li>gpt: <code>Executing &gt; Executing plan &gt; Apply patch via edit</code></li>
+<li>deepseek: <code>Executing &gt; Executing plan &gt; Apply patch via edit</code></li>
+<li><strong>adjudicated: <code>Executing &gt; Executing plan &gt; Apply patch via edit</code></strong></li>
+</ul>
+</div></details>
+<details id="P011"><summary><span class="case-id">P011</span>try to install the package again</summary><div class="body"><p><strong>Contract C3 revises this historical decision for thought passages.</strong> Apply C1–C3 when using the v3 contract.</p><p>3 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Executing &gt; Executing plan &gt; Initiate planned action</code></li>
+<li>gpt: <code>Planning &gt; Formulate a workflow or plan &gt; Formulate a high-level plan</code></li>
+<li>deepseek: <code>Executing &gt; Executing plan &gt; Initiate planned action</code></li>
+<li><strong>adjudicated: <code>Executing &gt; Executing plan &gt; Initiate planned action</code></strong></li>
+</ul>
+</div></details>
+<details id="P012"><summary><span class="case-id">P012</span>because Django&#x27;s settings are not configured</summary><div class="body"><p>3 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Reasoning &gt; Inferring &gt; Diagnose Error Cause</code></li>
+<li>gpt: <code>Reflection &gt; Reflect on errors and failures &gt; Inspect Error Pattern</code></li>
+<li>deepseek: <code>Reflection &gt; Reflect on errors and failures &gt; Inspect Error Pattern</code></li>
+<li><strong>adjudicated: <code>Reasoning &gt; Inferring &gt; Diagnose Error Cause</code></strong></li>
+</ul>
+</div></details>
+<details id="P013"><summary><span class="case-id">P013</span>The error is occurring because we&#x27;re trying to define the model before configuring Django settings</summary><div class="body"><p>3 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Reasoning &gt; Inferring &gt; Diagnose Error Cause</code></li>
+<li>gpt: <code>Reflection &gt; Reflect on errors and failures &gt; Inspect Error Pattern</code></li>
+<li>deepseek: <code>Reasoning &gt; Inferring &gt; Diagnose Error Cause</code></li>
+<li><strong>adjudicated: <code>Reasoning &gt; Inferring &gt; Diagnose Error Cause</code></strong></li>
+</ul>
+</div></details>
+<details id="P014"><summary><span class="case-id">P014</span>open it and look for the ReadOnlyPasswordHashField class</summary><div class="body"><p>3 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Retrieval &gt; Retrieve from local corpus &gt; Retrieve from local corpus</code></li>
+<li>gpt: <code>Grounding &gt; Interact with digital environments &gt; Navigate digital interfaces</code></li>
+<li>deepseek: <code>Grounding &gt; Interact with digital environments &gt; Navigate digital interfaces</code></li>
+<li><strong>adjudicated: <code>Grounding &gt; Interact with digital environments &gt; Navigate digital interfaces</code></strong></li>
+</ul>
+</div></details>
+<details id="P015"><summary><span class="case-id">P015</span>add the code to reproduce the issue</summary><div class="body"><p><strong>Contract C3 revises this historical decision for thought passages.</strong> Apply C1–C3 when using the v3 contract.</p><p>2 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Reasoning &gt; Generating &gt; Generate initial codes</code></li>
+<li>gpt: <code>Executing &gt; Executing plan &gt; Apply patch via edit</code></li>
+<li>deepseek: <code>Reasoning &gt; Generating &gt; Generate initial codes</code></li>
+<li><strong>adjudicated: <code>Executing &gt; Executing plan &gt; Apply patch via edit</code></strong></li>
+</ul>
+</div></details>
+<details id="P017"><summary><span class="case-id">P017</span>The changes we made have successfully resolved the issue</summary><div class="body"><p>2 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Reasoning &gt; Inferring &gt; Conclude success from evidence</code></li>
+<li>gpt: <code>Evaluating &gt; Evaluating with gold &gt; Confirm actual == expected</code></li>
+<li>deepseek: <code>Evaluating &gt; Evaluating with gold &gt; Confirm actual == expected</code></li>
+<li><strong>adjudicated: <code>Evaluating &gt; Evaluating with goals/requirements/constraints &gt; Goal-completion check</code></strong></li>
+</ul>
+</div></details>
+<details id="P018"><summary><span class="case-id">P018</span>The change has been applied successfully</summary><div class="body"><p>2 span(s) · disagreement at <em>sub-action</em> level</p>
+<ul>
+<li>claude: <code>Evaluating &gt; Evaluating without ground truth &gt; Provide qualitative judgement</code></li>
+<li>gpt: <code>Evaluating &gt; Evaluating with gold &gt; Confirm actual == expected</code></li>
+<li>deepseek: <code>Evaluating &gt; Evaluating with goals/requirements/constraints &gt; Goal-completion check</code></li>
+<li><strong>adjudicated: <code>Evaluating &gt; Evaluating with goals/requirements/constraints &gt; Goal-completion check</code></strong></li>
+</ul>
+</div></details>
+<details id="P019"><summary><span class="case-id">P019</span>add the test case mentioned in the issue description</summary><div class="body"><p><strong>Contract C3 revises this historical decision for thought passages.</strong> Apply C1–C3 when using the v3 contract.</p><p>2 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Reasoning &gt; Generating &gt; Generate initial codes</code></li>
+<li>gpt: <code>Executing &gt; Executing plan &gt; Apply patch via edit</code></li>
+<li>deepseek: <code>Executing &gt; Executing plan &gt; Apply patch via edit</code></li>
+<li><strong>adjudicated: <code>Executing &gt; Executing plan &gt; Apply patch via edit</code></strong></li>
+</ul>
+</div></details>
+<details id="P020"><summary><span class="case-id">P020</span>remove the duplicate and keep only the updated version</summary><div class="body"><p><strong>Contract C3 revises this historical decision for thought passages.</strong> Apply C1–C3 when using the v3 contract.</p><p>2 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Executing &gt; Executing plan &gt; Apply patch via edit</code></li>
+<li>gpt: <code>Executing &gt; Executing plan &gt; Apply patch via edit</code></li>
+<li>deepseek: <code>Deciding &gt; Pick scores &gt; Select action by score</code></li>
+<li><strong>adjudicated: <code>Executing &gt; Executing plan &gt; Normal executing</code></strong></li>
+</ul>
+</div></details>
+<details id="P021"><summary><span class="case-id">P021</span>the actual implementation of how it&#x27;s handled in subqueries might be in a different file</summary><div class="body"><p>2 span(s) · disagreement at <em>sub-action</em> level</p>
+<ul>
+<li>claude: <code>Reasoning &gt; Inferring &gt; Infer structure from indirect evidence</code></li>
+<li>gpt: <code>Reasoning &gt; Analysing &gt; Analyse source code</code></li>
+<li>deepseek: <code>Reasoning &gt; Inferring &gt; Infer structure from indirect evidence</code></li>
+<li><strong>adjudicated: <code>Reasoning &gt; Inferring &gt; Infer structure from indirect evidence</code></strong></li>
+</ul>
+</div></details>
+<details id="P022"><summary><span class="case-id">P022</span>let&#x27;s test if this change resolves the issue</summary><div class="body"><p>2 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Evaluating &gt; Evaluating with gold &gt; Plan verification step</code></li>
+<li>gpt: <code>Evaluating &gt; Evaluating with gold &gt; Plan verification step</code></li>
+<li>deepseek: <code>Planning &gt; Decompose task &gt; Decompose into subgoals with success conditions</code></li>
+<li><strong>adjudicated: <code>Evaluating &gt; Evaluating with gold &gt; Plan verification step</code></strong></li>
+</ul>
+</div></details>
+<details id="P023"><summary><span class="case-id">P023</span>run the tests to see if the issue has been resolved</summary><div class="body"><p>2 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Evaluating &gt; Evaluating with gold &gt; Plan verification step</code></li>
+<li>gpt: <code>Executing &gt; Executing plan &gt; Run verification command</code></li>
+<li>deepseek: <code>Executing &gt; Executing plan &gt; Run verification command</code></li>
+<li><strong>adjudicated: <code>Evaluating &gt; Evaluating with gold &gt; Compare against gold reference</code></strong></li>
+</ul>
+</div></details>
+<details id="P024"><summary><span class="case-id">P024</span>The test looks correct, but it&#x27;s failing</summary><div class="body"><p>2 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Evaluating &gt; Evaluating with gold &gt; Confirm actual ≠ expected</code></li>
+<li>gpt: <code>Reasoning &gt; Inferring &gt; Diagnose Error Cause</code></li>
+<li>deepseek: <code>Reasoning &gt; Inferring &gt; Diagnose Error Cause</code></li>
+<li><strong>adjudicated: <code>Reasoning &gt; Inferring &gt; Diagnose Error Cause</code></strong></li>
+</ul>
+</div></details>
+<details id="P025"><summary><span class="case-id">P025</span>open this file and examine its contents</summary><div class="body"><p>2 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Retrieval &gt; Retrieve from local corpus &gt; Retrieve from local corpus</code></li>
+<li>gpt: <code>Grounding &gt; Interact with digital environments &gt; Navigate digital interfaces</code></li>
+<li>deepseek: <code>Retrieval &gt; Retrieve from local corpus &gt; Retrieve from local corpus</code></li>
+<li><strong>adjudicated: <code>Grounding &gt; Interact with digital environments &gt; Navigate digital interfaces</code></strong></li>
+</ul>
+</div></details>
+<details id="P026"><summary><span class="case-id">P026</span>create a script to reproduce the problem</summary><div class="body"><p>2 span(s) · disagreement at <em>sub-action</em> level</p>
+<ul>
+<li>claude: <code>Planning &gt; Decompose task &gt; Decompose into subgoals with success conditions</code></li>
+<li>gpt: <code>Planning &gt; Formulate a workflow or plan &gt; Plan function or tool use</code></li>
+<li>deepseek: <code>Planning &gt; Decompose task &gt; Decompose into subgoals with success conditions</code></li>
+<li><strong>adjudicated: <code>Planning &gt; Formulate a workflow or plan &gt; Plan function or tool use</code></strong></li>
+</ul>
+</div></details>
+<details id="P027"><summary><span class="case-id">P027</span>create a migration for our model and apply it in the test setup</summary><div class="body"><p><strong>Contract C3 revises this historical decision for thought passages.</strong> Apply C1–C3 when using the v3 contract.</p><p>2 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Planning &gt; Modify Plan &gt; Replan dynamically based on feedback</code></li>
+<li>gpt: <code>Executing &gt; Executing plan &gt; Apply patch via edit</code></li>
+<li>deepseek: <code>Planning &gt; Formulate a workflow or plan &gt; Plan function or tool use</code></li>
+<li><strong>adjudicated: <code>Executing &gt; Executing plan &gt; Apply patch via edit</code></strong></li>
+</ul>
+</div></details>
+<details id="P028"><summary><span class="case-id">P028</span>check if there&#x27;s a specific file for forms in the documentation</summary><div class="body"><p>2 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Retrieval &gt; Retrieve from local corpus &gt; Retrieve from local corpus</code></li>
+<li>gpt: <code>Planning &gt; Decompose task &gt; Plan deeper inspection before edit</code></li>
+<li>deepseek: <code>Retrieval &gt; Retrieve from local corpus &gt; Retrieve from local corpus</code></li>
+<li><strong>adjudicated: <code>Retrieval &gt; Retrieve from local corpus &gt; Retrieve from local corpus</code></strong></li>
+</ul>
+</div></details>
+<details id="P029"><summary><span class="case-id">P029</span>find the correct file without specifying a directory</summary><div class="body"><p>2 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Retrieval &gt; Retrieve from local corpus &gt; Retrieve from local corpus</code></li>
+<li>gpt: <code>Retrieval &gt; Retrieve from local corpus &gt; Retrieve from local corpus</code></li>
+<li>deepseek: <code>Planning &gt; Select Strategy &gt; Switch to fallback strategy</code></li>
+<li><strong>adjudicated: <code>Retrieval &gt; Retrieve from local corpus &gt; Retrieve from local corpus</code></strong></li>
+</ul>
+</div></details>
+<details id="P030"><summary><span class="case-id">P030</span>we&#x27;ve found the file containing the PythonCodePrinter class</summary><div class="body"><p>2 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Evaluating &gt; Evaluating without ground truth &gt; Evaluate intermediate results</code></li>
+<li>gpt: <code>Reasoning &gt; Analysing &gt; Analyse source code</code></li>
+<li>deepseek: <code>Evaluating &gt; Evaluating with goals/requirements/constraints &gt; Goal-completion check</code></li>
+<li><strong>adjudicated: <code>Reasoning &gt; Analysing &gt; Analyse source code</code></strong></li>
+</ul>
+</div></details>
+<details id="P031"><summary><span class="case-id">P031</span>add our new _print_Indexed method to the PythonCodePrinter class</summary><div class="body"><p>2 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Planning &gt; Formulate a workflow or plan &gt; Plan code or artifact structure</code></li>
+<li>gpt: <code>Reasoning &gt; Inferring &gt; Predict patch effect</code></li>
+<li>deepseek: <code>Planning &gt; Formulate a workflow or plan &gt; Plan code or artifact structure</code></li>
+<li><strong>adjudicated: <code>Planning &gt; Formulate a workflow or plan &gt; Plan code or artifact structure</code></strong></li>
+</ul>
+</div></details>
+<details id="P032"><summary><span class="case-id">P032</span>we&#x27;re working within the source code of astropy, and the extension modules haven&#x27;t been built yet</summary><div class="body"><p>1 span(s) · disagreement at <em>sub-action</em> level</p>
+<ul>
+<li>claude: <code>Reasoning &gt; Inferring &gt; Diagnose Error Cause</code></li>
+<li>gpt: <code>Reasoning &gt; Analysing &gt; Analyse source code</code></li>
+<li>deepseek: <code>Reasoning &gt; Inferring &gt; Diagnose Error Cause</code></li>
+<li><strong>adjudicated: <code>Reasoning &gt; Analysing &gt; Analyse source code</code></strong></li>
+</ul>
+</div></details>
+<details id="P033"><summary><span class="case-id">P033</span>build the extension modules as suggested in the error message</summary><div class="body"><p><strong>Contract C3 revises this historical decision for thought passages.</strong> Apply C1–C3 when using the v3 contract.</p><p>1 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Planning &gt; Modify Plan &gt; Replan dynamically based on feedback</code></li>
+<li>gpt: <code>Grounding &gt; Augment with external computation &gt; Execute code</code></li>
+<li>deepseek: <code>Planning &gt; Decompose task &gt; Decompose into subgoals with success conditions</code></li>
+<li><strong>adjudicated: <code>Executing &gt; Executing debug &gt; Adopt debugging instructions</code></strong></li>
+</ul>
+</div></details>
+<details id="P034"><summary><span class="case-id">P034</span>let&#x27;s try building the extension modules again</summary><div class="body"><p><strong>Contract C3 revises this historical decision for thought passages.</strong> Apply C1–C3 when using the v3 contract.</p><p>1 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Executing &gt; Executing plan &gt; Initiate planned action</code></li>
+<li>gpt: <code>Grounding &gt; Augment with external computation &gt; Execute code</code></li>
+<li>deepseek: <code>Executing &gt; Executing plan &gt; Initiate planned action</code></li>
+<li><strong>adjudicated: <code>Executing &gt; Executing plan &gt; Initiate planned action</code></strong></li>
+</ul>
+</div></details>
+<details id="P035"><summary><span class="case-id">P035</span>the build process encountered an error</summary><div class="body"><p>1 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Reflection &gt; Reflect on errors and failures &gt; Detect failed action</code></li>
+<li>gpt: <code>Reflection &gt; Reflect on errors and failures &gt; Inspect Error Pattern</code></li>
+<li>deepseek: <code>Reasoning &gt; Inferring &gt; Diagnose Error Cause</code></li>
+<li><strong>adjudicated: <code>Reasoning &gt; Analysing &gt; analyse current situation</code></strong></li>
+</ul>
+</div></details>
+<details id="P036"><summary><span class="case-id">P036</span>there&#x27;s a _convolve.pyx file instead of a _convolve.c file</summary><div class="body"><p>1 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Reasoning &gt; Analysing &gt; Analyse source code</code></li>
+<li>gpt: <code>Deciding &gt; Make a decision &gt; Pick alternative strategy</code></li>
+<li>deepseek: <code>Reasoning &gt; Analysing &gt; Analyse source code</code></li>
+<li><strong>adjudicated: <code>Reasoning &gt; Analysing &gt; Analyse source code</code></strong></li>
+</ul>
+</div></details>
+<details id="P037"><summary><span class="case-id">P037</span>modify the astropy/wcs/setup_package.py file to remove the dependency</summary><div class="body"><p><strong>Contract C3 revises this historical decision for thought passages.</strong> Apply C1–C3 when using the v3 contract.</p><p>1 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Planning &gt; Modify Plan &gt; Replan dynamically based on feedback</code></li>
+<li>gpt: <code>Reasoning &gt; Inferring &gt; Predict patch effect</code></li>
+<li>deepseek: <code>Reasoning &gt; Generating &gt; Generate initial fix candidate</code></li>
+<li><strong>adjudicated: <code>Executing &gt; Executing plan &gt; Normal executing</code></strong></li>
+</ul>
+</div></details>
+<details id="P038"><summary><span class="case-id">P038</span>modify the function to handle this case</summary><div class="body"><p><strong>Contract C3 revises this historical decision for thought passages.</strong> Apply C1–C3 when using the v3 contract.</p><p>1 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Planning &gt; Modify Plan &gt; Replan dynamically based on feedback</code></li>
+<li>gpt: <code>Executing &gt; Executing plan &gt; Apply patch via edit</code></li>
+<li>deepseek: <code>Reasoning &gt; Generating &gt; Generate initial fix candidate</code></li>
+<li><strong>adjudicated: <code>Executing &gt; Executing plan &gt; Apply patch via edit</code></strong></li>
+</ul>
+</div></details>
+<details id="P039"><summary><span class="case-id">P039</span>install the package with verbose output to see where it might be hanging</summary><div class="body"><p>1 span(s) · disagreement at <em>sub-action</em> level</p>
+<ul>
+<li>claude: <code>Planning &gt; Modify Plan &gt; Replan dynamically based on feedback</code></li>
+<li>gpt: <code>Planning &gt; Formulate a workflow or plan &gt; Formulate a high-level plan</code></li>
+<li>deepseek: <code>Planning &gt; Select Strategy &gt; Switch to fallback strategy</code></li>
+<li><strong>adjudicated: <code>Planning &gt; Formulate a workflow or plan &gt; Formulate a high-level plan</code></strong></li>
+</ul>
+</div></details>
+<details id="P040"><summary><span class="case-id">P040</span>focus on building just the extension modules</summary><div class="body"><p>1 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Planning &gt; Formulate a workflow or plan &gt; Plan function or tool use</code></li>
+<li>gpt: <code>Grounding &gt; Augment with external computation &gt; Execute code</code></li>
+<li>deepseek: <code>Planning &gt; Modify Plan &gt; Replan dynamically based on feedback</code></li>
+<li><strong>adjudicated: <code>Planning &gt; Formulate a workflow or plan &gt; Plan function or tool use</code></strong></li>
+</ul>
+</div></details>
+<details id="P041"><summary><span class="case-id">P041</span>the build process has completed successfully</summary><div class="body"><p>1 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Evaluating &gt; Evaluating without ground truth &gt; Provide qualitative judgement</code></li>
+<li>gpt: <code>Evaluating &gt; Evaluating with gold &gt; Confirm actual == expected</code></li>
+<li>deepseek: <code>Reasoning &gt; Inferring &gt; Conclude success from evidence</code></li>
+<li><strong>adjudicated: <code>Evaluating &gt; Evaluating with goals/requirements/constraints &gt; Goal-completion check</code></strong></li>
+</ul>
+</div></details>
+<details id="P042"><summary><span class="case-id">P042</span>the issue might actually be related to astropy&#x27;s implementation of TimeDelta</summary><div class="body"><p>1 span(s) · disagreement at <em>sub-action</em> level</p>
+<ul>
+<li>claude: <code>Reasoning &gt; Inferring &gt; Form precursor hypothesis about cause</code></li>
+<li>gpt: <code>Reasoning &gt; Analysing &gt; Analyse source code</code></li>
+<li>deepseek: <code>Reasoning &gt; Inferring &gt; Initial diagnostic framing</code></li>
+<li><strong>adjudicated: <code>Reasoning &gt; Inferring &gt; Initial diagnostic framing</code></strong></li>
+</ul>
+</div></details>
+<details id="P043"><summary><span class="case-id">P043</span>the issue is in the _format_float() function in the card.py file</summary><div class="body"><p>1 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Reasoning &gt; Inferring &gt; Initial diagnostic framing</code></li>
+<li>gpt: <code>Reasoning &gt; Inferring &gt; Pinpoint root cause mechanism</code></li>
+<li>deepseek: <code>Memory &gt; Read memory &gt; Read from working memory</code></li>
+<li><strong>adjudicated: <code>Reasoning &gt; Inferring &gt; Pinpoint root cause mechanism</code></strong></li>
+</ul>
+</div></details>
+<details id="P044"><summary><span class="case-id">P044</span>using 16 digits of precision for all float values, which can lead to unnecessary expansion</summary><div class="body"><p>1 span(s) · disagreement at <em>leaf</em> level</p>
+<ul>
+<li>claude: <code>Reasoning &gt; Inferring &gt; Diagnose Error Cause</code></li>
+<li>gpt: <code>Reasoning &gt; Inferring &gt; Form precursor hypothesis about cause</code></li>
+<li>deepseek: <code>Reasoning &gt; Inferring &gt; Pinpoint root cause mechanism</code></li>
+<li><strong>adjudicated: <code>Reasoning &gt; Inferring &gt; Pinpoint root cause mechanism</code></strong></li>
+</ul>
+</div></details>
+<details id="P045"><summary><span class="case-id">P045</span>It covers all the aspects of the issue we&#x27;ve fixed</summary><div class="body"><p>1 span(s) · disagreement at <em>sub-action</em> level</p>
+<ul>
+<li>claude: <code>Evaluating &gt; Evaluating with goals/requirements/constraints &gt; Requirement-satisfaction check</code></li>
+<li>gpt: <code>Evaluating &gt; Evaluating with gold &gt; Confirm actual == expected</code></li>
+<li>deepseek: <code>Evaluating &gt; Evaluating without ground truth &gt; Provide qualitative judgement</code></li>
+<li><strong>adjudicated: <code>Evaluating &gt; Evaluating with goals/requirements/constraints &gt; Requirement-satisfaction check</code></strong></li>
+</ul>
+</div></details>
+<details id="P046"><summary><span class="case-id">P046</span>the pytest command is not able to find the astropy module</summary><div class="body"><p>1 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Reflection &gt; Reflect on errors and failures &gt; Detect failed action</code></li>
+<li>gpt: <code>Retrieval &gt; Retrieve from local corpus &gt; Read code semantics from open file</code></li>
+<li>deepseek: <code>Reasoning &gt; Inferring &gt; Diagnose Error Cause</code></li>
+<li><strong>adjudicated: <code>Reflection &gt; Reflect on errors and failures &gt; Detect failed action</code></strong></li>
+</ul>
+</div></details>
+<details id="P047"><summary><span class="case-id">P047</span>run the test using Python directly</summary><div class="body"><p><strong>Contract C3 revises this historical decision for thought passages.</strong> Apply C1–C3 when using the v3 contract.</p><p>1 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Planning &gt; Select Strategy &gt; Switch to fallback strategy</code></li>
+<li>gpt: <code>Executing &gt; Executing plan &gt; Run verification command</code></li>
+<li>deepseek: <code>Deciding &gt; Make a decision &gt; Pick alternative strategy</code></li>
+<li><strong>adjudicated: <code>Executing &gt; Executing plan &gt; Run verification command</code></strong></li>
+</ul>
+</div></details>
+<details id="P048"><summary><span class="case-id">P048</span>we&#x27;ve verified that our changes work as expected and the test passes</summary><div class="body"><p>1 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Evaluating &gt; Evaluating with gold &gt; Confirm actual == expected</code></li>
+<li>gpt: <code>Executing &gt; Terminating &gt; Terminate rollout with submission</code></li>
+<li>deepseek: <code>Evaluating &gt; Evaluating with gold &gt; Confirm actual == expected</code></li>
+<li><strong>adjudicated: <code>Evaluating &gt; Evaluating with goals/requirements/constraints &gt; Goal-completion check</code></strong></li>
+</ul>
+</div></details>
+<details id="P049"><summary><span class="case-id">P049</span>add the code to reproduce the issue</summary><div class="body"><p><strong>Contract C3 revises this historical decision for thought passages.</strong> Apply C1–C3 when using the v3 contract.</p><p>1 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Reasoning &gt; Generating &gt; Generate initial codes</code></li>
+<li>gpt: <code>Executing &gt; Executing plan &gt; Apply patch via edit</code></li>
+<li>deepseek: <code>Executing &gt; Executing plan &gt; Initiate planned action</code></li>
+<li><strong>adjudicated: <code>Executing &gt; Executing plan &gt; Apply patch via edit</code></strong></li>
+</ul>
+</div></details>
+<details id="P051"><summary><span class="case-id">P051</span>look at the file where the problem is occurring</summary><div class="body"><p>1 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Planning &gt; Decompose task &gt; Phase transition: reproduce → localize</code></li>
+<li>gpt: <code>Reasoning &gt; Inferring &gt; Pinpoint root cause mechanism</code></li>
+<li>deepseek: <code>Retrieval &gt; Retrieve from local corpus &gt; Retrieve from local corpus</code></li>
+<li><strong>adjudicated: <code>Reasoning &gt; Inferring &gt; Diagnose Error Cause</code></strong></li>
+</ul>
+</div></details>
+<details id="P057"><summary><span class="case-id">P057</span>add the test case mentioned in the issue description</summary><div class="body"><p><strong>Contract C3 revises this historical decision for thought passages.</strong> Apply C1–C3 when using the v3 contract.</p><p>1 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Planning &gt; Decompose task &gt; Decompose into subgoals with success conditions</code></li>
+<li>gpt: <code>Grounding &gt; Interact with digital environments &gt; Navigate digital interfaces</code></li>
+<li>deepseek: <code>Planning &gt; Decompose task &gt; Decompose into subgoals with success conditions</code></li>
+<li><strong>adjudicated: <code>Executing &gt; Executing plan &gt; Normal executing</code></strong></li>
+</ul>
+</div></details>
+<details id="P060"><summary><span class="case-id">P060</span>clean up the imports and add the missing Item model</summary><div class="body"><p><strong>Contract C3 revises this historical decision for thought passages.</strong> Apply C1–C3 when using the v3 contract.</p><p>1 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Executing &gt; Executing plan &gt; Apply patch via edit</code></li>
+<li>gpt: <code>Executing &gt; Executing plan &gt; Apply patch via edit</code></li>
+<li>deepseek: <code>Planning &gt; Decompose task &gt; Decompose into subgoals with success conditions</code></li>
+<li><strong>adjudicated: <code>Executing &gt; Executing plan &gt; Normal executing</code></strong></li>
+</ul>
+</div></details>
+<details id="P062"><summary><span class="case-id">P062</span>move the test_exists_exclude method to the end</summary><div class="body"><p><strong>Contract C3 revises this historical decision for thought passages.</strong> Apply C1–C3 when using the v3 contract.</p><p>1 span(s) · disagreement at <em>sub-action</em> level</p>
+<ul>
+<li>claude: <code>Planning &gt; Modify Plan &gt; Replan dynamically based on feedback</code></li>
+<li>gpt: <code>Planning &gt; Formulate a workflow or plan &gt; Formulate a high-level plan</code></li>
+<li>deepseek: <code>Planning &gt; Modify Plan &gt; Replan dynamically based on feedback</code></li>
+<li><strong>adjudicated: <code>Executing &gt; Executing plan &gt; Normal executing</code></strong></li>
+</ul>
+</div></details>
+<details id="P063"><summary><span class="case-id">P063</span>adding the method after the last method in the class</summary><div class="body"><p><strong>Contract C3 revises this historical decision for thought passages.</strong> Apply C1–C3 when using the v3 contract.</p><p>1 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Planning &gt; Formulate a workflow or plan &gt; Plan code or artifact structure</code></li>
+<li>gpt: <code>Reasoning &gt; Analysing &gt; Analyse source code</code></li>
+<li>deepseek: <code>Reasoning &gt; Analysing &gt; Analyse source code</code></li>
+<li><strong>adjudicated: <code>Executing &gt; Executing plan &gt; Normal executing</code></strong></li>
+</ul>
+</div></details>
+<details id="P064"><summary><span class="case-id">P064</span>we need to fix the actual issue in the Django codebase</summary><div class="body"><p>1 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Planning &gt; Decompose task &gt; Phase transition: reproduce → localize</code></li>
+<li>gpt: <code>Evaluating &gt; Evaluating with gold &gt; Plan verification step</code></li>
+<li>deepseek: <code>Planning &gt; Decompose task &gt; Phase transition: reproduce → localize</code></li>
+<li><strong>adjudicated: <code>Planning &gt; Formulate a workflow or plan &gt; Formulate a high-level plan</code></strong></li>
+</ul>
+</div></details>
+<details id="P065"><summary><span class="case-id">P065</span>The problem is likely in the Exists field implementation</summary><div class="body"><p>1 span(s) · disagreement at <em>leaf</em> level</p>
+<ul>
+<li>claude: <code>Reasoning &gt; Inferring &gt; Initial diagnostic framing</code></li>
+<li>gpt: <code>Reasoning &gt; Inferring &gt; Pinpoint root cause mechanism</code></li>
+<li>deepseek: <code>Reasoning &gt; Inferring &gt; Initial diagnostic framing</code></li>
+<li><strong>adjudicated: <code>Reasoning &gt; Inferring &gt; Initial diagnostic framing</code></strong></li>
+</ul>
+</div></details>
+<details id="P066"><summary><span class="case-id">P066</span>find it in the query.py file, which is likely to contain query-related classes</summary><div class="body"><p>1 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Retrieval &gt; Retrieve from local corpus &gt; Retrieve from local corpus</code></li>
+<li>gpt: <code>Retrieval &gt; Retrieve from local corpus &gt; Retrieve from local corpus</code></li>
+<li>deepseek: <code>Planning &gt; Select Strategy &gt; Select among candidate strategies</code></li>
+<li><strong>adjudicated: <code>Reasoning &gt; Inferring &gt; Diagnose Error Cause</code></strong></li>
+</ul>
+</div></details>
+<details id="P068"><summary><span class="case-id">P068</span>the add_filter method of the Query class, as it&#x27;s likely to be involved in handling filters and exclusions</summary><div class="body"><p>1 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Reasoning &gt; Inferring &gt; Initial diagnostic framing</code></li>
+<li>gpt: <code>Retrieval &gt; Retrieve from local corpus &gt; Read code semantics from open file</code></li>
+<li>deepseek: <code>Reasoning &gt; Inferring &gt; Initial diagnostic framing</code></li>
+<li><strong>adjudicated: <code>Reasoning &gt; Inferring &gt; Initial diagnostic framing</code></strong></li>
+</ul>
+</div></details>
+<details id="P069"><summary><span class="case-id">P069</span>The problem could be in the build_filter method, which is called from _add_q</summary><div class="body"><p>1 span(s) · disagreement at <em>sub-action</em> level</p>
+<ul>
+<li>claude: <code>Reasoning &gt; Inferring &gt; Infer dataflow / control flow</code></li>
+<li>gpt: <code>Reasoning &gt; Analysing &gt; Analyse source code</code></li>
+<li>deepseek: <code>Reasoning &gt; Inferring &gt; Infer dataflow / control flow</code></li>
+<li><strong>adjudicated: <code>Reasoning &gt; Inferring &gt; Diagnose Error Cause</code></strong></li>
+</ul>
+</div></details>
+<details id="P071"><summary><span class="case-id">P071</span>The method doesn&#x27;t seem to have specific handling for OuterRef objects</summary><div class="body"><p>1 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Reasoning &gt; Inferring &gt; Pinpoint root cause mechanism</code></li>
+<li>gpt: <code>Reflection &gt; Reflect on errors and failures &gt; Detect failed action</code></li>
+<li>deepseek: <code>Reasoning &gt; Inferring &gt; Pinpoint root cause mechanism</code></li>
+<li><strong>adjudicated: <code>Reasoning &gt; Inferring &gt; Diagnose Error Cause</code></strong></li>
+</ul>
+</div></details>
+<details id="P072"><summary><span class="case-id">P072</span>there are now two test_exists_exclude methods in the file</summary><div class="body"><p>1 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Reflection &gt; Reflect on errors and failures &gt; Detect failed action</code></li>
+<li>gpt: <code>Reasoning &gt; Inferring &gt; Form precursor hypothesis about cause</code></li>
+<li>deepseek: <code>Reflection &gt; Reflect on errors and failures &gt; Detect failed action</code></li>
+<li><strong>adjudicated: <code>Reasoning &gt; Analysing &gt; Analyse source code</code></strong></li>
+</ul>
+</div></details>
+<details id="P075"><summary><span class="case-id">P075</span>use Django&#x27;s test runner directly</summary><div class="body"><p>1 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Planning &gt; Select Strategy &gt; Switch to fallback strategy</code></li>
+<li>gpt: <code>Deciding &gt; Make a decision &gt; Pick alternative strategy</code></li>
+<li>deepseek: <code>Planning &gt; Select Strategy &gt; Switch to fallback strategy</code></li>
+<li><strong>adjudicated: <code>Planning &gt; Select Strategy &gt; Select among candidate strategies</code></strong></li>
+</ul>
+</div></details>
+<details id="P083"><summary><span class="case-id">P083</span>The error is occurring during the SQL compilation process, specifically when handling the OuterRef</summary><div class="body"><p>1 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Reasoning &gt; Inferring &gt; Diagnose Error Cause</code></li>
+<li>gpt: <code>Reflection &gt; Reflect on errors and failures &gt; Inspect Error Pattern</code></li>
+<li>deepseek: <code>Reasoning &gt; Inferring &gt; Pinpoint root cause mechanism</code></li>
+<li><strong>adjudicated: <code>Reasoning &gt; Inferring &gt; Diagnose Error Cause</code></strong></li>
+</ul>
+</div></details>
+<details id="P085"><summary><span class="case-id">P085</span>print out the count of Number objects and Item objects</summary><div class="body"><p><strong>Contract C3 revises this historical decision for thought passages.</strong> Apply C1–C3 when using the v3 contract.</p><p>1 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Reasoning &gt; Generating &gt; Generate initial codes</code></li>
+<li>gpt: <code>Executing &gt; Executing plan &gt; Apply patch via edit</code></li>
+<li>deepseek: <code>Planning &gt; Formulate a workflow or plan &gt; Formulate an analysis workflow</code></li>
+<li><strong>adjudicated: <code>Executing &gt; Executing plan &gt; Apply patch via edit</code></strong></li>
+</ul>
+</div></details>
+<details id="P093"><summary><span class="case-id">P093</span>add the code to reproduce the issue</summary><div class="body"><p><strong>Contract C3 revises this historical decision for thought passages.</strong> Apply C1–C3 when using the v3 contract.</p><p>1 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Reasoning &gt; Generating &gt; Generate initial codes</code></li>
+<li>gpt: <code>Executing &gt; Executing plan &gt; Apply patch via edit</code></li>
+<li>deepseek: <code>Planning &gt; Decompose task &gt; Decompose into subgoals with success conditions</code></li>
+<li><strong>adjudicated: <code>Executing &gt; Executing plan &gt; Apply patch via edit</code></strong></li>
+</ul>
+</div></details>
+<details id="P094"><summary><span class="case-id">P094</span>include a setUpClass method that creates the necessary tables</summary><div class="body"><p><strong>Contract C3 revises this historical decision for thought passages.</strong> Apply C1–C3 when using the v3 contract.</p><p>1 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Planning &gt; Modify Plan &gt; Replan dynamically based on feedback</code></li>
+<li>gpt: <code>Executing &gt; Executing plan &gt; Apply patch via edit</code></li>
+<li>deepseek: <code>Planning &gt; Formulate a workflow or plan &gt; Plan code or artifact structure</code></li>
+<li><strong>adjudicated: <code>Executing &gt; Executing plan &gt; Apply patch via edit</code></strong></li>
+</ul>
+</div></details>
+<details id="P100"><summary><span class="case-id">P100</span>we should run the Django test suite to ensure that our changes haven&#x27;t broken anything</summary><div class="body"><p>1 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Evaluating &gt; Evaluating with gold &gt; Plan verification step</code></li>
+<li>gpt: <code>Executing &gt; Executing plan &gt; Run verification command</code></li>
+<li>deepseek: <code>Planning &gt; Decompose task &gt; Decompose into subgoals with success conditions</code></li>
+<li><strong>adjudicated: <code>Evaluating &gt; Evaluating with gold &gt; Compare against gold reference</code></strong></li>
+</ul>
+</div></details>
+<details id="P110"><summary><span class="case-id">P110</span>add a comment explaining the change we made</summary><div class="body"><p><strong>Contract C3 revises this historical decision for thought passages.</strong> Apply C1–C3 when using the v3 contract.</p><p>1 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Reasoning &gt; Generating &gt; Generate initial codes</code></li>
+<li>gpt: <code>Executing &gt; Executing plan &gt; Apply patch via edit</code></li>
+<li>deepseek: <code>Reasoning &gt; Generating &gt; Generate structured artifacts</code></li>
+<li><strong>adjudicated: <code>Executing &gt; Executing plan &gt; Apply patch via edit</code></strong></li>
+</ul>
+</div></details>
+<details id="P111"><summary><span class="case-id">P111</span>run the tests again to ensure everything is still working correctly</summary><div class="body"><p>1 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Evaluating &gt; Evaluating with gold &gt; Plan verification step</code></li>
+<li>gpt: <code>Executing &gt; Executing plan &gt; Run verification command</code></li>
+<li>deepseek: <code>Evaluating &gt; Evaluating with gold &gt; Plan verification step</code></li>
+<li><strong>adjudicated: <code>Evaluating &gt; Evaluating with gold &gt; Compare against gold reference</code></strong></li>
+</ul>
+</div></details>
+<details id="P140"><summary><span class="case-id">P140</span>include a comment explaining why we added the check</summary><div class="body"><p>1 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Planning &gt; Formulate a workflow or plan &gt; Plan code or artifact structure</code></li>
+<li>gpt: <code>Reasoning &gt; Inferring &gt; Predict patch effect</code></li>
+<li>deepseek: <code>Planning &gt; Formulate a workflow or plan &gt; Plan function or tool use</code></li>
+<li><strong>adjudicated: <code>Planning &gt; Formulate a workflow or plan &gt; Plan code or artifact structure</code></strong></li>
+</ul>
+</div></details>
+<details id="P147"><summary><span class="case-id">P147</span>add the new method _print_Indexed to this class</summary><div class="body"><p>1 span(s) · disagreement at <em>action</em> level</p>
+<ul>
+<li>claude: <code>Planning &gt; Formulate a workflow or plan &gt; Plan code or artifact structure</code></li>
+<li>gpt: <code>Reasoning &gt; Inferring &gt; Predict patch effect</code></li>
+<li>deepseek: <code>Reasoning &gt; Generating &gt; Generate initial fix candidate</code></li>
+<li><strong>adjudicated: <code>Planning &gt; Formulate a workflow or plan &gt; Plan code or artifact structure</code></strong></li>
+</ul>
+</div></details></div>
+</section>
+</main>
+<script>
+'use strict';
+const byId = id => document.getElementById(id);
+const storageKey = 'actonomy.case-library.v1';
+const schema = 'actonomy.case-library.v1';
+const fields = ['quote', 'surface', 'decision', 'label', 'alternative', 'reason', 'source'];
+const decisions = {label: 'Assign a label', omit: 'Leave passage untagged', unresolved: 'Unresolved'};
+let cases = [];
+let editing = null;
+let memoryOnly = false;
+let unreadable = false;
+
+function check(condition, message) {
+  if (!condition) throw new Error(message);
+}
+
+function readLibrary(text) {
+  const data = JSON.parse(text);
+  check(data && data.schema === schema && Array.isArray(data.cases), 'Choose a JSON file exported by this case library.');
+  const ids = new Set();
+  return data.cases.map(record => {
+    check(record && typeof record.id === 'string' && record.id.trim() && !ids.has(record.id), 'A case ID is missing or repeated.');
+    ids.add(record.id);
+    const clean = {id: record.id};
+    for (const field of fields) {
+      check(typeof record[field] === 'string', 'A case is missing the field “' + field + '”.');
+      clean[field] = record[field];
+    }
+    check(['thought', 'action', 'other'].includes(clean.surface) &&
+      Object.hasOwn(decisions, clean.decision) && clean.quote.trim() && clean.reason.trim() &&
+      (clean.decision !== 'label' || clean.label.trim()), 'A case has an incomplete decision or passage.');
+    return clean;
+  });
+}
+
+function encode(records) {
+  return JSON.stringify({schema, cases: records}, null, 2) + '\n';
+}
+
+function currentCases() {
+  if (memoryOnly) return cases;
+  const text = localStorage.getItem(storageKey);
+  return text === null ? [] : readLibrary(text);
+}
+
+function status(message) { byId('status').textContent = message; }
+
+function commit(records, message) {
+  if (!memoryOnly) {
+    // Failed writes leave the editor and the existing library intact.
+    localStorage.setItem(storageKey, encode(records));
+  }
+  cases = records;
+  closeEditor();
+  status(message + (memoryOnly ? ' Export JSON to keep a copy before closing.' : ''));
+}
+
+function errorMessage(error) {
+  return error.name === 'QuotaExceededError' ? 'Browser storage is full. Export your existing cases and free some space before saving.' : error.message;
+}
+
+function element(tag, value, className) {
+  const node = document.createElement(tag);
+  node.textContent = value;
+  if (className) node.className = className;
+  return node;
+}
+
+function actionButton(title, fn) {
+  const button = element('button', title, 'link-button');
+  button.type = 'button';
+  button.disabled = !byId('editor').hidden;
+  button.addEventListener('click', fn);
+  return button;
+}
+
+function showCases() {
+  const list = byId('mine-list');
+  list.replaceChildren();
+  const open = !byId('editor').hidden;
+  byId('export').disabled = !cases.length;
+  byId('add').disabled = unreadable || open;
+  byId('import').disabled = unreadable || open;
+  for (const record of cases) {
+    const article = document.createElement('article');
+    const description = record.decision === 'label' ? record.label : decisions[record.decision];
+    article.append(element('h3', description), element('p', '“' + record.quote + '”'));
+    article.append(element('p', record.surface + (record.source ? ' · ' + record.source : ''), 'meta'));
+    article.append(element('p', record.reason));
+    if (record.alternative) article.append(element('p', 'Alternative · ' + record.alternative, 'meta'));
+    const controls = element('div', '', 'actions');
+    controls.append(actionButton('Edit', () => openEditor(record)), actionButton('Delete', () => {
+      if (!confirm('Delete this case from your library?')) return;
+      try {
+        const latest = currentCases();
+        check(latest.some(item => JSON.stringify(item) === JSON.stringify(record)), 'This case changed in another tab. Reload to review it.');
+        commit(latest.filter(item => item.id !== record.id), 'Case deleted.');
+      } catch (error) { status(errorMessage(error)); }
+    }));
+    article.append(controls);
+    list.append(article);
+  }
+}
+
+function updateLabel() {
+  const needed = byId('decision').value === 'label';
+  byId('label-wrap').hidden = !needed;
+  byId('label').required = needed;
+}
+
+function openEditor(record = null) {
+  editing = record;
+  byId('editor').reset();
+  if (record) for (const field of fields) byId(field).value = record[field];
+  updateLabel();
+  byId('form-title').textContent = record ? 'Edit case' : 'New case';
+  byId('editor').hidden = false;
+  byId('mine-list').hidden = true;
+  status('');
+  showCases();
+  byId('quote').focus();
+}
+
+function closeEditor() {
+  editing = null;
+  byId('editor').hidden = true;
+  byId('mine-list').hidden = false;
+  showCases();
+  byId('add').focus();
+}
+
+byId('add').addEventListener('click', () => openEditor());
+byId('cancel').addEventListener('click', closeEditor);
+byId('decision').addEventListener('change', updateLabel);
+byId('editor').addEventListener('submit', event => {
+  event.preventDefault();
+  try {
+    const record = {id: editing ? editing.id : Array.from(crypto.getRandomValues(new Uint8Array(16)), byte => byte.toString(16).padStart(2, '0')).join('')};
+    for (const field of fields) record[field] = byId(field).value.trim();
+    if (record.decision !== 'label') record.label = '';
+    readLibrary(encode([record]));
+    const latest = currentCases();
+    if (editing) {
+      const i = latest.findIndex(item => item.id === editing.id);
+      check(i >= 0 && JSON.stringify(latest[i]) === JSON.stringify(editing), 'This case changed in another tab. Cancel this edit and reopen the updated case.');
+      latest[i] = record;
+    } else {
+      latest.unshift(record);
+    }
+    commit(latest, 'Case saved.');
+  } catch (error) { status(errorMessage(error)); }
+});
+
+byId('export').addEventListener('click', () => {
+  const url = URL.createObjectURL(new Blob([encode(cases)], {type: 'application/json'}));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'actonomy-custom-cases.json';
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+});
+
+byId('import').addEventListener('click', () => byId('file').click());
+byId('file').addEventListener('change', async event => {
+  const file = event.target.files[0];
+  if (!file) return;
+  try {
+    const imports = readLibrary(await file.text());
+    const latest = currentCases();
+    const known = new Map(latest.map(item => [item.id, item]));
+    const additions = [];
+    for (const item of imports) {
+      const previous = known.get(item.id);
+      if (!previous) additions.push(item);
+      else check(JSON.stringify(previous) === JSON.stringify(item), 'Import stopped. A case with the same ID has different content. Your library is intact.');
+    }
+    commit([...additions, ...latest], additions.length + ' added · ' + (imports.length - additions.length) + ' already in your library.');
+  } catch (error) { status('Import failed. ' + errorMessage(error)); }
+  finally { event.target.value = ''; }
+});
+
+function refreshReference() {
+  const terms = byId('search').value.toLowerCase().trim().split(/\s+/).filter(Boolean);
+  let count = 0;
+  for (const item of document.querySelectorAll('#references > details')) {
+    const text = item.textContent.toLowerCase();
+    item.hidden = !terms.every(term => text.includes(term));
+    if (!item.hidden) count++;
+  }
+  byId('count').textContent = count === 0 ? 'No matching cases.' : count + (count === 1 ? ' case' : ' cases');
+}
+
+byId('search').addEventListener('input', refreshReference);
+window.addEventListener('storage', event => {
+  if (event.key === storageKey || event.key === null) load();
+});
+
+function load() {
+  try {
+    cases = currentCases();
+    unreadable = false;
+  } catch (error) {
+    if (error.name === 'SecurityError') {
+      memoryOnly = true;
+      status('Browser storage is unavailable. Export JSON to keep your cases.');
+    } else {
+      unreadable = true;
+      status('The saved library could not be read. Open a fresh browser profile to start another library.');
+    }
+  }
+  showCases();
+}
+
+load();
+refreshReference();
+
+</script>
+</body>
+</html>

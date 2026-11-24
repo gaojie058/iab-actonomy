@@ -8,7 +8,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/Code-MIT-yellow?style=flat" alt="Code license: MIT"></a>
   <a href="LICENSE-codebook"><img src="https://img.shields.io/badge/Data-CC_BY_4.0-lightgrey?style=flat" alt="Codebook and data license: CC BY 4.0"></a>
   <a href="data/taxonomy/taxonomy.md"><img src="https://img.shields.io/badge/Codebook-V4.2-7564B0?style=flat" alt="Codebook V4.2"></a>
-  <a href="tools/trace-qualitative-analyst/README.md"><img src="https://img.shields.io/badge/Coding_Agent-Claude_Code-D97757?style=flat" alt="Coding Agent: Claude Code"></a>
+  <a href="trace-qualitative-analyst/README.md"><img src="https://img.shields.io/badge/Coding_Agent-Claude_Code-D97757?style=flat" alt="Coding Agent: Claude Code"></a>
 </p>
 
 <!-- <h1 align="center">Act*ONOMY: A shared vocabulary for understanding, describing and analysing agent runtime behavior</h1> -->
@@ -47,7 +47,7 @@ The [project website](https://actonomy-agents.github.io/) includes the taxonomy 
 
 | Your goal                                          | Start here                                                             |
 |----------------------------------------------------|------------------------------------------------------------------------|
-| Understand an agent's reasoning and actions        | [Trajectory analysis](tools/trace-qualitative-analyst/README.md)       |
+| Understand an agent's reasoning and actions        | [Trajectory analysis](trace-qualitative-analyst/README.md)       |
 | Study how a human steers an agent                  | [Human–agent analysis](tools/human-trace-qualitative-analyst/SKILL.md) |
 | Compare behavioral profiles across agents or tasks | [Case studies](trajectory%20annotation%20examples/README.md)           |
 | Identify behaviors missing from the vocabulary     | [Discovery workflow](tools/discovery-qualitative-analyst/SKILL.md)     |
@@ -62,7 +62,7 @@ Analysis runs in a compatible AI assistant with the skills loaded. The assistant
 
 ### 1. Download skills
 
-Download this repository; the skill bundles are in [`tools/`](tools/).
+Download this repository. The [trajectory skill](trace-qualitative-analyst/) includes the [case library](trace-qualitative-analyst/case-library.html) and report renderer. Additional skills are in [`tools/`](tools/).
 
 ```bash
 git clone https://github.com/gaojie058/iab-actonomy.git
@@ -74,7 +74,7 @@ cd iab-actonomy
 Open the repository in your assistant and ask:
 
 ```text
-Install tools/trace-qualitative-analyst and tools/human-trace-qualitative-analyst
+Install trace-qualitative-analyst and tools/human-trace-qualitative-analyst
 using this environment's skill installation workflow. Keep both complete
 folders side by side, including their references, scripts, and assets.
 ```
@@ -91,7 +91,7 @@ Annotate behavior with verbatim evidence from the trajectory and generate
 outputs/trajectory.annotated.json and outputs/trajectory.html.
 ```
 
-For a Claude Code session with human interactions, use `human-trace-qualitative-analyst` and provide the session `.jsonl` file. See the [trace skill guide](tools/trace-qualitative-analyst/README.md) for usage and bundle details.
+For a Claude Code session with human interactions, use `human-trace-qualitative-analyst` and provide the session `.jsonl` file. See the [trace skill guide](trace-qualitative-analyst/README.md) for usage and bundle details.
 
 ### 4. Generate a report
 
@@ -118,7 +118,7 @@ The assistant saves the annotated JSON and an interactive HTML report. Open **`o
 | Directory                                                                       | Contents                                                             |
 |---------------------------------------------------------------------------------|----------------------------------------------------------------------|
 | [data/](data/README.md)                                                         | Research corpora, canonical taxonomy, and development snapshots      |
-| [tools/](tools/)                                                                | Four skill bundles with instructions, scripts, and supporting assets |
+| [tools/](tools/)                                                                | Skill bundles and the compatibility path for the trajectory analyst |
 | [trajectory annotation examples/](trajectory%20annotation%20examples/README.md) | Agent trajectories and annotated reports                             |
 
 <!-- ## Data and examples

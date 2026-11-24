@@ -1,11 +1,11 @@
 ---
 name: trace-qualitative-analyst
-description: Analyze SWE-agent trajectories with quote-level codebook annotations and produce an interactive HTML report with a pie chart of action types. Use this skill whenever the user wants to analyze, annotate, visualize, or break down an agent trajectory — especially SWE-agent or SWE-bench trajectories — with phrase-level grounding to an action codebook. Trigger this for requests like "analyze this trajectory", "annotate these turns", "make a codebook breakdown", "generate a trajectory report", or whenever the user provides raw `(observation, thought, action)` data and wants structured analysis. Also trigger when the user mentions terms like "trajectory analysis", "action space codebook", "thought-action grounding", "qualitative trajectory analysis", or asks to ground codebook tags to specific quotes from agent reasoning.
+description: Annotate agent trajectories with verbatim Act-onomy evidence, resolve ambiguous labels using adjudicated cases, and render interactive trajectory reports.
 ---
 
 # SWE-agent Trajectory Analyzer
 
-Produce an interactive HTML report from an agent trajectory. The report shows each turn as a `(observation, thought, action)` triple, with codebook tags **grounded to specific quoted phrases** in the thought text, plus an SVG horizontal bar chart of action-group distribution and a per-turn **codebook-group signature** (right panel, below the bar chart).
+Produce an interactive HTML report that connects each Act-onomy annotation to its original thought or action. The overview shows the run timeline and action frequencies. The turn log links source passages to their codebook labels.
 
 ## When to use this skill
 
@@ -16,7 +16,7 @@ Use this skill when the user gives you any of the following:
 - A request to "annotate", "tag", "ground", "break down", or "visualize" agent reasoning
 - A request to build a qualitative-analysis artifact for one or more agent runs
 
-The deliverable is always an interactive HTML file with a pie chart, written in English.
+The deliverable is always an interactive HTML file with an action-frequency profile, written in English.
 
 ## High-level workflow
 
@@ -27,7 +27,7 @@ There are four stages plus a required summarization step. **Stages 1 and 4 are n
                           it emits a partial annotated skeleton with TODOs
 2. Phase-label turns    → assign reproduce/localize/edit/recover/verify/submit
                           (fill in `phase`, `phase_label`, `headline` per turn)
-3. ANNOTATE             → for each thought, pick 2-5 verbatim quotes and
+3. ANNOTATE             → select verbatim thought and action spans and
                           map each to a codebook (group, subgroup, leaf) triple
 3b. SUMMARIZE           → write a 4–8 sentence narrative summary of the run
                           (REQUIRED — the renderer rejects JSON without it)
@@ -35,6 +35,10 @@ There are four stages plus a required summarization step. **Stages 1 and 4 are n
 ```
 
 **Read `references/codebook.md` before stage 3.** It defines the 10 codebook groups (a three-level hierarchy: action → sub-action → leaf, aligned with arXiv:2605.13625v1), their subgroups and leaf actions, plus annotation guidelines. Stage 3 is impossible to do well without it.
+
+For new annotations, read [the ambiguity case library](references/ambiguity_cases.md) before stage 3. Apply contract rules C1–C6 first, then consult matching adjudicated examples. Record the evidence field for each quote. Where a historical case uses `Evaluating`, use the current codebook action `Evaluate`. The [case-library editor](case-library.html) supports browsing the precedents and recording project-specific decisions.
+
+If the user provides a JSON library exported by `case-library.html` (schema `actonomy.case-library.v1`), read its `cases` before stage 3. Match each precedent by its evidence field, quoted passage and rationale. A `label` decision supplies the user's label, `omit` leaves the matching passage untagged, and `unresolved` records an open question. Identify project-specific labels and unresolved or conflicting precedents in the findings. Apply the codebook to remaining passages and preserve the run's required evidence fields and validation format.
 
 ---
 
@@ -114,12 +118,12 @@ Also write a short `phase_label` (display string, e.g., "Reproduction", "File-le
 
 **This is the part you must do manually for each turn.** The script cannot do it.
 
-For each turn's thought, pick **2–5 short verbatim quotes** that each carry a distinct cognitive move, and map each quote to a `(grp, sub, leaf)` codebook triple from `references/codebook.md`.
+For each turn, quote the shortest verbatim spans that support distinct behaviors. Set `quote_target` to `both` for new contract-v3 annotations and set each quote’s `target` to `thought` or `action`. Map each quote to a `(grp, sub, leaf)` codebook triple from `references/codebook.md`.
 
 ### Hard rules
 
 1. **Quotes must be exact substrings.** The renderer matches by `String.indexOf`. If the thought says "the bug" but you write "this bug", the highlight will silently fail. Copy-paste, don't paraphrase.
-2. **Quotes must not overlap.** If two cognitive moves are in the same phrase, pick the dominant one or split.
+2. **Quotes must not overlap.** Split distinct evidence where possible. For inseparable spans, follow C4–C6 in the case library and surface any unresolved collision.
 3. **Use a leaf from the codebook when possible.** If genuinely none fits, write a new leaf in the same naming style ("verb-phrase capturing the cognitive move") and the user can accept or revise it.
 4. **The `grp` field uses these exact values (10-category v4.2 codebook):** `Retrieval`, `Memory`, `Planning`, `Reasoning`, `Evaluate`, `Deciding`, `Grounding`, `Executing`, `Learning`, `Reflection`. The keys are also their display names — no rewriting is performed by the template. The triple has no super-class layer; the paper's 3 clusters (External Interaction / Cognition & Execution / Learning & Adaptation) are presentation only.
 
@@ -139,6 +143,7 @@ For each turn, attach a `quotes` list:
 ```json
 "quotes": [
   {"quote": "first try to replicate the bug as described",
+   "target": "thought",
    "grp": "Planning",
    "sub": "Decompose task",
    "leaf": "Decompose into subgoals with success conditions"},
@@ -157,8 +162,8 @@ python scripts/render_artifact.py <annotated.json> --output <output.html>
 ```
 
 The script:
-- Validates every quote is a substring of its turn's thought (warnings, not errors)
-- Builds an SVG donut pie chart of group counts
+- Checks each quote against its designated thought or action field (warnings, not errors)
+- Builds the run overview, action-frequency bars and linked turn log
 - Fills the HTML template
 - Writes a self-contained HTML file
 
@@ -173,7 +178,7 @@ If there are warnings, **read them and fix the JSON** — usually the quote has 
   "outcome": "resolved",
   "issue_text": "...full issue body, plain text...",
   "summary": "REQUIRED. A 4–8 sentence narrative summary of the entire trajectory...",
-  "quote_target": "thought",   // OPTIONAL. "thought" (default), "action", or "both".
+  "quote_target": "both",      // New contract-v3 annotations mark the host field of each quote.
                                // See "Quote target modes" below.
   "findings": [
     {"title": "Reasoning is layered", "body": "Turn 9 alone has 5 distinct phrases..."},
@@ -194,10 +199,10 @@ If there are warnings, **read them and fix the JSON** — usually the quote has 
       "thought": "...verbatim...",
       "action": "create test.py",
       "quotes": [
-        {"quote": "...", "grp": "Planning", "sub": "...", "leaf": "..."},
+        {"target": "thought", "quote": "...", "grp": "Planning", "sub": "...", "leaf": "..."},
         ...
       ],
-      "insight": "Optional callout shown in yellow — paper cross-reference, key observation, etc."
+      "insight": "Optional note shown with the turn."
     },
     ...
   ]
@@ -210,9 +215,9 @@ The renderer supports three top-level modes for where quotes are anchored:
 
 | `quote_target` | When to use | Quote substrings come from | Highlighted block |
 |---|---|---|---|
-| `"thought"` (default) | SWE-agent reproduce/localize/edit loops where each turn has a clear `(thought, action)` split — thought is multi-paragraph reasoning, action is a single shell command. | `t.thought` | Thought block (italic Fraunces serif) |
-| `"action"` | Multi-agent dialog trajectories (AutoGen, MAST, etc.) where the agent's *message itself is the action* — code blocks, stdout tokens, peer directives. The "thought" surrounding the action is mostly explanatory prose; the user wants codebook tags grounded in the executable surface. | `t.action` | Action block (monospace dark `<code>`) |
-| `"both"` | Hybrid runs (HyperAgent, Planner-Executor loops) where each turn carries *both* a multi-paragraph Planner thought AND a multi-block sub-agent action surface, and the cognitive interest lives on both. Each quote in `turns[*].quotes[]` then needs an extra `"target": "thought"` or `"target": "action"` field naming its host (defaults to `"action"`). | `t.thought` for thought-targeted quotes, `t.action` for action-targeted quotes. | Both blocks render with their respective highlights and a separate annotation table under each. |
+| `"both"` | New contract-v3 annotations | Each quote names its `target` | Thought and Action in the turn log |
+| `"thought"` | Previously annotated thought-only trajectories, or a requested thought-only analysis | `t.thought` | Thought |
+| `"action"` | Previously annotated action-only trajectories, or a requested action-only analysis | `t.action` | Action |
 
 **In `"action"` mode**, the schema interpretation flips:
 
@@ -225,7 +230,7 @@ The renderer supports three top-level modes for where quotes are anchored:
 
 ### Summary section (required)
 
-The `summary` field is **required** for every render. It populates a "Trajectory summary" panel that sits between the issue statement and the turn-by-turn timeline — the first thing a reader sees that has been written *by you* about *this specific run*.
+The `summary` field is **required** for every render. It appears in the Overview tab above the stage narratives.
 
 Aim for **4–8 sentences** of narrative prose. A good summary covers:
 
@@ -240,25 +245,18 @@ The summary is the lens through which the rest of the artifact is read — write
 
 ### Findings section
 
-The `findings` array (0–4 entries) populates a "Summary findings" footer. Each finding is a `{title, body}` pair. Good findings are observations that would only become visible **because** of the quote-level granularity — for example:
+The `findings` array (0–4 entries) populates the Findings tab. Each finding is a `{title, body}` pair. Good findings are observations that would only become visible **because** of the quote-level granularity — for example:
 - Turns where one paragraph fires 4+ different codebook leaves
 - A single short phrase that carries a phase transition
 - The contrast between annotation-dense reasoning turns and bare procedural turns
 
-If you have nothing meaningful to say, omit `findings` entirely. The script will leave a polite placeholder.
+If you have nothing meaningful to say, omit `findings` entirely. The renderer displays the tab when findings or behavior patterns are present.
 
 **Summary vs. Findings:** the **summary** is a holistic narrative of the whole run (what happened, in what order, with what quality). The **findings** are punchy 1–2 sentence observations about *patterns the quote-level granularity reveals*. Don't duplicate; they read as complementary layers.
 
 ### Trajectory signature (auto-generated)
 
-The right panel automatically renders a **codebook signature** below the bar chart — no schema fields required. For each turn it lists, in firing order, the full `Group › Sub › Leaf` of that turn's quotes. The block is shown twice:
-
-- A **flat copy-pasteable text block** (one line per turn, `T01 = [Group › Sub › Leaf, ...]` form), useful for diffing two runs side by side. Pre-element is `user-select: all` so a single click selects the whole block.
-- A **clickable per-turn row list**, where each row shows colored chips — one chip per quote — with a small-caps group prefix, the subgroup as the dominant text, and the leaf trailing in muted italic after a `›` separator. Colored by the group palette. Hovering any chip reveals the full triple as a tooltip. Clicking a row scrolls the trajectory to that turn.
-
-**Session-restart detection** is built in: if any turn's verbatim `thought` text equals an earlier turn's `thought`, a `↺` divider is inserted at that boundary in both views. This catches multi-agent runs (e.g. HyperAgent) that re-issue an initial planner thought after an internal reset, and is silent on normal single-session SWE-agent runs.
-
-The signature is purely a JS-side projection of the existing `turns[*].quotes[*].{grp,sub,leaf}` data — no extra annotation work is required to populate it.
+The Turn log shows the original trajectory beside its signature. Each signature chip displays the group, subgroup and leaf of one quote. Select a chip to locate its source passage, or select a highlighted passage to locate the matching chip. On narrow screens the two views share a switch. Repeated thought text marks session restarts in the signature.
 
 ### Human-interaction events (optional — human-in-the-loop trajectories)
 
@@ -277,45 +275,13 @@ Rules and rendering behavior:
 - Interaction events carry **no codebook quotes** — the codebook describes *agent* behavior. The agent's uptake of a prompt is annotated on the *agent* turn that responds (e.g., Reasoning › Analysing › Understanding intent; Reflection › Reflect on external feedback › Receive and integrate external feedback).
 - `label` is a lightweight *human-move* tag, deliberately separate from the agent codebook. Suggested vocabulary (extend as needed): `initial request`, `defect report`, `diagnostic hint`, `scope extension`, `escalation`, `preference reversal`, `commit request`, `constraint`, `new task`.
 - Agent turns keep their own contiguous numbering (`n` = 1..N, interactions excluded), so `segments`, findings, and summary turn references are unaffected by how many human turns interleave.
-- The renderer shows interaction events as amber cards with a **person icon** (Google Material Design `person`); agent turn headers get a **robot icon** (`smart_toy`). Both icons are embedded inline (Apache 2.0, from google/material-design-icons). The masthead gains a "Human prompts" count, and the right-panel signature interleaves clickable `H▸` rows (truncated prompt text) between turn rows — in the flat copy-paste block they appear as `H3 ▸ HUMAN (escalation): …` lines.
-- An empty `obs` on an agent turn (typical for the first turn after a prompt) is simply not rendered.
-- Cycle boundaries (one human prompt + the agent turns until the next prompt) are natural `segments` anchors; a segment whose start turn directly follows an interaction renders its header *above* that interaction (the prompt opens the cycle).
-- Interaction entries may carry a `headline` — a one-line summary shown in the card header (the verbatim `text` lives in the collapsible body).
+- Each interaction appears in the turn log and signature at its original position. The report header gives the interaction count. Write an actor and a concrete verb in each headline so readers can distinguish a human request from the agent’s response.
 
-**Actor-verb headline convention + collapsed-by-default rendering.** All turn cards (agent and interaction) render **collapsed by default**: only the header row (icon, number, headline, phase/label pill, chevron) is visible; clicking the header toggles the body, and "expand all / collapse all" buttons sit above the timeline. Programmatic navigation (codebook, bar-chart, or signature clicks) auto-expands target turns so highlights are never hidden. Because the headline is all a reader sees until they expand, write headlines as full actor-verb sentences: agent turns start with **"Agent <verb> …"** ("Agent greps the page for red-* utility classes."), interaction headlines start with **"Human <verb> …"** ("Human escalates in all-caps: remove all red."). Use the same Human-verb/Agent-verb pattern in segment titles ("Human reports overflow · Agent recovers from failed edits") and segment summaries.
+### Segments and layout
 
-### Segments (optional)
+Optional `segments` entries have `start`, `end`, `title` and `summary`. Use agent turn numbers for the bounds in chronological order. Authored segments supply the stage timeline and narrative. Where turns have no authored segment, the renderer groups consecutive turns by phase. Use `<code>`, `<strong>` or `<em>` for inline formatting in narrative fields.
 
-The optional `segments[]` field lets you carve the run into named sub-sequences (e.g., one per session-restart cycle, or one per phase block) and attach a 1–3 sentence narrative to each. Each entry has the shape:
-
-```json
-{
-  "start": 1,                                  // first turn n in the segment, inclusive
-  "end":   5,                                  // last turn n in the segment, inclusive
-  "title": "First investigation cycle",        // OPTIONAL short label
-  "summary": "Localize → reproduce → draft a first patch (T4); T5 fails to dispatch."  // OPTIONAL prose
-}
-```
-
-Segments are surfaced **only inside the right-panel Trajectory signature** (not in the main trajectory column), in two places:
-
-1. **Inline in the flat copy-paste `<pre>`** as plain-text headers (HTML stripped, summary auto-wrapped to ~78 cols), so analyses copy-paste cleanly into chat / notebooks:
-   ```
-   === SEQ 01 · T01–T05 · First investigation cycle ===
-   Localize → reproduce → draft a first patch (T4); T5 fails to dispatch.
-
-   T01 = [Reasoning › Inferring › Initial diagnostic framing, ...]
-   T02 = [...]
-   ```
-2. **As compact yellow cards** above the first clickable row of each segment (same `--highlight` background + `--accent` left border as the `insight` callouts; smaller font for the narrow panel).
-
-The summary may contain inline HTML (`<strong>`, `<em>`, `<code>`) — it renders as-is in the cards and is stripped (with entity unescape) for the flat block. Segments must be sorted by `start` and non-overlapping; the renderer doesn't enforce coverage so partial segmentation is fine.
-
-When to add segments: anytime the run has natural narrative chapters that are hard to spot from chips alone — session restarts, phase shifts, before/after a key edit, or stretches of stuck-loop behavior worth flagging. Skip for short trajectories (< ~10 turns) where the timeline is already self-evident.
-
-### Resizable right panel
-
-The right panel has a **drag-to-resize handle** on its left edge (default width 360px, min 280, capped at 70% of viewport). Drag to widen / narrow; double-click the handle to reset; the chosen width is persisted in `localStorage` so it sticks across reloads. Useful when the segment summaries or long leaf names spill across multiple lines and you want more breathing room.
+The Overview tab includes a resizable behavior-profile column. The Turn log opens with expanded turns and supports expanding or collapsing them together.
 
 ---
 
@@ -350,9 +316,12 @@ This is your gold-standard reference for what "good" looks like.
 ```
 trace-qualitative-analyst/
 ├── SKILL.md                              ← this file
+├── case-library.html                     ← browse precedents and import/export project cases
 ├── references/
+│   ├── ambiguity_cases.md                ← adjudicated cases and contract v3
 │   └── codebook.md                       ← the 10-group v4.2 action codebook (read in stage 3)
 ├── scripts/
+│   ├── report_layout.py                  ← standalone report layout
 │   ├── parse_trajectory.py               ← stage 1 preprocessor (raw JSON → skeleton)
 │   └── render_artifact.py                ← stage 4 renderer (annotated JSON → HTML)
 └── assets/

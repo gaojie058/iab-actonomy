@@ -16,8 +16,10 @@ import sys
 ROOT = Path(__file__).resolve().parents[3]
 COUNT_PATTERN = re.compile(r'\b(\d+)\s*(?:sub-?actions?\b|类子动作)', re.IGNORECASE)
 MIRROR_FILES = (
-    'SKILL.md', 'README.md', 'references/codebook.md', 'assets/example_pylint_5859.json',
+    'SKILL.md', 'README.md', 'case-library.html', 'references/codebook.md',
+    'references/ambiguity_cases.md', 'assets/example_pylint_5859.json',
     'assets/template.html', 'scripts/parse_trajectory.py', 'scripts/render_artifact.py',
+    'scripts/report_layout.py',
 )
 
 
